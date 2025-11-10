@@ -1,0 +1,59 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22.x]
+    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - run: npm run build --if-present
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Calculate image tag
+        id: vars
+        run: |
+          echo "IMAGE_REPOSITORY=ibabiankou/home-lab" >> $GITHUB_ENV
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "IMAGE_TAG=narrator-web-app-$calculatedSha" >> $GITHUB_ENV
+
+      - name: Confirm which image is being pushed
+        run: echo "${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      - name: Invoke workflow in home-lab-gitops
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: update_tag.yml
+          repo: ibabiankou/home-lab-gitops
+          inputs: '{ "image_repo": "${{ env.IMAGE_REPOSITORY }}", "image_tag": "${{ env.IMAGE_TAG }}" }'
+          token: "${{ secrets.GH_PAT_RW }}"
