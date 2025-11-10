@@ -1,5 +1,5 @@
 # Use the official Nginx image as the base image
-FROM nginx:1.28.0-alpine
+FROM nginx:1.29.3-alpine
 
 RUN rm -rf /usr/share/nginx/html
 
