@@ -1,0 +1,29 @@
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+env/
+venv/
+
+# Node dependencies
+node_modules/
+
+# Angular build output
+dist/
+tmp/
+
+# IDE settings
+.idea/
+
+# Log files
+*.log
