@@ -8,6 +8,8 @@ Content-Disposition: form-data; name="file"; filename="readme.md"
 < ./readme.md
 --boundary--
 
+> {% client.global.set("file_id", response.body.id); %}
+
 ### Response will include ID of the uploaded file that can be used in followup requests.
 
 ### Create a new book.
@@ -17,8 +19,8 @@ Content-Type: application/json
 
 {
   "id": "{{$random.uuid}}",
-  "pdf_id": "{{$random.uuid}}",
-  "title": "Wonderful new book"
+  "title": "Wonderful new book",
+  "pdf_temp_file_id": "{{file_id}}"
 }
 
 ### Response will include ID of the book that can be used to navigate to the next step: View the book.

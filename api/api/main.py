@@ -26,4 +26,21 @@ def upload_file(file: UploadFile) -> TempFile:
     temp_files[str(resp.id)] = resp
     return resp
 
+
+class CreateBookRequest(BaseModel):
+    id: ID
+    title: str
+    pdf_temp_file_id: ID
+
+class BookDetails(BaseModel):
+    id: ID
+    title: str
+    pdf_file_name: str
+
+@base_url_router.post("/books/", response_model=BookDetails)
+def create_book(book: CreateBookRequest) -> BookDetails:
+    pdf_temp_file = temp_files.get(str(book.pdf_temp_file_id))
+    resp = BookDetails(id=book.id, title=book.title, pdf_file_name=pdf_temp_file.filename)
+    return resp
+
 app.include_router(base_url_router)
