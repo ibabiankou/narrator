@@ -1,0 +1,30 @@
+### Upload file to a temp location.
+POST http://localhost:8080/api/files/
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="readme.md"
+
+< ./readme.md
+--boundary--
+
+### Response will include ID of the uploaded file that can be used in followup requests.
+
+### Create a new book.
+# pdf_id is the ID provided in the response from the file upload endpoint.
+POST http://localhost:8080/api/books/
+Content-Type: application/json
+
+{
+  "id": "{{$random.uuid}}",
+  "pdf_id": "{{$random.uuid}}",
+  "title": "Wonderful new book"
+}
+
+### Response will include ID of the book that can be used to navigate to the next step: View the book.
+
+### Get details of a book
+GET http://localhost:8080/api/books/{book_id}/
+
+### Get content of a book
+GET http://localhost:8080/api/books/{book_id}/content/

@@ -2,12 +2,11 @@
 
 set -e
 
-# Build and push docker image
+# Build and run docker image
 
 IMAGE_NAME="narrator-api"
 
-PLATFORMS="${PLATFORMS:-"linux/amd64,linux/arm64"}"
-#PLATFORMS="${PLATFORMS:-"linux/arm64"}"
+PLATFORMS="${PLATFORMS:-"linux/arm64"}"
 COMMIT_HASH=$(git rev-parse --short HEAD)
 TAG="${IMAGE_NAME}-${2:-$COMMIT_HASH}"
 
@@ -17,8 +16,21 @@ docker buildx inspect multiarch \
 docker run --rm --privileged tonistiigi/binfmt --install all
 docker buildx inspect --bootstrap
 
-#  --load \
 docker buildx build \
   --platform "${PLATFORMS}" \
-  --push \
+  --load \
   -t "ibabiankou/home-lab:${TAG}" .
+
+# if --run is specified, then immediately run the newly built image.
+run=false
+for arg in "$@"; do
+  if [[ "$arg" == "--run" ]]; then
+    run=true
+    break
+  fi
+done
+
+if [ "$run" = true ]; then
+  echo "Starting the api container..."
+  docker run --rm --name api -p 8080:8000 "ibabiankou/home-lab:${TAG}"
+fi
