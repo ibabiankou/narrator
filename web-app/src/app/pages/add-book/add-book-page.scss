@@ -1,0 +1,30 @@
+.file-input input , .file-input mat-label {
+  cursor: default;
+}
+
+#add-book-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+mat-card-header, mat-card-actions {
+  padding: 16px;
+}
+
+mat-card-content {
+  display: flex;
+  flex-direction: column;
+}
+
+mat-card-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+mat-card {
+  width: 40%;
+  max-width: 600px;
+  min-width: 300px;
+}

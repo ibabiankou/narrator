@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --serve-path /app/ --open",
-    "build": "ng build --base-href /app/",
+    "build": "ng build --base-href /app/ --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -31,7 +31,8 @@
     "@angular/platform-browser": "^20.3.0",
     "@angular/router": "^20.3.0",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@angular/build": "^20.3.9",
