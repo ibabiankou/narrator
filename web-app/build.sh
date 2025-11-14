@@ -8,8 +8,7 @@ npm run build
 
 IMAGE_NAME="narrator-web-app"
 
-PLATFORMS="${PLATFORMS:-"linux/amd64,linux/arm64"}"
-#PLATFORMS="${PLATFORMS:-"linux/arm64"}"
+PLATFORMS="${PLATFORMS:-"linux/arm64"}"
 COMMIT_HASH=$(git rev-parse --short HEAD)
 TAG="${IMAGE_NAME}-${2:-$COMMIT_HASH}"
 
@@ -19,8 +18,21 @@ docker buildx inspect multiarch \
 docker run --rm --privileged tonistiigi/binfmt --install all
 docker buildx inspect --bootstrap
 
-#  --load \
 docker buildx build \
   --platform "${PLATFORMS}" \
-  --push \
+  --load \
   -t "ibabiankou/home-lab:${TAG}" .
+
+# if --run is specified, then immediately run the newly built image.
+run=false
+for arg in "$@"; do
+  if [[ "$arg" == "--run" ]]; then
+    run=true
+    break
+  fi
+done
+
+if [ "$run" = true ]; then
+  echo "Starting the web-app container..."
+  docker run --rm --name web-app -p 8081:80 "ibabiankou/home-lab:${TAG}"
+fi
