@@ -8,7 +8,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 
 
 load_dotenv()
-engine = create_engine(os.getenv("PG_URL"))
+engine = create_engine(os.getenv("PG_URL"), pool_recycle=600)
 
 def get_session():
     with Session(engine) as session:
@@ -25,3 +25,11 @@ class TempFile(Base):
     file_name: Mapped[str]
     file_path: Mapped[str]
     upload_time: Mapped[datetime.datetime]
+
+
+class Book(Base):
+    __tablename__ = "books"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    title: Mapped[str]
+    file_name: Mapped[str]
