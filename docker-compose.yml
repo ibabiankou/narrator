@@ -2,8 +2,24 @@ services:
   api:
     image: ibabiankou/home-lab:narrator-api
     build: ./api
+    depends_on:
+      pg:
+        condition: service_healthy
+        restart: true
     ports:
       - "8000:8000"
+  pg:
+    image: postgres:17.7
+    environment:
+      POSTGRES_PASSWORD: narrator
+      POSTGRES_USER: narrator
+      POSTGRES_DB: narrator
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
 
   web-app:
     image: ibabiankou/home-lab:narrator-web-app
