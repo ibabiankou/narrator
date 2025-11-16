@@ -54,11 +54,12 @@
             },
             "development": {
               "optimization": false,
+              "outputHashing": "all",
               "extractLicenses": false,
               "sourceMap": true
             }
           },
-          "defaultConfiguration": "production"
+          "defaultConfiguration": "development"
         },
         "serve": {
           "builder": "@angular/build:dev-server",

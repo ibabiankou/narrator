@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# A simple wrapper around docker compose command. The main goal is to catch cases
+# when web-app should be built before building an image.
+
+# Check first argument (assuming its a command). Build
+if [ "$1" = "up" ] || [ "$1" = "build" ] ; then
+  # check if any particular services are listed and if so, then web-app is among them
+  build_web_app=false
+  if [ "$#" -gt 1 ]; then
+    for arg in "$@"; do
+      if [[ "$arg" == "web-app" ]]; then
+        build_web_app=true
+        break
+      fi
+    done
+  fi
+
+  if [ "$build_web_app" = true ] || [ "$#" -eq 1 ]; then
+    echo "Building web-app..."
+    npm --prefix web-app run build:local
+  fi
+fi
+
+docker compose $@

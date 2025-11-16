@@ -1,0 +1,12 @@
+services:
+  api:
+    image: ibabiankou/home-lab:narrator-api
+    build: ./api
+    ports:
+      - "8000:8000"
+
+  web-app:
+    image: ibabiankou/home-lab:narrator-web-app
+    build: ./web-app
+    ports:
+      - "80:80"
