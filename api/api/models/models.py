@@ -1,10 +1,14 @@
 import datetime
+import os
 import uuid
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
 
-# TODO: move configuration to .env file and use dotenv
-engine = create_engine("postgresql://narrator:narrator@localhost:5432/narrator")
+
+load_dotenv()
+engine = create_engine(os.getenv("PG_URL"))
 
 def get_session():
     with Session(engine) as session:
