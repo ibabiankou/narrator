@@ -6,7 +6,6 @@ from fastapi import APIRouter, UploadFile
 from pydantic import BaseModel
 
 from api import SessionDep
-from api.api_models import ID
 from api.models import models
 
 files_router = APIRouter()
@@ -16,11 +15,9 @@ if not os.path.exists(local_dir):
     os.makedirs(local_dir)
 
 class TempFile(BaseModel):
-    id: ID
+    id: uuid.UUID
     filename: str
     upload_time: datetime
-
-temp_files = {}
 
 @files_router.post("/", response_model=TempFile)
 def upload_file(file: UploadFile, session: SessionDep) -> TempFile:
@@ -39,5 +36,4 @@ def upload_file(file: UploadFile, session: SessionDep) -> TempFile:
 
     resp = TempFile(id=file_id, filename=file.filename, upload_time=upload_time)
 
-    temp_files[str(resp.id)] = resp
     return resp
