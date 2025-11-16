@@ -6,6 +6,9 @@ services:
       pg:
         condition: service_healthy
         restart: true
+      s3:
+        condition: service_healthy
+        restart: true
     ports:
       - "8000:8000"
   pg:
@@ -20,6 +23,21 @@ services:
       retries: 5
     ports:
       - "5432:5432"
+  s3:
+    image: localstack/localstack:s3-latest
+    ports:
+      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+    environment:
+      - DEBUG=${DEBUG:-0}
+    healthcheck:
+#      test: [ "CMD", "awslocal", "s3api", "wait", "bucket-exists", "--bucket", "narrator" ]
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      retries: 5
+    volumes:
+      - "./scripts/init-s3.py:/etc/localstack/init/ready.d/init-s3.py"
+      - "./volume:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
 
   web-app:
     image: ibabiankou/home-lab:narrator-web-app
