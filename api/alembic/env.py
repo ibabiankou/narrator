@@ -29,7 +29,8 @@ target_metadata = None
 
 load_dotenv()
 section = config.config_ini_section
-config.set_section_option(section, "sqlalchemy.url", os.getenv("PG_URL"))
+pg_url = os.path.expandvars(os.getenv("PG_URL"))
+config.set_section_option(section, "sqlalchemy.url", pg_url)
 
 
 def run_migrations_offline() -> None:

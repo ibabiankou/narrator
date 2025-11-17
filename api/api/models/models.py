@@ -7,7 +7,8 @@ from sqlalchemy import create_engine, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker
 
 load_dotenv()
-engine = create_engine(os.getenv("PG_URL"), pool_recycle=600)
+pg_url = os.path.expandvars(os.getenv("PG_URL"))
+engine = create_engine(pg_url, pool_recycle=600)
 DbSession = sessionmaker(engine)
 
 def get_session():
