@@ -3,10 +3,7 @@ services:
     image: ibabiankou/home-lab:narrator-api
     build: ./api
     environment:
-      PG_USER: narrator
-      PG_PASS: narrator
-      PG_HOST: pg
-      PG_URL: postgresql://$${PG_USER}:$${PG_PASS}@$${PG_HOST}:5432/narrator
+      PG_URL: postgresql://narrator:narrator@pg:5432/narrator
       S3_ENDPOINT: http://s3:4566
       S3_ACCESS: test
       S3_SECRET: test
