@@ -3,12 +3,12 @@ import os
 import uuid
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session
-
+from sqlalchemy import create_engine, ForeignKey
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker
 
 load_dotenv()
 engine = create_engine(os.getenv("PG_URL"), pool_recycle=600)
+DbSession = sessionmaker(engine)
 
 def get_session():
     with Session(engine) as session:
@@ -33,3 +33,14 @@ class Book(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     title: Mapped[str]
     file_name: Mapped[str]
+
+class Section(Base):
+    __tablename__ = "sections"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"))
+
+    page_index: Mapped[int]
+    section_index: Mapped[int]
+
+    content: Mapped[str]

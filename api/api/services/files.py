@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+from io import BytesIO
 
 import boto3
 from botocore.exceptions import ClientError
@@ -35,11 +36,11 @@ class FilesService:
             logging.error(e)
             raise e
 
-    def get_book_file(self, book: Book) -> StreamingBody:
+    def get_book_file(self, book: Book) -> BytesIO:
         """Get the book file from the object store."""
-        remote_file_path = f"/{book.id}/{book.file_name}"
+        remote_file_path = f"{book.id}/{book.file_name}"
         pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
-        return pdf_object["Body"]
+        return BytesIO(pdf_object["Body"].read())
 
     def upload_book_pages(self, book: Book, pdf_pages):
         """Upload the book pages to the object store."""
