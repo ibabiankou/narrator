@@ -5,11 +5,13 @@ from fastapi.params import Depends
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 
-from api import SessionDep
+from api import SessionDep, get_logger
 from api.models import models
 from api.models.models import TempFile
 from api.services.books import BookService
 from api.services.files import FilesService
+
+LOG = get_logger(__name__)
 
 books_router = APIRouter()
 
@@ -39,6 +41,7 @@ def create_book(book: CreateBookRequest,
     try:
         files_service.store_book_file(book.id, pdf_temp_file)
     except Exception:
+        LOG.info("Error uploading book file to object store", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to store book file")
 
     # Store book metadata in DB

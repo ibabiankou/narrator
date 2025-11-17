@@ -5,13 +5,13 @@ from io import BytesIO
 
 import boto3
 from botocore.exceptions import ClientError
-from botocore.response import StreamingBody
 from dotenv import load_dotenv
 
 from api import get_logger
 from api.models.models import TempFile, Book
 
 LOG = get_logger(__name__)
+boto3.set_stream_logger('', logging.DEBUG)
 
 class FilesService:
     """A service to manage files stored in an object store."""
@@ -29,6 +29,7 @@ class FilesService:
     def store_book_file(self, book_id: uuid.UUID, book_file: TempFile):
         """Move the book file from the local disk to the object store."""
         remote_file_path = f"{book_id}/{book_file.file_name}"
+        LOG.info(f"Uploading {remote_file_path}")
 
         try:
             self.s3_client.upload_file(book_file.file_path, self.bucket_name, remote_file_path)
