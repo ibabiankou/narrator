@@ -51,10 +51,8 @@ export class AddBookPage {
   }
 
   addBook() {
-    console.log('addBook');
     this.filesService.uploadFile(this.file!)
       .pipe(switchMap(tempFile => {
-        console.log('tempFile: ', tempFile);
         return this.booksService.createBook({
           "id": uuidv4(),
           "title": this.title,
@@ -63,12 +61,11 @@ export class AddBookPage {
       }))
       .subscribe({
         next: bookDetails => {
-          console.log("Book details: ", bookDetails);
           this.router.navigate(['/books', bookDetails.id]);
         },
         error: err => {
           // TODO: show the error message.
-          console.log("Error: ", err);
+          console.error("Error: ", err);
         }
       })
   }

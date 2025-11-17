@@ -18,6 +18,6 @@ export class BooksPage {
   }
 
   navigateToAdd() {
-    this.router.navigate(['/books/add']);
+    this.router.navigate(['/add-book']);
   }
 }

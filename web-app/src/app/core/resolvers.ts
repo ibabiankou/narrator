@@ -5,7 +5,6 @@ import { BooksService } from './services/books.service';
 import { catchError, of } from 'rxjs';
 
 export const bookResolver: ResolveFn<BookDetails | RedirectCommand> = (route) => {
-  console.log('bookResolver');
   const booksService = inject(BooksService);
   const router = inject(Router);
   const bookId = route.paramMap.get('id')!;

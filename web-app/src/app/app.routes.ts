@@ -7,6 +7,6 @@ import { bookResolver } from './core/resolvers';
 export const routes: Routes = [
   {path: 'books', component: BooksPage},
   {path: 'books/:id', component: ViewBookPage, resolve: { book: bookResolver }},
-  {path: 'books/add', component: AddBookPage},
+  {path: 'add-book', component: AddBookPage},
   {path: '**', redirectTo: '/books'}
 ];
