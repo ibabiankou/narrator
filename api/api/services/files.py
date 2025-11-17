@@ -4,10 +4,13 @@ import uuid
 
 import boto3
 from botocore.exceptions import ClientError
+from botocore.response import StreamingBody
 from dotenv import load_dotenv
 
-from api.models.models import TempFile
+from api import get_logger
+from api.models.models import TempFile, Book
 
+LOG = get_logger(__name__)
 
 class FilesService:
     """A service to manage files stored in an object store."""
@@ -31,3 +34,23 @@ class FilesService:
         except ClientError as e:
             logging.error(e)
             raise e
+
+    def get_book_file(self, book: Book) -> StreamingBody:
+        """Get the book file from the object store."""
+        remote_file_path = f"/{book.id}/{book.file_name}"
+        pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
+        return pdf_object["Body"]
+
+    def upload_book_pages(self, book: Book, pdf_pages):
+        """Upload the book pages to the object store."""
+
+        pages_dir_path = f"{book.id}/pages"
+        for page in pdf_pages:
+            page_file_name = page["file_name"]
+            remote_path = f"{pages_dir_path}/{page_file_name}"
+            LOG.info(f"Uploading {remote_path}")
+
+            self.s3_client.put_object(
+                Body=page["content"],
+                Bucket=self.bucket_name,
+                Key=remote_path)

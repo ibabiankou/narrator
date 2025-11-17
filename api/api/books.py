@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.params import Depends
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from api import SessionDep
 from api.models import models
 from api.models.models import TempFile
+from api.services.books import BookService
 from api.services.files import FilesService
 
 books_router = APIRouter()
@@ -24,7 +25,11 @@ class BookDetails(BaseModel):
     pdf_file_name: str
 
 @books_router.post("/", response_model=BookDetails)
-def create_book(book: CreateBookRequest, session: SessionDep, files_service: FilesService = Depends()) -> BookDetails:
+def create_book(book: CreateBookRequest,
+                session: SessionDep,
+                background_tasks: BackgroundTasks,
+                files_service: FilesService = Depends(),
+                book_service: BookService = Depends()) -> BookDetails:
     # Load temp_file metadata from DB
     pdf_temp_file = session.get(TempFile, book.pdf_temp_file_id)
     if pdf_temp_file is None:
@@ -37,14 +42,16 @@ def create_book(book: CreateBookRequest, session: SessionDep, files_service: Fil
         raise HTTPException(status_code=500, detail="Failed to store book file")
 
     # Store book metadata in DB
+    book = models.Book(id=book.id, title=book.title, file_name=pdf_temp_file.file_name)
     try:
-        session.add(models.Book(id=book.id, title=book.title, file_name=pdf_temp_file.file_name))
+        session.add(book)
         session.commit()
     except IntegrityError:
         session.rollback()
         raise HTTPException(status_code=409, detail="Book with this ID already exists")
 
-    # TODO: Trigger processing in background. How??
+    # Process book file in the background
+    background_tasks.add_task(book_service.parse_book, book)
 
     return BookDetails(id=book.id, title=book.title, pdf_file_name=pdf_temp_file.file_name)
 
