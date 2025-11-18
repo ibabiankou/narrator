@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, UTC
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.params import Depends
@@ -48,7 +49,7 @@ def create_book(book: CreateBookRequest,
         raise HTTPException(status_code=500, detail="Failed to store book file")
 
     # Store book metadata in DB
-    book = models.Book(id=book.id, title=book.title, file_name=pdf_temp_file.file_name)
+    book = models.Book(id=book.id, title=book.title, file_name=pdf_temp_file.file_name, created_time=datetime.now(UTC))
     try:
         session.add(book)
         session.commit()
