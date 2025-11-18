@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 import os
 import uuid
 from io import BytesIO
@@ -11,7 +12,10 @@ from api import get_logger
 from api.models.models import TempFile, Book
 
 LOG = get_logger(__name__)
-boto3.set_stream_logger('', logging.DEBUG)
+boto3.set_stream_logger('botocore.endpoint', logging.DEBUG)
+boto3.set_stream_logger('botocore.parsers', logging.DEBUG)
+boto3.set_stream_logger('botocore.retryhandler', logging.DEBUG)
+
 
 class FilesService:
     """A service to manage files stored in an object store."""
@@ -53,10 +57,12 @@ class FilesService:
             remote_path = f"{pages_dir_path}/{page_file_name}"
             LOG.info(f"Uploading {remote_path}")
 
+            mime_type, encoding = mimetypes.guess_type(remote_path)
             self.s3_client.put_object(
                 Body=page["content"],
                 Bucket=self.bucket_name,
-                Key=remote_path)
+                Key=remote_path,
+                ContentType=mime_type)
 
     def get_book_page_file(self, book_id: uuid.UUID, page_file_name: str) -> dict:
         """Get the book page file from the object store."""
