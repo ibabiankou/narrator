@@ -1,10 +1,9 @@
 from io import BytesIO
 
-from botocore.response import StreamingBody
 from fastapi.params import Depends
 from pypdf import PdfReader, PdfWriter
 
-from api import get_logger, get_session
+from api import get_logger
 from api.models.models import Book, Section, DbSession
 from api.services.files import FilesService
 
