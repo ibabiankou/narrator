@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { BookDetails, CreateBookRequest } from '../models/books.dto';
+import { BookContent, BookDetails, CreateBookRequest } from '../models/books.dto';
 
 @Injectable({
   providedIn: 'root'
@@ -25,5 +25,15 @@ export class BooksService {
 
   listBooks(): Observable<BookDetails[]> {
     return this.http.get<BookDetails[]>(`${this.apiUrl}/`);
+  }
+
+  getBookContent(bookId: string, lastPageIndex: number = 0, limit: number = 10): Observable<BookContent> {
+    const httpParams = new HttpParams({
+      fromObject: {
+        last_page_idx: lastPageIndex,
+        limit: limit
+      }
+    });
+    return this.http.get<BookContent>(`${this.apiUrl}/${bookId}/content`, {params: httpParams});
   }
 }

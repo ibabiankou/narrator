@@ -1,5 +1,5 @@
 import { Component, input } from '@angular/core';
-import { BookDetails } from '../../core/models/books.dto';
+import { BookDetails, BookPage } from '../../core/models/books.dto';
 
 @Component({
   selector: 'app-view-book-page',
@@ -9,4 +9,5 @@ import { BookDetails } from '../../core/models/books.dto';
 })
 export class ViewBookPage {
   book = input.required<BookDetails>();
+  pages = input.required<BookPage[]>();
 }

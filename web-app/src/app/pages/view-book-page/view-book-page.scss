@@ -1,0 +1,23 @@
+.pages-container {
+  //background-color: aqua;
+}
+
+.page-container {
+  //background-color: beige;
+  display: flex;
+  flex-direction: row;
+
+  .raw-page {
+    width: 30%;
+    //border: 1px solid gray;
+  }
+
+  .sections {
+    width: 40%;
+    //border: 1px solid red;
+
+    p {
+      //border: 1px solid green;
+    }
+  }
+}

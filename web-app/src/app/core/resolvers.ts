@@ -1,8 +1,8 @@
 import { RedirectCommand, ResolveFn, Router } from '@angular/router';
-import { BookDetails } from './models/books.dto';
+import { BookDetails, BookPage } from './models/books.dto';
 import { inject } from '@angular/core';
 import { BooksService } from './services/books.service';
-import { catchError, of } from 'rxjs';
+import { catchError, map, of, tap } from 'rxjs';
 
 export const bookResolver: ResolveFn<BookDetails | RedirectCommand> = (route) => {
   const booksService = inject(BooksService);
@@ -22,6 +22,18 @@ export const booksResolver: ResolveFn<BookDetails[]> = (route) => {
   return booksService.listBooks().pipe(
     catchError(error => {
       console.error('Failed to load books:', error);
+      return of([]);
+    })
+  );
+};
+
+export const bookContentResolver: ResolveFn<BookPage[]> = (route) => {
+  const booksService = inject(BooksService);
+  const bookId = route.paramMap.get('id')!;
+  return booksService.getBookContent(bookId).pipe(
+    map(content => content.pages),
+    catchError(error => {
+      console.error('Failed to load book content:', error);
       return of([]);
     })
   );
