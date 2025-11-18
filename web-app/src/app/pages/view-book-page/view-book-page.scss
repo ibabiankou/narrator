@@ -1,15 +1,9 @@
-.pages-container {
-  //background-color: aqua;
-}
-
 .page-container {
-  //background-color: beige;
   display: flex;
   flex-direction: row;
 
   .raw-page {
     width: 40%;
-    //border: 1px solid gray;
 
     object {
       width: 100%;
@@ -19,10 +13,5 @@
 
   .sections {
     width: 40%;
-    //border: 1px solid red;
-
-    p {
-      //border: 1px solid green;
-    }
   }
 }
