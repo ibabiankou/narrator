@@ -34,6 +34,7 @@ class Book(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     title: Mapped[str]
     file_name: Mapped[str]
+    created_time: Mapped[datetime.datetime]
 
 class Section(Base):
     __tablename__ = "sections"
