@@ -1,4 +1,11 @@
-<p>books-page works!</p>
+<h1>Latest books</h1>
+<ul>
+  @for (book of books(); track book.id) {
+    <li><a [routerLink]="['/books', book.id]">{{ book.title }}</a></li>
+  } @empty {
+    <li>There are no books yet. Add a new book using the button below.</li>
+  }
+</ul>
 
 <button mat-fab color="primary" aria-label="Add new book" (click)="navigateToAdd()">
   <mat-icon>add</mat-icon>

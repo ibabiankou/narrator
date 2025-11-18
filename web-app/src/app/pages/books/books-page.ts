@@ -1,21 +1,23 @@
-import { Component } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { MatFabButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { BookDetails } from '../../core/models/books.dto';
 
 @Component({
   selector: 'app-books-page',
   imports: [
     MatIcon,
-    MatFabButton
+    MatFabButton,
+    RouterLink
   ],
   templateUrl: './books-page.html',
   styleUrl: './books-page.scss',
 })
 export class BooksPage {
 
-  constructor(private router: Router) {
-  }
+  router: Router = inject(Router)
+  books = input.required<BookDetails[]>();
 
   navigateToAdd() {
     this.router.navigate(['/add-book']);

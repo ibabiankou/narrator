@@ -15,3 +15,14 @@ export const bookResolver: ResolveFn<BookDetails | RedirectCommand> = (route) =>
     })
   );
 };
+
+export const booksResolver: ResolveFn<BookDetails[]> = (route) => {
+  const booksService = inject(BooksService);
+  // TODO: consider adding pagination
+  return booksService.listBooks().pipe(
+    catchError(error => {
+      console.error('Failed to load books:', error);
+      return of([]);
+    })
+  );
+};

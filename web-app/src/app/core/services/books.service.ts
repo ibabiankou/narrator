@@ -22,4 +22,8 @@ export class BooksService {
     const url = `${this.apiUrl}/${bookId}`;
     return this.http.get<BookDetails>(url);
   }
+
+  listBooks(): Observable<BookDetails[]> {
+    return this.http.get<BookDetails[]>(`${this.apiUrl}/`);
+  }
 }
