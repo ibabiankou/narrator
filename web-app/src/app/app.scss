@@ -5,4 +5,8 @@
     container-background-color: var(--mat-sys-primary),
     container-text-color: var(--mat-sys-on-primary),
   ));
+  a {
+    text-decoration: none;
+    color: var(--mat-sys-on-primary);
+  }
 }

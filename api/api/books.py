@@ -134,7 +134,7 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
     return BookContent(pages=pages)
 
 
-@books_router.get("/{book_id}/page/{page_file_name}")
+@books_router.get("/{book_id}/pages/{page_file_name}")
 def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesService = Depends()):
     response_dict = file_service.get_book_page_file(book_id, page_file_name)
     return Response(content=response_dict["body"], media_type=response_dict["content_type"])

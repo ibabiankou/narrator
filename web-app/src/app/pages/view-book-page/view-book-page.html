@@ -1,11 +1,14 @@
-<h1>{{book().title}}</h1>
+<h1>{{ book().title }}</h1>
 <div class="pages-container">
   @for (page of pages(); track page.index) {
     <div class="page-container">
-      <div class="raw-page">{{page.file_name}}</div>
+      <div class="raw-page">
+        <object [data]="pageUrl(book().id, page.file_name)"
+                type="application/pdf"></object>
+      </div>
       <div class="sections">
         @for (section of page.sections; track section.section_index) {
-          <p>{{section.content}}</p>
+          <p>{{ section.content }}</p>
         }
       </div>
     </div>

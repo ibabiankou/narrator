@@ -8,8 +8,13 @@
   flex-direction: row;
 
   .raw-page {
-    width: 30%;
+    width: 40%;
     //border: 1px solid gray;
+
+    object {
+      width: 100%;
+      aspect-ratio: 8.5/11;
+    }
   }
 
   .sections {
