@@ -30,6 +30,22 @@ class BookDetails(BaseModel):
     pdf_file_name: str
 
 
+class BookPage(BaseModel):
+    index: int
+    file_name: str
+
+
+class BookSection(BaseModel):
+    page_index: int
+    section_index: int
+    content: str
+
+
+class BookContent(BaseModel):
+    pages: list[BookPage]
+    sections: list[BookSection]
+
+
 @books_router.post("/")
 def create_book(book: CreateBookRequest,
                 session: SessionDep,
@@ -83,3 +99,33 @@ def get_book(book_id: uuid.UUID, session: SessionDep) -> BookDetails:
         raise HTTPException(status_code=404, detail="Book not found")
 
     return BookDetails(id=book.id, title=book.title, pdf_file_name=book.file_name)
+
+
+@books_router.get("/{book_id}/content")
+def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int = 0, limit: int = 10) -> BookContent:
+    stmt = select(models.Section).where(models.Section.book_id == book_id)
+    # Treat the default value as a special case because page index is 0 based, otherwise we always miss the first page.
+    if last_page_idx == 0:
+        stmt = stmt.where(models.Section.page_index >= 0).where(models.Section.page_index < limit)
+    else:
+        stmt = stmt.where(models.Section.page_index > last_page_idx).where(
+            models.Section.page_index <= last_page_idx + limit)
+    stmt = stmt.order_by(models.Section.section_index)
+    db_sections = session.execute(stmt).scalars().all()
+
+    # Convert into the API model.
+    pages = []
+    # For now I simply generate pages, but I might need to store that data explicitly instead.
+    # TODO: consider persisting number of pages as a metadata on Book level.
+
+    # Skip offset for the initial request.
+    first_page_offset = 0 if last_page_idx == 0 else 1
+    for i in range(last_page_idx + first_page_offset, last_page_idx + limit + first_page_offset):
+        pages.append(BookPage(index=i, file_name=f"{i}.pdf"))
+
+    sections = []
+    for section in db_sections:
+        sections.append(
+            BookSection(page_index=section.page_index, section_index=section.section_index, content=section.content))
+
+    return BookContent(pages=pages, sections=sections)
