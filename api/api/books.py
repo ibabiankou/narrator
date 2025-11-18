@@ -31,20 +31,20 @@ class BookDetails(BaseModel):
     pdf_file_name: str
 
 
-class BookPage(BaseModel):
-    index: int
-    file_name: str
-
-
 class BookSection(BaseModel):
     page_index: int
     section_index: int
     content: str
 
 
+class BookPage(BaseModel):
+    index: int
+    file_name: str
+    sections: list[BookSection]
+
+
 class BookContent(BaseModel):
     pages: list[BookPage]
-    sections: list[BookSection]
 
 
 @books_router.post("/")
@@ -116,20 +116,23 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
 
     # Convert into the API model.
     pages = []
+    pages_dict = {}
     # For now I simply generate pages, but I might need to store that data explicitly instead.
     # TODO: consider persisting number of pages as a metadata on Book level.
 
     # Skip offset for the initial request.
     first_page_offset = 0 if last_page_idx == 0 else 1
     for i in range(last_page_idx + first_page_offset, last_page_idx + limit + first_page_offset):
-        pages.append(BookPage(index=i, file_name=f"{i}.pdf"))
+        pages.append(BookPage(index=i, file_name=f"{i}.pdf", sections=[]))
+        pages_dict[i] = pages[-1]
 
-    sections = []
     for section in db_sections:
-        sections.append(
-            BookSection(page_index=section.page_index, section_index=section.section_index, content=section.content))
+        book_section = BookSection(page_index=section.page_index,
+                                   section_index=section.section_index,
+                                   content=section.content)
+        pages_dict[section.page_index].sections.append(book_section)
+    return BookContent(pages=pages)
 
-    return BookContent(pages=pages, sections=sections)
 
 @books_router.get("/{book_id}/page/{page_file_name}")
 def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesService = Depends()):
