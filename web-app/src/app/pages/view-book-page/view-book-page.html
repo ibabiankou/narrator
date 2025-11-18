@@ -1,9 +1,12 @@
 <h1>{{ book().title }}</h1>
-<div class="pages-container">
-  @for (page of pages(); track page.index) {
+<div class="pages-container" infiniteScroll
+     [infiniteScrollThrottle]="250"
+     (scrolled)="loadMorePages()"
+>
+  @for (page of pages(); track page.file_name) {
     <div class="page-container">
       <div class="raw-page">
-        <object [data]="pageUrl(book().id, page.file_name)"
+        <object [data]="page.file_url"
                 type="application/pdf"></object>
       </div>
       <div class="sections">

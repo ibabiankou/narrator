@@ -1,3 +1,5 @@
+import { SafeResourceUrl } from '@angular/platform-browser';
+
 export interface CreateBookRequest {
   id: string;
   title: string;
@@ -24,6 +26,8 @@ export interface BookPage {
   index: number;
   // File name of the page. It can be used to download the page.
   file_name: string;
+
+  file_url: SafeResourceUrl;
 
   // Sections of the book starting on this page.
   sections: Section[];

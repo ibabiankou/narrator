@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BookContent, BookDetails, CreateBookRequest } from '../models/books.dto';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Injectable({
   providedIn: 'root'
@@ -10,8 +11,7 @@ import { BookContent, BookDetails, CreateBookRequest } from '../models/books.dto
 export class BooksService {
 
   private apiUrl = `${environment.api_base_url}/books`;
-
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private sanitizer: DomSanitizer) {
   }
 
   createBook(data: CreateBookRequest): Observable<BookDetails> {
@@ -34,6 +34,12 @@ export class BooksService {
         limit: limit
       }
     });
-    return this.http.get<BookContent>(`${this.apiUrl}/${bookId}/content`, {params: httpParams});
+    return this.http.get<BookContent>(`${this.apiUrl}/${bookId}/content`, {params: httpParams})
+      .pipe(tap(content => {
+        content.pages.forEach(page => {
+          const url = `${this.apiUrl}/${bookId}/pages/${page.file_name}#toolbar=0&navpanes=0&scrollbar=0`
+          page.file_url = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+        });
+      }));
   }
 }
