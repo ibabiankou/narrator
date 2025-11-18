@@ -57,3 +57,12 @@ class FilesService:
                 Body=page["content"],
                 Bucket=self.bucket_name,
                 Key=remote_path)
+
+    def get_book_page_file(self, book_id: uuid.UUID, page_file_name: str) -> dict:
+        """Get the book page file from the object store."""
+        remote_file_path = f"{book_id}/pages/{page_file_name}"
+        pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
+        return {
+            "body": pdf_object["Body"].read(),
+            "content_type": pdf_object["ContentType"]
+        }

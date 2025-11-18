@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, UTC
+from functools import lru_cache
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
 from fastapi.params import Depends
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -129,3 +130,8 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
             BookSection(page_index=section.page_index, section_index=section.section_index, content=section.content))
 
     return BookContent(pages=pages, sections=sections)
+
+@books_router.get("/{book_id}/page/{page_file_name}")
+def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesService = Depends()):
+    response_dict = file_service.get_book_page_file(book_id, page_file_name)
+    return Response(content=response_dict["body"], media_type=response_dict["content_type"])
