@@ -72,15 +72,18 @@ def split_into_sections(pdf_reader: PdfReader):
 
     line_reader = LineReader(pdf_reader)
     while line_reader.has_next():
-
         section_builder = SectionBuilder()
         while section_builder.need_more_text() and line_reader.has_next():
-
             paragraph_builder = ParagraphBuilder()
             while paragraph_builder.need_more_text() and line_reader.has_next():
                 paragraph_builder.append(line_reader.next())
 
+            if section_builder.page_index is not None and paragraph_builder.page_index != section_builder.page_index:
+                sections.append(section_builder.build())
+                section_builder = SectionBuilder()
+
             section_builder.append(paragraph_builder.build())
+
         sections.append(section_builder.build())
 
     return sections
