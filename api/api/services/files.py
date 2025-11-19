@@ -64,11 +64,17 @@ class FilesService:
                 Key=remote_path,
                 ContentType=mime_type)
 
-    def get_book_page_file(self, book_id: uuid.UUID, page_file_name: str) -> dict:
+    def get_book_page_file(self, book_id: uuid.UUID, page_file_name: str) -> dict | None:
         """Get the book page file from the object store."""
         remote_file_path = f"{book_id}/pages/{page_file_name}"
-        pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
-        return {
-            "body": pdf_object["Body"].read(),
-            "content_type": pdf_object["ContentType"]
-        }
+        try:
+            pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
+            return {
+                "body": pdf_object["Body"].read(),
+                "content_type": pdf_object["ContentType"]
+            }
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchKey":
+                return None
+            else:
+                raise e

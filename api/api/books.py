@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, UTC
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
 from fastapi.params import Depends
@@ -28,7 +29,7 @@ class BookDetails(BaseModel):
     id: uuid.UUID
     title: str
     pdf_file_name: str
-    number_of_pages: int = None
+    number_of_pages: Optional[int] = None
     status: str
 
 
@@ -142,6 +143,9 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
 
+    if book.status != BookStatus.ready or book.number_of_pages is None:
+        raise HTTPException(status_code=204, detail="Book is not ready. No content.")
+
     stmt = select(models.Section).where(models.Section.book_id == book_id)
     # Treat the default value as a special case because page index is 0 based, otherwise we always miss the first page.
     if last_page_idx == 0:
@@ -177,4 +181,6 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
 @books_router.get("/{book_id}/pages/{page_file_name}")
 def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesService = Depends()):
     response_dict = file_service.get_book_page_file(book_id, page_file_name)
+    if response_dict is None:
+        raise HTTPException(status_code=404, detail="Page not found")
     return Response(content=response_dict["body"], media_type=response_dict["content_type"])
