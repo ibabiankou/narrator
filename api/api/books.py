@@ -144,7 +144,8 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
         raise HTTPException(status_code=404, detail="Book not found")
 
     if book.status != BookStatus.ready or book.number_of_pages is None:
-        raise HTTPException(status_code=204, detail="Book is not ready. No content.")
+        # There will be no content, so return immediately.
+        return BookContent(pages=[])
 
     stmt = select(models.Section).where(models.Section.book_id == book_id)
     # Treat the default value as a special case because page index is 0 based, otherwise we always miss the first page.

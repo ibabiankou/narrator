@@ -1,21 +1,26 @@
 <h1>{{ book().title }}</h1>
-<div class="pages-container" infiniteScroll
-     [infiniteScrollThrottle]="250"
-     (scrolled)="loadMorePages()"
->
-  @for (page of pages(); track page.file_name) {
-    <div class="page-container">
-      <div class="raw-page">
-        <object [data]="page.file_url"
-                type="application/pdf"></object>
+@if (isLoading()) {
+  <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+  <p>This book is still being processed. The content will be displayed as soon as it's ready.</p>
+} @else {
+  <div class="pages-container" infiniteScroll
+       [infiniteScrollThrottle]="250"
+       (scrolled)="loadMorePages()"
+  >
+    @for (page of pages(); track page.file_name) {
+      <div class="page-container">
+        <div class="raw-page">
+          <object [data]="page.file_url"
+                  type="application/pdf"></object>
+        </div>
+        <div class="sections">
+          @for (section of page.sections; track section.section_index) {
+            <p>{{ section.content }}</p>
+          }
+        </div>
       </div>
-      <div class="sections">
-        @for (section of page.sections; track section.section_index) {
-          <p>{{ section.content }}</p>
-        }
-      </div>
-    </div>
-  } @empty {
-    <p>There are no pages yet. Most likely book is still being processed.</p>
-  }
-</div>
+    } @empty {
+      <p>Strange... This book seem to be empty.</p>
+    }
+  </div>
+}

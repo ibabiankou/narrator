@@ -6,10 +6,17 @@ export interface CreateBookRequest {
   pdf_temp_file_id: string;
 }
 
+export enum BookStatus {
+  processing = "processing",
+  ready = "ready"
+}
+
 export interface BookDetails {
   id: string;
   title: string;
   pdf_file_name: string;
+  number_of_pages: number;
+  status: string;
 }
 
 export interface Section {
