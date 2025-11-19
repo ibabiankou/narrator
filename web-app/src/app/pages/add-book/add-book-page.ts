@@ -5,11 +5,13 @@ import { MatInput } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 import { MatCard, MatCardActions, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/material/card';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FilesService } from '../../core/services/files.service';
 import { switchMap } from 'rxjs';
 import { BooksService } from '../../core/services/books.service';
 import { v4 as uuidv4 } from 'uuid';
+import { MatIcon } from '@angular/material/icon';
+import { MatToolbar } from '@angular/material/toolbar';
 
 @Component({
   selector: 'app-add-book-page',
@@ -23,7 +25,10 @@ import { v4 as uuidv4 } from 'uuid';
     MatCardHeader,
     MatCardTitle,
     MatCardContent,
-    MatCardActions
+    MatCardActions,
+    MatIcon,
+    MatToolbar,
+    RouterLink
   ],
   templateUrl: './add-book-page.html',
   styleUrl: './add-book-page.scss',

@@ -37,3 +37,22 @@ body {
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+mat-toolbar {
+  @include mat.toolbar-overrides((
+    container-background-color: var(--mat-sys-background),
+    container-text-color: var(--mat-sys-neutral10),
+    standard-height: 48px
+  ));
+
+  box-shadow: 0 6px 8px rgba(149, 149, 149, 0.3);
+
+  a {
+    text-decoration: none;
+    color: var(--mat-sys-neutral10);
+  }
+}
+
+mat-toolbar.mat-toolbar {
+  margin-bottom: 20px;
+}

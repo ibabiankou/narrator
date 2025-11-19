@@ -4,12 +4,18 @@ import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
 import { BooksService } from '../../core/services/books.service';
 import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { MatIcon } from '@angular/material/icon';
+import { MatToolbar } from '@angular/material/toolbar';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-view-book-page',
   imports: [
     InfiniteScrollDirective,
-    MatProgressSpinner
+    MatProgressSpinner,
+    MatIcon,
+    MatToolbar,
+    RouterLink
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',

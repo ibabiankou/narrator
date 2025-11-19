@@ -1,4 +1,7 @@
-<h1>Latest books</h1>
+<mat-toolbar class="toolbar">
+  <a [routerLink]="['/books']">AI Narrator Books</a>
+</mat-toolbar>
+
 <ul>
   @for (book of books(); track book.id) {
     <li><a [routerLink]="['/books', book.id]">{{ book.title }}</a></li>

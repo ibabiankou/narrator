@@ -1,4 +1,9 @@
-<h1>{{ book().title }}</h1>
+<mat-toolbar class="toolbar">
+  <a [routerLink]="['/books']">AI Narrator Books</a>
+  <mat-icon>chevron_right</mat-icon>
+  <h1>{{ book().title }}</h1>
+</mat-toolbar>
+
 @if (isLoading()) {
   <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
   <p>This book is still being processed. The content will be displayed as soon as it's ready.</p>
