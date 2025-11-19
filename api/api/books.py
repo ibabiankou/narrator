@@ -1,16 +1,15 @@
 import uuid
 from datetime import datetime, UTC
-from functools import lru_cache
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
 from fastapi.params import Depends
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from api import SessionDep, get_logger
 from api.models import models
-from api.models.models import TempFile
+from api.models.models import TempFile, BookStatus
 from api.services.books import BookService
 from api.services.files import FilesService
 
@@ -66,7 +65,11 @@ def create_book(book: CreateBookRequest,
         raise HTTPException(status_code=500, detail="Failed to store book file")
 
     # Store book metadata in DB
-    book = models.Book(id=book.id, title=book.title, file_name=pdf_temp_file.file_name, created_time=datetime.now(UTC))
+    book = models.Book(id=book.id,
+                       title=book.title,
+                       file_name=pdf_temp_file.file_name,
+                       created_time=datetime.now(UTC),
+                       status=BookStatus.processing)
     try:
         session.add(book)
         session.commit()
@@ -100,6 +103,24 @@ def get_book(book_id: uuid.UUID, session: SessionDep) -> BookDetails:
         raise HTTPException(status_code=404, detail="Book not found")
 
     return BookDetails(id=book.id, title=book.title, pdf_file_name=book.file_name)
+
+
+@books_router.post("/{book_id}/reprocess")
+def get_book(book_id: uuid.UUID,
+             session: SessionDep,
+             background_tasks: BackgroundTasks,
+             book_service: BookService = Depends()):
+    book = session.get(models.Book, book_id)
+    if book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    session.execute(update(models.Book).where(models.Book.id == book.id).values(status=BookStatus.processing))
+    session.commit()
+
+    book_service.delete_sections(book)
+
+    # Process book file in the background
+    background_tasks.add_task(book_service.parse_book, book)
 
 
 @books_router.get("/{book_id}/content")

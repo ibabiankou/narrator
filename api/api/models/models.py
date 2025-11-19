@@ -1,6 +1,8 @@
 import datetime
 import os
 import uuid
+from enum import StrEnum
+from typing import Optional
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, ForeignKey
@@ -28,13 +30,20 @@ class TempFile(Base):
     upload_time: Mapped[datetime.datetime]
 
 
+class BookStatus(StrEnum):
+    processing = "processing"
+    ready = "ready"
+
+
 class Book(Base):
     __tablename__ = "books"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     title: Mapped[str]
     file_name: Mapped[str]
+    number_of_pages: Mapped[Optional[int]]
     created_time: Mapped[datetime.datetime]
+    status: Mapped[BookStatus]
 
 class Section(Base):
     __tablename__ = "sections"
