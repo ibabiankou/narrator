@@ -28,6 +28,8 @@ class BookDetails(BaseModel):
     id: uuid.UUID
     title: str
     pdf_file_name: str
+    number_of_pages: int = None
+    status: str
 
 
 class BookSection(BaseModel):
@@ -80,7 +82,10 @@ def create_book(book: CreateBookRequest,
     # Process book file in the background
     background_tasks.add_task(book_service.parse_book, book)
 
-    return BookDetails(id=book.id, title=book.title, pdf_file_name=pdf_temp_file.file_name)
+    return BookDetails(id=book.id,
+                       title=book.title,
+                       pdf_file_name=pdf_temp_file.file_name,
+                       status=book.status)
 
 
 @books_router.get("/")
@@ -91,7 +96,11 @@ def get_books(session: SessionDep) -> list[BookDetails]:
 
     resp = []
     for book in books:
-        resp.append(BookDetails(id=book.id, title=book.title, pdf_file_name=book.file_name))
+        resp.append(BookDetails(id=book.id,
+                                title=book.title,
+                                pdf_file_name=book.file_name,
+                                number_of_pages=book.number_of_pages,
+                                status=book.status))
 
     return resp
 
@@ -102,7 +111,11 @@ def get_book(book_id: uuid.UUID, session: SessionDep) -> BookDetails:
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    return BookDetails(id=book.id, title=book.title, pdf_file_name=book.file_name)
+    return BookDetails(id=book.id,
+                       title=book.title,
+                       pdf_file_name=book.file_name,
+                       number_of_pages=book.number_of_pages,
+                       status=book.status)
 
 
 @books_router.post("/{book_id}/reprocess")
@@ -125,6 +138,10 @@ def get_book(book_id: uuid.UUID,
 
 @books_router.get("/{book_id}/content")
 def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int = 0, limit: int = 10) -> BookContent:
+    book = session.get(models.Book, book_id)
+    if book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+
     stmt = select(models.Section).where(models.Section.book_id == book_id)
     # Treat the default value as a special case because page index is 0 based, otherwise we always miss the first page.
     if last_page_idx == 0:
@@ -143,7 +160,9 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
 
     # Skip offset for the initial request.
     first_page_offset = 0 if last_page_idx == 0 else 1
-    for i in range(last_page_idx + first_page_offset, last_page_idx + limit + first_page_offset):
+    # Don't go beyond the total number of pages.
+    last_page = min(last_page_idx + limit + first_page_offset, book.number_of_pages)
+    for i in range(last_page_idx + first_page_offset, last_page):
         pages.append(BookPage(index=i, file_name=f"{i}.pdf", sections=[]))
         pages_dict[i] = pages[-1]
 

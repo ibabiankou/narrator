@@ -43,7 +43,7 @@ class Book(Base):
     file_name: Mapped[str]
     number_of_pages: Mapped[Optional[int]]
     created_time: Mapped[datetime.datetime]
-    status: Mapped[BookStatus]
+    status: Mapped[str]
 
 class Section(Base):
     __tablename__ = "sections"
