@@ -80,8 +80,9 @@ def create_book(book: CreateBookRequest,
         session.rollback()
         raise HTTPException(status_code=409, detail="Book with this ID already exists")
 
-    # Process book file in the background
-    background_tasks.add_task(book_service.parse_book, book)
+    # Process the book in the background
+    background_tasks.add_task(book_service.split_pages, book)
+    background_tasks.add_task(book_service.extract_text, book)
 
     return BookDetails(id=book.id,
                        title=book.title,
@@ -133,8 +134,7 @@ def get_book(book_id: uuid.UUID,
 
     book_service.delete_sections(book)
 
-    # Process book file in the background
-    background_tasks.add_task(book_service.parse_book, book)
+    background_tasks.add_task(book_service.extract_text, book)
 
 
 @books_router.get("/{book_id}/content")

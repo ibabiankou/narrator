@@ -16,8 +16,8 @@ class BookService:
     def __init__(self, files_service: FilesService = Depends()):
         self.files_service = files_service
 
-    def parse_book(self, book: Book):
-        LOG.info(f"Parsing book {book.id}")
+    def split_pages(self, book: Book):
+        LOG.debug(f"Splitting book {book.id} into pages.")
 
         pdf_file = self.files_service.get_book_file(book)
 
@@ -27,8 +27,11 @@ class BookService:
         # Upload page files to the object store
         self.files_service.upload_book_pages(book, pdf_pages)
 
+    def extract_text(self, book: Book):
+        LOG.info(f"Extracting text of the book {book.id}")
+
         # Split each page into sections. A section is one or more paragraphs.
-        pdf_file.seek(0)
+        pdf_file = self.files_service.get_book_file(book)
         pdf_reader = PdfReader(pdf_file)
         page_num = len(pdf_reader.pages)
         section_dicts = split_into_sections(pdf_reader)
