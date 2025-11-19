@@ -1,3 +1,5 @@
+from pypdf import PdfReader
+
 from api import get_logger
 
 LOG = get_logger(__name__)
@@ -7,6 +9,7 @@ class ParagraphBuilder:
     """A buffer using simple logic to guess if the text represents a single paragraph."""
 
     def __init__(self):
+        self.page_index = None
         self.text = ""
         self.stack = []
         # Should only be true if the last char was either one of [.!?] or one of the closing quotes.
@@ -25,19 +28,22 @@ class ParagraphBuilder:
         """Returns True if the text is most likely an incomplete paragraph."""
         return len(self.text) == 0 or (not self._ignore_quotes and len(self.stack) != 0) or self._is_incomplete_sentence
 
-    def append(self, line: str):
+    def append(self, line: (int, str)):
         """Append a line of text."""
         LOG.debug("Appending line: \n%s", line)
+
+        if self.page_index is None:
+            self.page_index = line[0]
 
         if len(self.text) > 0:
             self.text += " "
 
         text_index = len(self.text)
         line_index = 0
-        self.text += line
+        self.text += line[1]
         LOG.debug("Full text: \n%s", self.text)
 
-        for character in line:
+        for character in line[1]:
             if not self._ignore_quotes:
                 if character in self._opening_quotes:
                     LOG.debug("%03d Got opening quote: %s", line_index, character)
@@ -79,20 +85,59 @@ class ParagraphBuilder:
 
         LOG.debug("Need more text: %s", self.need_more_text())
 
+    def build(self) -> (int, str):
+        return self.page_index, self.text
+
 
 class SectionBuilder:
-    def __init__(self, page_index: int, target_length: int = 300):
+    def __init__(self, target_length: int = 300):
         # It takes around 25s to generate speech for 300 char snippet of text.
         self.text = ""
-        self.page_index = page_index
+        self.page_index = None
         self.target_length = target_length
 
     def need_more_text(self) -> bool:
         return len(self.text) < self.target_length
 
-    def append(self, line: str):
-        if len(line.strip()) > 0:
-            self.text += line + "\n"
+    def append(self, line: (int, str)):
+        if self.page_index is None:
+            self.page_index = line[0]
+
+        if len(line[1].strip()) > 0:
+            self.text += line[1] + "\n"
 
     def build(self):
         return {"page_index": self.page_index, "content": self.text}
+
+
+class LineReader:
+    def __init__(self, pdf_reader: PdfReader):
+        self.lines = self._read_lines(pdf_reader)
+        self.line_index = 0
+
+    def _remove_key_words(self, text: str) -> str:
+        # TODO: extract the list of key words to some kind of config...
+        key_words = ["OceanofPDF.com", "OceanofPDF .com"]
+        for key_word in key_words:
+            text = text.replace(key_word, "")
+        return text
+
+    def _read_lines(self, pdf_reader: PdfReader):
+        lines = []
+        pages = pdf_reader.pages
+        for page_index in range(len(pages)):
+            page_lines = self._remove_key_words(pages[page_index].extract_text()).splitlines()
+            for line in page_lines:
+                lines.append((page_index, line))
+        return lines
+
+    def has_next(self) -> bool:
+        return self.line_index < len(self.lines)
+
+    def next(self) -> (int, str):
+        if self.has_next():
+            line = self.lines[self.line_index]
+            self.line_index += 1
+            return line
+        else:
+            raise LookupError()

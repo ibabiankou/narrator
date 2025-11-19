@@ -6,7 +6,7 @@ from pypdf import PdfReader, PdfWriter
 from api import get_logger
 from api.models.models import Book, Section, DbSession
 from api.services.files import FilesService
-from api.utils.text import ParagraphBuilder, SectionBuilder
+from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader
 
 LOG = get_logger(__name__)
 
@@ -27,7 +27,9 @@ class BookService:
         self.files_service.upload_book_pages(book, pdf_pages)
 
         # Split each page into sections. A section is one or more paragraphs.
-        section_dicts = self._split_into_sections(pdf_file)
+        pdf_file.seek(0)
+        pdf_reader = PdfReader(pdf_file)
+        section_dicts = split_into_sections(pdf_reader)
 
         # TODO: clean up text,
         # TODO: convert into phonemes,
@@ -64,56 +66,21 @@ class BookService:
 
         return pages
 
-    def _split_into_sections(self, pdf_file: BytesIO):
-        pdf_file.seek(0)
-        pdf_reader = PdfReader(pdf_file)
 
-        sections = []
+def split_into_sections(pdf_reader: PdfReader):
+    sections = []
 
-        section_builder = None
-        paragraph_builder = None
+    line_reader = LineReader(pdf_reader)
+    while line_reader.has_next():
 
-        page_num = len(pdf_reader.pages)
-        for page_index in range(page_num):
-            page = pdf_reader.pages[page_index]
-            text = self._remove_key_words(page.extract_text())
-            lines = text.splitlines()
-            for line in lines:
-                # Append lines to a paragraph until it is complete.
-                if paragraph_builder is None:
-                    paragraph_builder = ParagraphBuilder()
+        section_builder = SectionBuilder()
+        while section_builder.need_more_text() and line_reader.has_next():
 
-                if paragraph_builder.need_more_text():
-                    paragraph_builder.append(line)
-                    continue
+            paragraph_builder = ParagraphBuilder()
+            while paragraph_builder.need_more_text() and line_reader.has_next():
+                paragraph_builder.append(line_reader.next())
 
-                # Append paragraphs to a section until it is complete.
-                if section_builder is None:
-                    section_builder = SectionBuilder(page_index)
+            section_builder.append(paragraph_builder.build())
+        sections.append(section_builder.build())
 
-                if section_builder.need_more_text():
-                    section_builder.append(paragraph_builder.text)
-                    paragraph_builder = None
-                    continue
-
-                # We have a complete section, so lets add it to the list of results
-                sections.append(section_builder.build())
-                section_builder = None
-
-        # Check if we have leftovers in either builder.
-        if paragraph_builder is not None:
-            # Create another section if needed.
-            if section_builder is None:
-                section_builder = SectionBuilder(page_num-1)
-            section_builder.append(paragraph_builder.text)
-        if section_builder is not None:
-            sections.append(section_builder.build())
-
-        return sections
-
-    def _remove_key_words(self, text: str) -> str:
-        # TODO: extract the list of key words to some kind of config...
-        key_words = ["OceanofPDF.com", "OceanofPDF .com"]
-        for key_word in key_words:
-            text = text.replace(key_word, "\n")
-        return text
+    return sections
