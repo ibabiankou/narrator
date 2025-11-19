@@ -1,9 +1,14 @@
+.main-container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
 .page-container {
   display: flex;
   flex-direction: row;
 
   .raw-page {
-    width: 40%;
+    width: 45%;
 
     object {
       width: 100%;
@@ -12,11 +17,9 @@
   }
 
   .sections {
-    width: 40%;
+    width: 55%;
+    p {
+      padding: 0 10px;
+    }
   }
-}
-
-mat-progress-spinner {
-  //--mat-sys-primary: orange;
-
 }
