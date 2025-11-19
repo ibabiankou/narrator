@@ -6,6 +6,7 @@ from pypdf import PdfReader, PdfWriter
 from api import get_logger
 from api.models.models import Book, Section, DbSession
 from api.services.files import FilesService
+from api.utils.text import ParagraphBuilder, SectionBuilder
 
 LOG = get_logger(__name__)
 
@@ -69,16 +70,44 @@ class BookService:
 
         sections = []
 
+        section_builder = None
+        paragraph_builder = None
+
         page_num = len(pdf_reader.pages)
         for page_index in range(page_num):
             page = pdf_reader.pages[page_index]
             text = self._remove_key_words(page.extract_text())
             lines = text.splitlines()
             for line in lines:
-                sections.append({
-                    "page_index": page_index,
-                    "content": line
-                })
+                # Append lines to a paragraph until it is complete.
+                if paragraph_builder is None:
+                    paragraph_builder = ParagraphBuilder()
+
+                if paragraph_builder.need_more_text():
+                    paragraph_builder.append(line)
+                    continue
+
+                # Append paragraphs to a section until it is complete.
+                if section_builder is None:
+                    section_builder = SectionBuilder(page_index)
+
+                if section_builder.need_more_text():
+                    section_builder.append(paragraph_builder.text)
+                    paragraph_builder = None
+                    continue
+
+                # We have a complete section, so lets add it to the list of results
+                sections.append(section_builder.build())
+                section_builder = None
+
+        # Check if we have leftovers in either builder.
+        if paragraph_builder is not None:
+            # Create another section if needed.
+            if section_builder is None:
+                section_builder = SectionBuilder(page_num-1)
+            section_builder.append(paragraph_builder.text)
+        if section_builder is not None:
+            sections.append(section_builder.build())
 
         return sections
 
