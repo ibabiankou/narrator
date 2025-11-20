@@ -1,6 +1,7 @@
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.params import Depends
+from starlette.middleware.gzip import GZipMiddleware
 
 from api.books import books_router
 from api.files import files_router
@@ -19,6 +20,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware)
 
 base_url_router = APIRouter(prefix="/api")
 
