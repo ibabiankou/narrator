@@ -34,6 +34,8 @@ class BookDetails(BaseModel):
 
 
 class BookSection(BaseModel):
+    id: int
+    book_id: uuid.UUID
     page_index: int
     section_index: int
     content: str
@@ -172,7 +174,9 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
         pages_dict[i] = pages[-1]
 
     for section in db_sections:
-        book_section = BookSection(page_index=section.page_index,
+        book_section = BookSection(id=section.id,
+                                   book_id=section.book_id,
+                                   page_index=section.page_index,
                                    section_index=section.section_index,
                                    content=section.content)
         pages_dict[section.page_index].sections.append(book_section)
@@ -185,3 +189,16 @@ def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesSe
     if response_dict is None:
         raise HTTPException(status_code=404, detail="Page not found")
     return Response(content=response_dict["body"], media_type=response_dict["content_type"])
+
+
+@books_router.delete("/{book_id}/sections/{section_id}", status_code=204)
+def delete_section(book_id: uuid.UUID, section_id: int, session: SessionDep):
+    section = session.get(models.Section, section_id)
+    if section is None:
+        raise HTTPException(status_code=404, detail="Section not found")
+
+    if section.book_id != book_id:
+        raise HTTPException(status_code=400, detail="Section does not belong to this book")
+
+    session.delete(section)
+    session.commit()

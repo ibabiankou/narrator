@@ -1,5 +1,5 @@
 import { Component, inject, model, OnInit, signal } from '@angular/core';
-import { BookDetails, BookPage, BookStatus } from '../../core/models/books.dto';
+import { BookDetails, BookPage, BookStatus, Section } from '../../core/models/books.dto';
 import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
 import { BooksService } from '../../core/services/books.service';
 import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
@@ -66,5 +66,11 @@ export class ViewBookPage implements OnInit {
         this.pages.set([...pages, ...content.pages]);
       }
     );
+  }
+
+  deleteSection(section: Section) {
+    const pages = this.pages();
+    const page = pages[section.page_index]
+    page.sections = page.sections.filter(s => s.id != section.id);
   }
 }

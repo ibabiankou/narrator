@@ -20,6 +20,8 @@ export interface BookDetails {
 }
 
 export interface Section {
+  id: number;
+  book_id: string;
   // Index of the section within the book.
   section_index: number;
   // Index of the page where the section starts.

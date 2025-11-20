@@ -42,4 +42,9 @@ export class BooksService {
         });
       }));
   }
+
+  deleteSection(bookId: string, sectionId: number) {
+    const url = `${this.apiUrl}/${bookId}/sections/${sectionId}`;
+    return this.http.delete(url);
+  }
 }

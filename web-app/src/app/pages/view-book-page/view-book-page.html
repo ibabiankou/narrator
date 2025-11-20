@@ -21,7 +21,7 @@
           </div>
           <div class="sections">
             @for (section of page.sections; track section.section_index) {
-              <app-section [section]="section"></app-section>
+              <app-section [section]="section" (sectionDeleted)="deleteSection(section)"></app-section>
             }
           </div>
         </div>
