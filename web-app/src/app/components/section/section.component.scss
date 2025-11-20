@@ -8,85 +8,78 @@
   position: relative;
   // Allow controls to be visible outside the component.
   overflow: visible;
+
+  // Default index of inactive sections.
+  z-index: 10;
 }
 
 :host:hover {
   border: 1px solid #e0e0e0;
   box-shadow: 0 4px 4px rgba(0, 0, 0, 0.08);
+
+  // Active host should be above the inactive hosts.
+  z-index: 20;
 }
 
 /* Styling for the container that holds the top right controls. */
 .top-right-controls {
-  position: absolute;
-
-  top: -40px;
+  top: -45px;
   right: 0;
-
-  opacity: 0;
   transform: translateX(10px);
-
-  transition: all 0.3s ease-in-out;
-
-  z-index: 10;
-
-  /* Space out buttons nicely */
-  display: flex;
-  gap: 8px;
 }
-
 :host:hover .top-right-controls {
-  opacity: 1;
   transform: translateX(0);
 }
 
 /* Styling for the container that holds the top middle controls. */
 .top-mid-controls {
-  position: absolute;
-
-  top: -40px;
+  top: -30px;
   left: 50%; /* Moves the container's left edge to the center of the host */
   /* -50% horizontal shift pulls the container back by half its own width,
      thus perfectly centering it.
      The 10px vertical shift pushes it down for the "slide up" animation effect.
     */
   transform: translate(-50%, 10px);
-
-  opacity: 0;
-
-  transition: all 0.3s ease-in-out;
-
-  z-index: 10;
 }
-
 :host:hover .top-mid-controls {
-  opacity: 1;
   transform: translate(-50%, 0);
 }
 
 /* Styling for the container that holds the bottom middle controls. */
 .bottom-mid-controls {
-  position: absolute;
-
-  bottom: -40px;
+  bottom: -30px;
   left: 50%; /* Moves the container's left edge to the center of the host */
-  /* -50% horizontal shift pulls the container back by half its own width,
-     thus perfectly centering it.
-     The 10px vertical shift pushes it down for the "slide up" animation effect.
-    */
+
+  /* -50% horizontal shift pulls the container back by half its own width, thus perfectly centering it.
+     The 10px vertical shift pushes it down for the "slide up" animation effect. */
   transform: translate(-50%, -10px);
-
-  opacity: 0;
-
-  transition: all 0.3s ease-in-out;
-
-  z-index: 10;
 }
-
 :host:hover .bottom-mid-controls {
-  opacity: 1;
   transform: translate(-50%, 0);
 }
 
+.controls {
+  position: absolute;
+  opacity: 0; // Hidden by default, show on hover.
+  transition: all 0.3s ease-in-out; // Ensure smooth transitions
+  // Default index of inactive controls. Should be over the content of inactive sections.
+  z-index: 15;
+
+  /* Space out buttons nicely if multiple */
+  display: flex;
+  gap: 8px;
+
+  // Blur content under the controls.
+  background-color: rgba(var(--mat-sys-surface), 0.75);
+  backdrop-filter: blur(3px);
+  border-radius: 20px;
+}
+
+:host:hover .controls {
+  opacity: 1;
+  // Active controls should be over the content of the active section.
+  z-index: 25;
+}
 
 p {
   margin: 0;
