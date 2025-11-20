@@ -3,12 +3,90 @@
   transition: all 0.3s ease-in-out;
   border: 1px solid transparent;
   border-radius: 4px;
+
+  // Establish a positioning context for the controls.
+  position: relative;
+  // Allow controls to be visible outside the component.
+  overflow: visible;
 }
 
 :host:hover {
   border: 1px solid #e0e0e0;
   box-shadow: 0 4px 4px rgba(0, 0, 0, 0.08);
 }
+
+/* Styling for the container that holds the top right controls. */
+.top-right-controls {
+  position: absolute;
+
+  top: -40px;
+  right: 0;
+
+  opacity: 0;
+  transform: translateX(10px);
+
+  transition: all 0.3s ease-in-out;
+
+  z-index: 10;
+
+  /* Space out buttons nicely */
+  display: flex;
+  gap: 8px;
+}
+
+:host:hover .top-right-controls {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Styling for the container that holds the top middle controls. */
+.top-mid-controls {
+  position: absolute;
+
+  top: -40px;
+  left: 50%; /* Moves the container's left edge to the center of the host */
+  /* -50% horizontal shift pulls the container back by half its own width,
+     thus perfectly centering it.
+     The 10px vertical shift pushes it down for the "slide up" animation effect.
+    */
+  transform: translate(-50%, 10px);
+
+  opacity: 0;
+
+  transition: all 0.3s ease-in-out;
+
+  z-index: 10;
+}
+
+:host:hover .top-mid-controls {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Styling for the container that holds the bottom middle controls. */
+.bottom-mid-controls {
+  position: absolute;
+
+  bottom: -40px;
+  left: 50%; /* Moves the container's left edge to the center of the host */
+  /* -50% horizontal shift pulls the container back by half its own width,
+     thus perfectly centering it.
+     The 10px vertical shift pushes it down for the "slide up" animation effect.
+    */
+  transform: translate(-50%, -10px);
+
+  opacity: 0;
+
+  transition: all 0.3s ease-in-out;
+
+  z-index: 10;
+}
+
+:host:hover .bottom-mid-controls {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 
 p {
   margin: 0;
