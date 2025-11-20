@@ -7,6 +7,7 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatIcon } from '@angular/material/icon';
 import { MatToolbar } from '@angular/material/toolbar';
 import { RouterLink } from '@angular/router';
+import { SectionComponent } from '../../components/section/section.component';
 
 @Component({
   selector: 'app-view-book-page',
@@ -15,7 +16,8 @@ import { RouterLink } from '@angular/router';
     MatProgressSpinner,
     MatIcon,
     MatToolbar,
-    RouterLink
+    RouterLink,
+    SectionComponent
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',

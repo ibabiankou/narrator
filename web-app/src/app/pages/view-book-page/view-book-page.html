@@ -21,7 +21,7 @@
           </div>
           <div class="sections">
             @for (section of page.sections; track section.section_index) {
-              <p>{{ section.content }}</p>
+              <app-section [section]="section"></app-section>
             }
           </div>
         </div>
