@@ -1,1 +1,3 @@
-<p>{{ section().content }}</p>
+@for (paragraph of getParagraphs(); track paragraph) {
+  <p>{{ paragraph }}</p>
+}

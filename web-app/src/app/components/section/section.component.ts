@@ -9,4 +9,8 @@ import { Section } from '../../core/models/books.dto';
 })
 export class SectionComponent {
   section = input.required<Section>();
+
+  getParagraphs() {
+    return this.section().content.split('\n');
+  }
 }
