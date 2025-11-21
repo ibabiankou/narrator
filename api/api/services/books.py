@@ -5,7 +5,7 @@ from pypdf import PdfReader, PdfWriter
 from sqlalchemy import update, delete
 
 from api import get_logger
-from api.models.models import Book, Section, DbSession, BookStatus
+from api.models.db import Book, Section, DbSession, BookStatus
 from api.services.files import FilesService
 from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader
 

@@ -5,7 +5,6 @@ Revises: d8df8166266c
 Create Date: 2025-11-18 11:10:18.637023
 
 """
-from datetime import UTC, datetime
 from typing import Sequence, Union
 
 from alembic import op

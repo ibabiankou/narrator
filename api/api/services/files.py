@@ -9,7 +9,7 @@ from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 
 from api import get_logger
-from api.models.models import TempFile, Book
+from api.models.db import TempFile, Book
 
 LOG = get_logger(__name__)
 boto3.set_stream_logger('botocore.endpoint', logging.DEBUG)

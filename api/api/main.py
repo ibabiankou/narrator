@@ -28,10 +28,6 @@ base_url_router = APIRouter(prefix="/api")
 def health():
     return {"status": "ok"}
 
-@base_url_router.get("/test")
-def test(files_service: FilesService = Depends()):
-    pass
-
 
 base_url_router.include_router(files_router, prefix="/files")
 base_url_router.include_router(books_router, prefix="/books")
