@@ -1,0 +1,18 @@
+from fastapi import APIRouter, HTTPException
+
+from api import SessionDep, get_logger
+from api.models import db
+
+LOG = get_logger(__name__)
+
+sections_router = APIRouter()
+
+
+@sections_router.delete("/{section_id}", status_code=204)
+def delete_section(section_id: int, session: SessionDep):
+    section = session.get(db.Section, section_id)
+    if section is None:
+        raise HTTPException(status_code=404, detail="Section not found")
+
+    session.delete(section)
+    session.commit()

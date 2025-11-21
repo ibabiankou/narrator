@@ -155,16 +155,3 @@ def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesSe
     if response_dict is None:
         raise HTTPException(status_code=404, detail="Page not found")
     return Response(content=response_dict["body"], media_type=response_dict["content_type"])
-
-
-@books_router.delete("/{book_id}/sections/{section_id}", status_code=204)
-def delete_section(book_id: uuid.UUID, section_id: int, session: SessionDep):
-    section = session.get(db.Section, section_id)
-    if section is None:
-        raise HTTPException(status_code=404, detail="Section not found")
-
-    if section.book_id != book_id:
-        raise HTTPException(status_code=400, detail="Section does not belong to this book")
-
-    session.delete(section)
-    session.commit()
