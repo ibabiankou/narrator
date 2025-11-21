@@ -1,14 +1,18 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { Section } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
-import { BooksService } from '../../core/services/books.service';
+import { MatInput } from '@angular/material/input';
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { SectionsService } from '../../core/services/sections.service';
 
 @Component({
   selector: 'app-section',
   imports: [
     MatIcon,
-    MatIconButton
+    MatIconButton,
+    MatInput,
+    CdkTextareaAutosize
   ],
   templateUrl: './section.component.html',
   styleUrl: './section.component.scss',
@@ -16,8 +20,9 @@ import { BooksService } from '../../core/services/books.service';
 export class SectionComponent {
   section = input.required<Section>();
   sectionDeleted = output();
+  isEditing = signal(false)
 
-  constructor(private bookService: BooksService) {
+  constructor(private sectionsService: SectionsService) {
   }
 
   getParagraphs() {
@@ -25,11 +30,28 @@ export class SectionComponent {
   }
 
   deleteSection() {
-    this.bookService.deleteSection(this.section().book_id, this.section().id)
+    this.sectionsService.deleteSection(this.section().id)
       .subscribe({
         next: () => {
           this.sectionDeleted.emit();
         }
       })
+  }
+
+  editSection() {
+    this.isEditing.set(true);
+  }
+
+  saveSection(value: string) {
+    this.section().content = value;
+    this.sectionsService.updateSection(this.section()).subscribe({
+      next: () => {
+        this.isEditing.set(false);
+      }
+    });
+  }
+
+  cancelEditing() {
+    this.isEditing.set(false);
   }
 }

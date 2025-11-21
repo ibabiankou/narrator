@@ -1,11 +1,23 @@
-<div class="top-right-controls controls">
-  <button matIconButton aria-label="Edit section">
-    <mat-icon>edit</mat-icon>
-  </button>
-  <button matIconButton aria-label="Delete section" (click)="deleteSection()">
-    <mat-icon>delete_forever</mat-icon>
-  </button>
-</div>
-@for (paragraph of getParagraphs(); track paragraph) {
-  <p>{{ paragraph }}</p>
+@if (isEditing()) {
+  <div class="top-right-controls controls keep-visible">
+    <button matIconButton aria-label="Cancel changes" (click)="cancelEditing()">
+      <mat-icon>close</mat-icon>
+    </button>
+    <button matIconButton aria-label="Save changes" (click)="saveSection(textArea.value)">
+      <mat-icon>save</mat-icon>
+    </button>
+  </div>
+  <textarea matInput [cdkTextareaAutosize]="true" #textArea>{{section().content}}</textarea>
+} @else {
+  <div class="top-right-controls controls">
+    <button matIconButton aria-label="Edit section" (click)="editSection()">
+      <mat-icon>edit</mat-icon>
+    </button>
+    <button matIconButton aria-label="Delete section" (click)="deleteSection()">
+      <mat-icon>delete_forever</mat-icon>
+    </button>
+  </div>
+  @for (paragraph of getParagraphs(); track paragraph) {
+    <p>{{ paragraph }}</p>
+  }
 }
