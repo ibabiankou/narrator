@@ -73,12 +73,6 @@ class BookService:
 
         return pages
 
-    def delete_sections(self, book: Book):
-        with DbSession() as session:
-            stmt = delete(Section).where(Section.book_id == book.id)
-            session.execute(stmt)
-            session.commit()
-
 def split_into_sections(pdf_reader: PdfReader):
     sections = []
 

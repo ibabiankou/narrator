@@ -11,6 +11,7 @@ from api.models import db, api
 from api.models.db import TempFile, BookStatus
 from api.services.books import BookService
 from api.services.files import FilesService
+from api.services.sections import SectionService
 
 LOG = get_logger(__name__)
 
@@ -89,10 +90,11 @@ def get_book(book_id: uuid.UUID, session: SessionDep) -> api.BookDetails:
 
 
 @books_router.post("/{book_id}/reprocess")
-def get_book(book_id: uuid.UUID,
+def reprocess_book(book_id: uuid.UUID,
              session: SessionDep,
              background_tasks: BackgroundTasks,
-             book_service: BookService = Depends()):
+             book_service: BookService = Depends(),
+             section_service: SectionService = Depends()):
     book = session.get(db.Book, book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -100,7 +102,7 @@ def get_book(book_id: uuid.UUID,
     session.execute(update(db.Book).where(db.Book.id == book.id).values(status=BookStatus.processing))
     session.commit()
 
-    book_service.delete_sections(book)
+    section_service.delete_sections(book.id)
 
     background_tasks.add_task(book_service.extract_text, book)
 

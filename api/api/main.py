@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
@@ -5,8 +7,15 @@ from starlette.middleware.gzip import GZipMiddleware
 from api.books import books_router
 from api.files import files_router
 from api.sections import sections_router
+from api.services.sections import SpeechGenerationQueue
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    SpeechGenerationQueue.singleton = SpeechGenerationQueue()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 origins = [
     "http://localhost",
     "http://localhost:4200",

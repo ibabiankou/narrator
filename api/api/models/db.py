@@ -45,6 +45,15 @@ class Book(Base):
     created_time: Mapped[datetime.datetime]
     status: Mapped[str]
 
+
+class SpeechStatus(StrEnum):
+    missing = "missing"
+    queued = "queued"
+    generating = "generating"
+    failed = "failed"
+    ready = "ready"
+
+
 class Section(Base):
     __tablename__ = "sections"
 
@@ -55,3 +64,12 @@ class Section(Base):
     section_index: Mapped[int]
 
     content: Mapped[str]
+    phonemes: Mapped[Optional[str]]
+
+    speech_status: Mapped[str] = mapped_column(default=SpeechStatus.missing.value)
+    speech_file: Mapped[Optional[str]]
+
+    def __repr__(self) -> str:
+        return (f"Section(id={self.id}, book_id={self.book_id}, page_index={self.page_index}, "
+                f"section_index={self.section_index}, speech_status={self.speech_status}, "
+                f"speech_file={self.speech_file})")
