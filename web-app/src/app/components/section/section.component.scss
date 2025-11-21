@@ -31,33 +31,6 @@
   transform: translateX(0);
 }
 
-/* Styling for the container that holds the top middle controls. */
-.top-mid-controls {
-  top: -30px;
-  left: 50%; /* Moves the container's left edge to the center of the host */
-  /* -50% horizontal shift pulls the container back by half its own width,
-     thus perfectly centering it.
-     The 10px vertical shift pushes it down for the "slide up" animation effect.
-    */
-  transform: translate(-50%, 10px);
-}
-:host:hover .top-mid-controls {
-  transform: translate(-50%, 0);
-}
-
-/* Styling for the container that holds the bottom middle controls. */
-.bottom-mid-controls {
-  bottom: -30px;
-  left: 50%; /* Moves the container's left edge to the center of the host */
-
-  /* -50% horizontal shift pulls the container back by half its own width, thus perfectly centering it.
-     The 10px vertical shift pushes it down for the "slide up" animation effect. */
-  transform: translate(-50%, -10px);
-}
-:host:hover .bottom-mid-controls {
-  transform: translate(-50%, 0);
-}
-
 .controls {
   position: absolute;
   opacity: 0; // Hidden by default, show on hover.
