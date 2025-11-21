@@ -17,6 +17,15 @@
       <mat-icon>delete_forever</mat-icon>
     </button>
   </div>
+  <div class="mid-right-controls controls">
+    <button matIconButton [matMenuTriggerFor]="menu" aria-label="Generate speech">
+      <mat-icon>text_to_speech</mat-icon>
+    </button>
+    <mat-menu #menu="matMenu">
+      <button mat-menu-item>For all missing above</button>
+      <button mat-menu-item>Only for this one</button>
+    </mat-menu>
+  </div>
   @for (paragraph of getParagraphs(); track paragraph) {
     <p>{{ paragraph }}</p>
   }

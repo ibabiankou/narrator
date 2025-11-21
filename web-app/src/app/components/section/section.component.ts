@@ -5,6 +5,7 @@ import { MatIconButton } from '@angular/material/button';
 import { MatInput } from '@angular/material/input';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { SectionsService } from '../../core/services/sections.service';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 
 @Component({
   selector: 'app-section',
@@ -12,7 +13,10 @@ import { SectionsService } from '../../core/services/sections.service';
     MatIcon,
     MatIconButton,
     MatInput,
-    CdkTextareaAutosize
+    CdkTextareaAutosize,
+    MatMenuTrigger,
+    MatMenu,
+    MatMenuItem
   ],
   templateUrl: './section.component.html',
   styleUrl: './section.component.scss',
