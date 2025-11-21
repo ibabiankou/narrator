@@ -38,10 +38,10 @@ def create_book(book: api.CreateBookRequest,
 
     # Store book metadata in DB
     book = db.Book(id=book.id,
-                       title=book.title,
-                       file_name=pdf_temp_file.file_name,
-                       created_time=datetime.now(UTC),
-                       status=BookStatus.processing)
+                   title=book.title,
+                   file_name=pdf_temp_file.file_name,
+                   created_time=datetime.now(UTC),
+                   status=BookStatus.processing)
     try:
         session.add(book)
         session.commit()
@@ -54,9 +54,9 @@ def create_book(book: api.CreateBookRequest,
     background_tasks.add_task(book_service.extract_text, book)
 
     return api.BookDetails(id=book.id,
-                       title=book.title,
-                       pdf_file_name=pdf_temp_file.file_name,
-                       status=book.status)
+                           title=book.title,
+                           pdf_file_name=pdf_temp_file.file_name,
+                           status=book.status)
 
 
 @books_router.get("/")
@@ -68,10 +68,10 @@ def get_books(session: SessionDep) -> list[api.BookDetails]:
     resp = []
     for book in books:
         resp.append(api.BookDetails(id=book.id,
-                                title=book.title,
-                                pdf_file_name=book.file_name,
-                                number_of_pages=book.number_of_pages,
-                                status=book.status))
+                                    title=book.title,
+                                    pdf_file_name=book.file_name,
+                                    number_of_pages=book.number_of_pages,
+                                    status=book.status))
 
     return resp
 
@@ -83,18 +83,18 @@ def get_book(book_id: uuid.UUID, session: SessionDep) -> api.BookDetails:
         raise HTTPException(status_code=404, detail="Book not found")
 
     return api.BookDetails(id=book.id,
-                       title=book.title,
-                       pdf_file_name=book.file_name,
-                       number_of_pages=book.number_of_pages,
-                       status=book.status)
+                           title=book.title,
+                           pdf_file_name=book.file_name,
+                           number_of_pages=book.number_of_pages,
+                           status=book.status)
 
 
 @books_router.post("/{book_id}/reprocess")
 def reprocess_book(book_id: uuid.UUID,
-             session: SessionDep,
-             background_tasks: BackgroundTasks,
-             book_service: BookService = Depends(),
-             section_service: SectionService = Depends()):
+                   session: SessionDep,
+                   background_tasks: BackgroundTasks,
+                   book_service: BookService = Depends(),
+                   section_service: SectionService = Depends()):
     book = session.get(db.Book, book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -108,7 +108,8 @@ def reprocess_book(book_id: uuid.UUID,
 
 
 @books_router.get("/{book_id}/content")
-def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int = 0, limit: int = 10) -> api.BookContent:
+def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int = 0,
+                     limit: int = 10) -> api.BookContent:
     book = session.get(db.Book, book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -143,10 +144,10 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
 
     for section in db_sections:
         book_section = api.BookSection(id=section.id,
-                                   book_id=section.book_id,
-                                   page_index=section.page_index,
-                                   section_index=section.section_index,
-                                   content=section.content)
+                                       book_id=section.book_id,
+                                       page_index=section.page_index,
+                                       section_index=section.section_index,
+                                       content=section.content)
         pages_dict[section.page_index].sections.append(book_section)
     return api.BookContent(pages=pages)
 
@@ -156,4 +157,12 @@ def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesSe
     response_dict = file_service.get_book_page_file(book_id, page_file_name)
     if response_dict is None:
         raise HTTPException(status_code=404, detail="Page not found")
+    return Response(content=response_dict["body"], media_type=response_dict["content_type"])
+
+
+@books_router.get("/{book_id}/speech/{file_name}")
+def get_speech_file(book_id: uuid.UUID, file_name: str, file_service: FilesService = Depends()):
+    response_dict = file_service.get_speech_file(book_id, file_name)
+    if response_dict is None:
+        raise HTTPException(status_code=404, detail="Speech file not found")
     return Response(content=response_dict["body"], media_type=response_dict["content_type"])

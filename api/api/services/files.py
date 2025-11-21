@@ -66,15 +66,37 @@ class FilesService:
 
     def get_book_page_file(self, book_id: uuid.UUID, page_file_name: str) -> dict | None:
         """Get the book page file from the object store."""
-        remote_file_path = f"{book_id}/pages/{page_file_name}"
+        return self._get_object(f"{book_id}/pages/{page_file_name}")
+
+
+    def _get_object(self, key: str) -> dict | None:
         try:
-            pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
+            s3_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
             return {
-                "body": pdf_object["Body"].read(),
-                "content_type": pdf_object["ContentType"]
+                "body": s3_object["Body"].read(),
+                "content_type": s3_object["ContentType"]
             }
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
                 return None
             else:
                 raise e
+
+    def store_speech_file(self, book_id: uuid.UUID, file_name: str, speech_data: bytes):
+        """Store speech data to the object store."""
+        remote_file_path = f"{book_id}/speech/{file_name}"
+
+        try:
+            mime_type, encoding = mimetypes.guess_type(remote_file_path)
+            self.s3_client.put_object(
+                Body=speech_data,
+                Bucket=self.bucket_name,
+                Key=remote_file_path,
+                ContentType=mime_type)
+        except ClientError as e:
+            logging.error(e)
+            raise e
+
+    def get_speech_file(self, book_id: uuid.UUID, file_name: str) -> dict | None:
+        """Get the speech file from the object store."""
+        return self._get_object(f"{book_id}/speech/{file_name}")

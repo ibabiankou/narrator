@@ -1,4 +1,6 @@
+import logging
 from contextlib import asynccontextmanager
+from http.client import HTTPConnection
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +11,14 @@ from api.files import files_router
 from api.sections import sections_router
 from api.services.sections import SpeechGenerationQueue
 
+
+# logging.basicConfig()
+# logging.getLogger("sqlalchemy.engine").setLevel(logging.DEBUG)
+#
+# # Debug requests library
+# HTTPConnection.debuglevel = 1
+# logging.getLogger("requests.packages.urllib3").setLevel(logging.DEBUG)
+# logging.getLogger("requests.packages.urllib3").propagate = True
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
