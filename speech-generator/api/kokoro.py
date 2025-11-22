@@ -1,3 +1,5 @@
+from io import BytesIO
+
 import numpy as np
 from kokoro import KModel, KPipeline
 from soundfile import SoundFile
@@ -32,22 +34,22 @@ class KokoroService:
 
         return "\n".join(phonemes)
 
-    def synthesize(self, phonemes: str) -> bytes:
-        file_name = "audio.wav"
-        with SoundFile(file_name, mode="w", samplerate=24000, channels=1) as sf:
+    def synthesize(self, phonemes: str, voice: str = "am_adam", speed: float = 1.1) -> dict:
+        audio_buf = BytesIO()
+        audio_format = "mp3"
+        with SoundFile(audio_buf, mode="w", format=audio_format, samplerate=24000, channels=1, compression_level=0.99) as sf:
             chunks = phonemes.split("\n")
             for chunk in chunks:
-                for result in self.pipeline.generate_from_tokens(
-                        tokens=chunk,
-                        voice="am_adam"
-                ):
+                if not chunk.strip():
+                    continue
+                for result in self.pipeline.generate_from_tokens(tokens=chunk, voice=voice, speed=speed):
                     sf.write(result.audio)
                 sf.write(self._silence(0.25))
-
-        with open(file_name, "rb") as f:
-            return f.read()
+        audio_buf.seek(0)
+        return {
+            "content": audio_buf.read(),
+            "content_type": f"audio/{audio_format}",
+        }
 
     def _silence(self, duration_s: float):
-        silence_samples = int(duration_s * 24000)  # 24kHz sample rate
-        silence_audio = np.zeros(silence_samples, dtype=np.int16)
-        return silence_audio
+        return np.zeros(int(duration_s * 24000), dtype=np.int16) # 24kHz sample rate

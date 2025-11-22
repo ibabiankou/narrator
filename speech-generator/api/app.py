@@ -43,7 +43,7 @@ class SynthesizeRequest(BaseModel):
 @base_url_router.post("/synthesize")
 def synthesize(request: SynthesizeRequest):
     result = KokoroService.instance.synthesize(request.phonemes)
-    return Response(content=result, media_type="audio/wav")
+    return Response(content=result.get("content"), media_type=result.get("content_type"))
 
 
 app.include_router(base_url_router)
