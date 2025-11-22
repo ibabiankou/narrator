@@ -34,7 +34,7 @@ class SectionService:
             SpeechGenerationQueue.singleton.put(self, section)
 
     def store_speech_file(self, section: Section, speech_data: bytes) -> str:
-        file_name = f"{section.id}.wav"
+        file_name = f"{section.id}.mp3"
         self.files_service.store_speech_file(section.book_id, file_name, speech_data)
         return file_name
 

@@ -7,7 +7,7 @@ services:
       S3_ENDPOINT: http://s3:4566
       S3_ACCESS: test
       S3_SECRET: test
-      KOKORO_BASEURL: https://kokoro.in.ggnt.eu
+      KOKORO_BASEURL: http://speech:8001
     depends_on:
       pg:
         condition: service_healthy
@@ -57,4 +57,4 @@ services:
     image: ibabiankou/home-lab:narrator-speech
     build: ./speech-generator
     ports:
-      - "8001:8000"
+      - "8001:8001"

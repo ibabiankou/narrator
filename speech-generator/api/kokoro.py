@@ -37,7 +37,7 @@ class KokoroService:
     def synthesize(self, phonemes: str, voice: str = "am_adam", speed: float = 1.1) -> dict:
         audio_buf = BytesIO()
         audio_format = "mp3"
-        with SoundFile(audio_buf, mode="w", format=audio_format, samplerate=24000, channels=1, compression_level=0.99) as sf:
+        with SoundFile(audio_buf, mode="w", format=audio_format, samplerate=24000, channels=1, compression_level=0.5) as sf:
             chunks = phonemes.split("\n")
             for chunk in chunks:
                 if not chunk.strip():

@@ -8,19 +8,17 @@ class KokoroClient:
         self.base_url = os.getenv("KOKORO_BASEURL")
 
     def phonemize(self, text: str) -> str:
-        url = f"{self.base_url}/dev/phonemize"
+        url = f"{self.base_url}/api/phonemize"
         request_json = {
-            "text": text,
-            "language": "a"
+            "text": text
         }
         response = self.session.post(url, json=request_json)
         return response.json()["phonemes"]
 
     def generate_from_phonemes(self, phonemes: str) -> bytes:
-        url = f"{self.base_url}/dev/generate_from_phonemes"
+        url = f"{self.base_url}/api/synthesize"
         request_json = {
-            "phonemes": phonemes,
-            "voice": "am_adam",
+            "phonemes": phonemes
         }
         response = self.session.post(url, json=request_json)
         return response.content
