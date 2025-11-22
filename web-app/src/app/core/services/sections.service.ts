@@ -21,4 +21,11 @@ export class SectionsService {
   deleteSection(sectionId: number) {
     return this.http.delete(`${this.apiUrl}/${sectionId}`);
   }
+
+  generateSpeech(id: number, mode: string) {
+    const request = {
+      "mode": mode
+    }
+    return this.http.post(`${this.apiUrl}/${id}/generate-speech`, request);
+  }
 }

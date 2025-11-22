@@ -58,4 +58,15 @@ export class SectionComponent {
   cancelEditing() {
     this.isEditing.set(false);
   }
+
+  generateSpeech(id: number, mode: string) {
+    this.sectionsService.generateSpeech(id, mode)
+      .subscribe({
+        next: () => {
+          console.log("Speech generation triggered...");
+          // TODO: Response should include IDs of all sections for which speech generation was triggered.
+          //  Poll their status.
+        }
+      })
+  }
 }
