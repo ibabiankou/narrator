@@ -1,8 +1,19 @@
-from fastapi import FastAPI, APIRouter
-from kokoro import KPipeline
-import soundfile as sf
+from contextlib import asynccontextmanager
 
-app = FastAPI()
+from pydantic import BaseModel
+
+from api.kokoro import KokoroService
+from fastapi import FastAPI, APIRouter, Response
+from kokoro import KPipeline
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    KokoroService.initialize()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 base_url_router = APIRouter(prefix="/api")
 
@@ -14,16 +25,25 @@ def health():
 
 pipeline = KPipeline(lang_code='a')
 
-@base_url_router.get("/test")
-def test():
-    text = "Lets test this thing out..."
 
-    generator = pipeline(text, voice='af_heart')
-    for i, (gs, ps, audio) in enumerate(generator):
-        print(i, gs, ps)
-        sf.write(f'{i}.wav', audio, 24000)
+class PhonemizeRequest(BaseModel):
+    text: str
 
-    return {"status": "ok"}
+
+@base_url_router.post("/phonemize")
+def phonemize(request: PhonemizeRequest):
+    phonemes = KokoroService.instance.phonemize(request.text)
+    return {"phonemes": phonemes}
+
+
+class SynthesizeRequest(BaseModel):
+    phonemes: str
+
+
+@base_url_router.post("/synthesize")
+def synthesize(request: SynthesizeRequest):
+    result = KokoroService.instance.synthesize(request.phonemes)
+    return Response(content=result, media_type="audio/wav")
 
 
 app.include_router(base_url_router)
