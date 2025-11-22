@@ -22,11 +22,11 @@ class KokoroService:
             LOG.warning("Initialize is called after already initialized")
         cls.instance = KokoroService()
 
-    def phonemize(self, text: str):
+    def phonemize(self, text: str, voice: str = "am_adam"):
         phonemes = []
         for result in self.pipeline(
             text=text,
-            voice="am_adam",
+            voice=voice,
             split_pattern= r'\n',
             model=None
         ):

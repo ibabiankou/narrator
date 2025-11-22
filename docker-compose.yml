@@ -15,6 +15,9 @@ services:
       s3:
         condition: service_healthy
         restart: true
+      speech:
+        condition: service_started
+        restart: true
     ports:
       - "8000:8000"
   pg:
@@ -36,7 +39,6 @@ services:
     environment:
       - DEBUG=${DEBUG:-0}
     healthcheck:
-#      test: [ "CMD", "awslocal", "s3api", "wait", "bucket-exists", "--bucket", "narrator" ]
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
       interval: 5s
       retries: 5
@@ -50,3 +52,9 @@ services:
     build: ./web-app
     ports:
       - "80:80"
+
+  speech:
+    image: ibabiankou/home-lab:narrator-speech
+    build: ./speech-generator
+    ports:
+      - "8001:8000"
