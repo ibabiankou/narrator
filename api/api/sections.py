@@ -51,7 +51,8 @@ def generate_speech(section_id: int,
         stmt = (session.query(db.Section)
                 .where(db.Section.book_id == section.book_id)
                 .where(db.Section.section_index <= section.section_index)
-                .where(db.Section.speech_status == db.SpeechStatus.missing))
+                .where(db.Section.speech_status == db.SpeechStatus.missing)
+                .order_by(db.Section.section_index))
         sections = session.execute(stmt).scalars().all()
     else:
         raise HTTPException(status_code=400, detail="Unknown speech generation mode")
