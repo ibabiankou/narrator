@@ -1,4 +1,4 @@
-name: API Docker Image CI
+name: Speech Generator Docker Image CI
 
 on:
   push:
