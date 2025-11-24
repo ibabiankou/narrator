@@ -2,7 +2,7 @@
   <button matIconButton class="amplitude-prev">
     <mat-icon>skip_previous</mat-icon>
   </button>
-  <button matIconButton class="amplitude-play-pause">
+  <button matIconButton class="play-pause" (click)="playPause()">
     @if (isPlaying()) {
       <mat-icon>pause</mat-icon>
     } @else {
@@ -12,8 +12,4 @@
   <button matIconButton class="amplitude-next">
     <mat-icon>skip_next</mat-icon>
   </button>
-
-  <div class="amplitude-prev" id="previous"></div>
-  <div class="amplitude-play-pause" id="play-pause"></div>
-  <div class="amplitude-next" id="next"></div>
 </div>

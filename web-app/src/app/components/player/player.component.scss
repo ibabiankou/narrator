@@ -20,7 +20,7 @@ div#controls {
   display: flex;
   align-items: center;
 
-  .amplitude-play-pause {
+  .play-pause {
     $button_size: 36px;
 
     height: calc($button_size + 2 * 8px);
