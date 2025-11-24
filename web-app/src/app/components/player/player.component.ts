@@ -22,12 +22,16 @@ export class PlayerComponent implements OnInit {
   isPlaying = signal<boolean>(false);
   baseUrl = environment.api_base_url
 
-  readySections = computed(() => this.sections()
-    .filter(section => section.speech_status == SpeechStatus.ready));
-  queuedSections = computed(() => this.sections()
-    .filter(section => section.speech_status == SpeechStatus.queued));
-  missingSections = computed(() => this.sections()
-    .filter(section => section.speech_status == SpeechStatus.missing));
+  readyWidth = computed(() => {
+    const total = this.sections().length
+    const ready = this.sections().filter(section => section.speech_status == SpeechStatus.ready).length
+    return ready / total * 100;
+  });
+  missingWidth = computed(() => {
+    const total = this.sections().length
+    const missing = this.sections().filter(section => section.speech_status == SpeechStatus.missing).length;
+    return missing / total * 100;
+  });
 
   constructor() {
     effect(() => {

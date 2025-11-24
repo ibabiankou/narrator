@@ -1,3 +1,5 @@
+@use '@angular/material' as mat;
+
 :host {
   position: fixed;
   bottom: 0;
@@ -13,6 +15,56 @@
   box-shadow: 0 -6px 8px rgba(149, 149, 149, 0.3);
 
   z-index: 50;
+
+  @include mat.slider-overrides((
+    active-track-color: orange,
+    disabled-inactive-track-color: transparent,
+  ));
+}
+
+div.progress {
+  position: absolute;
+  top: 0;
+
+  width: 100%;
+  height: 4px;
+
+  display: inline-block;
+  justify-content: start;
+
+  > * {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none !important;
+    background-color: rgba(255, 255, 255, 0);
+    left: 0;
+    width: 100%;
+    margin: 0;
+    z-index: 5;
+  }
+
+  .available {
+    background-color: var(--mat-sys-primary);
+    left: 0;
+    width: 100%;
+  }
+
+  .queued {
+    background-color: var(--mat-sys-background);
+    width: 100%;
+    z-index: -2;
+  }
+
+  .unavailable {
+    right: 0;
+    width: 60%;
+    background-color: rgba(159, 174, 180, 0.48);
+    z-index: -1;
+  }
 }
 
 
