@@ -1,10 +1,3 @@
-<div class="progress">
-  <input type="range" class="slider-input" [style]="{ width: readyWidth()  + '%' }"
-         min="0" max="10000" value="0" />
-  <div class="available" [style]="{ width: readyWidth()  + '%' }" ></div>
-  <div class="queued"></div>
-  <div class="unavailable" [style]="{ width: missingWidth()  + '%' }"></div>
-</div>
 <div id="controls">
   <button matIconButton class="amplitude-prev">
     <mat-icon>skip_previous</mat-icon>
@@ -19,4 +12,13 @@
   <button matIconButton class="amplitude-next">
     <mat-icon>skip_next</mat-icon>
   </button>
+
+</div>
+
+<div class="progress">
+  <input type="range" class="slider-input" [style]="{ width: readyWidth()  + '%' }"
+         min="0" max="10000" value="0" />
+  <div class="available" [style]="{ width: readyWidth()  + '%' }" ></div>
+  <div class="queued"></div>
+  <div class="unavailable" [style]="{ width: missingWidth()  + '%' }"></div>
 </div>
