@@ -1,17 +1,24 @@
 <div id="controls">
-  <button matIconButton class="amplitude-prev">
-    <mat-icon>skip_previous</mat-icon>
-  </button>
-  <button matIconButton class="play-pause" (click)="playPause()">
-    @if (isPlaying()) {
-      <mat-icon>pause</mat-icon>
-    } @else {
-      <mat-icon>play_arrow</mat-icon>
-    }
-  </button>
-  <button matIconButton class="amplitude-next">
-    <mat-icon>skip_next</mat-icon>
-  </button>
+  <div class="main-controls">
+    <button matIconButton class="amplitude-prev">
+      <mat-icon>skip_previous</mat-icon>
+    </button>
+    <button matIconButton class="play-pause" (click)="playPause()">
+      @if (isPlaying()) {
+        <mat-icon>pause</mat-icon>
+      } @else {
+        <mat-icon>play_arrow</mat-icon>
+      }
+    </button>
+    <button matIconButton class="amplitude-next">
+      <mat-icon>skip_next</mat-icon>
+    </button>
+  </div>
+  <div class="settings">
+    <button matIconButton>
+      <mat-icon>sync_arrow_down</mat-icon>
+    </button>
+  </div>
 
 </div>
 

@@ -63,9 +63,6 @@ export class PlayerComponent implements OnInit {
       songs: songs,
       playback_speed: 1.1
     });
-
-    interval(1000).pipe(take(25))
-      .subscribe(x => console.log("Songs in playlist: ", Amplitude.getSongs().length));
   }
 
   // TODO: Implement progress bar. Available, queued, unavailable.
