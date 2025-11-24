@@ -3,7 +3,6 @@ import { Section, SpeechStatus } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import { environment } from '../../../environments/environment';
-import { interval, take } from 'rxjs';
 
 declare const Amplitude: any;
 
@@ -22,6 +21,7 @@ export class PlayerComponent implements OnInit {
   isPlaying = signal<boolean>(false);
   baseUrl = environment.api_base_url
 
+  currentProgress = signal<number>(25);
   readyWidth = computed(() => {
     const total = this.sections().length
     const ready = this.sections().filter(section => section.speech_status == SpeechStatus.ready).length
@@ -38,15 +38,30 @@ export class PlayerComponent implements OnInit {
       let sectionsInPlaylist = new Set<number>();
       Amplitude.getSongs().forEach((song: { section_id: number; }) => sectionsInPlaylist.add(song.section_id));
 
+      const songCount = sectionsInPlaylist.size;
       this.sections()
         .filter(section => section.speech_status == SpeechStatus.ready)
         .filter(section => !sectionsInPlaylist.has(section.id))
-        .forEach(section => Amplitude.addSong(
-          {
-            "section_id": section.id,
-            "url": `${this.baseUrl}/books/${section.book_id}/speech/${section.speech_file}`
+        // .map(section => {
+        //   return {
+        //     "section_id": section.id,
+        //     "url": `${this.baseUrl}/books/${section.book_id}/speech/${section.speech_file}`
+        //   }
+        // });
+        .forEach(section => {
+            Amplitude.addSong(
+              {
+                "section_id": section.id,
+                "url": `${this.baseUrl}/books/${section.book_id}/speech/${section.speech_file}`
+              });
+            console.log("added", section.id);
           }
-        ))
+        );
+      console.log(Amplitude.getSongs())
+      if (songCount == 0) {
+
+        // Amplitude.skipTo(0, 0);
+      }
     });
   }
 
@@ -60,9 +75,9 @@ export class PlayerComponent implements OnInit {
       });
 
     Amplitude.init({
-      songs: songs,
       playback_speed: 1.1
     });
+    Amplitude.setDebug(true);
   }
 
   // TODO: Implement progress bar. Available, queued, unavailable.
@@ -77,10 +92,13 @@ export class PlayerComponent implements OnInit {
   //  and let the page do the scrolling.
 
   playPause() {
+    console.log("Play/pause clicked");
     if (this.isPlaying()) {
       Amplitude.pause();
+      console.log("pause");
     } else {
       Amplitude.play();
+      console.log("play");
     }
     this.isPlaying.update(value => !value);
   }

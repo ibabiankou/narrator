@@ -17,6 +17,10 @@
     active-track-color: orange,
     disabled-inactive-track-color: transparent,
   ));
+
+  > * {
+    padding: 0 16px;
+  }
 }
 
 div#controls {
@@ -58,45 +62,68 @@ div#controls {
   }
 }
 
-div.progress {
+.progress {
+  display: block;
+
+  height: 45px;
+}
+
+$slider_height: 8px;
+.slider {
+  position: relative;
 
   width: 100%;
-  height: 4px;
+  height: $slider_height;
 
-  display: inline-block;
-  justify-content: start;
-
-  > * {
+  .now {
     position: absolute;
-    width: 100%;
-    height: 100%;
-  }
+    height: $slider_height;
 
-  input[type="range"] {
-    -webkit-appearance: none !important;
-    background-color: rgba(255, 255, 255, 0);
+    background-color: var(--mat-sys-primary);
     left: 0;
-    width: 100%;
-    margin: 0;
-    z-index: 5;
+    width: 10%; // Changed programmatically
   }
 
   .available {
-    background-color: var(--mat-sys-primary);
+    position: absolute;
+    height: $slider_height;
+
+    background-color: var(--mat-sys-primary-fixed-dim);
     left: 0;
-    width: 100%;
+    width: 40%; // Changed programmatically
+    z-index: -1;
   }
 
   .queued {
+    position: absolute;
+    height: $slider_height;
+
     background-color: var(--mat-sys-background);
     width: 100%;
     z-index: -2;
   }
 
   .unavailable {
+    position: absolute;
+    height: $slider_height;
+
     right: 0;
-    width: 60%;
+    width: 60%; // Changed programmatically
     background-color: rgba(159, 174, 180, 0.48);
     z-index: -1;
+  }
+}
+
+.times {
+  margin-top: 5px;
+
+  .current-progress {
+    position: absolute;
+    left: 16px;
+  }
+
+  .remaining-progress {
+    position: absolute;
+    right: 16px;
   }
 }

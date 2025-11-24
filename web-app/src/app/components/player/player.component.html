@@ -23,9 +23,14 @@
 </div>
 
 <div class="progress">
-  <input type="range" class="slider-input" [style]="{ width: readyWidth()  + '%' }"
-         min="0" max="10000" value="0" />
-  <div class="available" [style]="{ width: readyWidth()  + '%' }" ></div>
-  <div class="queued"></div>
-  <div class="unavailable" [style]="{ width: missingWidth()  + '%' }"></div>
+  <div class="slider">
+    <div class="now" [style]="{ width: currentProgress()  + '%' }" ></div>
+    <div class="available" [style]="{ width: readyWidth()  + '%' }" ></div>
+    <div class="queued"></div>
+    <div class="unavailable" [style]="{ width: missingWidth()  + '%' }"></div>
+  </div>
+  <div class="times">
+    <div class="current-progress">12:32</div>
+    <div class="remaining-progress">-18:12</div>
+  </div>
 </div>
