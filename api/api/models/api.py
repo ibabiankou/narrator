@@ -31,7 +31,12 @@ class BookSection(BaseModel):
     book_id: uuid.UUID
     page_index: int
     section_index: int
+
     content: str
+    phonemes: Optional[str]
+
+    speech_status: str
+    speech_file: Optional[str]
 
 
 class BookPage(BaseModel):

@@ -26,7 +26,7 @@
       <button mat-menu-item (click)="generateSpeech(section().id, 'single')">Only for this one</button>
     </mat-menu>
   </div>
-  @for (paragraph of getParagraphs(); track paragraph) {
+  @for (paragraph of getParagraphs(); track section().id.toString().concat($index.toString())) {
     <p>{{ paragraph }}</p>
   }
 }

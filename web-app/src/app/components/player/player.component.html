@@ -1,1 +1,19 @@
-<p>player.component works!</p>
+<div id="controls">
+  <button matIconButton class="amplitude-prev">
+    <mat-icon>skip_previous</mat-icon>
+  </button>
+  <button matIconButton class="amplitude-play-pause">
+    @if (isPlaying()) {
+      <mat-icon>pause</mat-icon>
+    } @else {
+      <mat-icon>play_arrow</mat-icon>
+    }
+  </button>
+  <button matIconButton class="amplitude-next">
+    <mat-icon>skip_next</mat-icon>
+  </button>
+
+  <div class="amplitude-prev" id="previous"></div>
+  <div class="amplitude-play-pause" id="play-pause"></div>
+  <div class="amplitude-next" id="next"></div>
+</div>

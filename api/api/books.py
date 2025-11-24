@@ -147,7 +147,10 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
                                        book_id=section.book_id,
                                        page_index=section.page_index,
                                        section_index=section.section_index,
-                                       content=section.content)
+                                       content=section.content,
+                                       phonemes=section.phonemes,
+                                       speech_status=section.speech_status,
+                                       speech_file=section.speech_file)
         pages_dict[section.page_index].sections.append(book_section)
     return api.BookContent(pages=pages)
 
