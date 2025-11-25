@@ -1,6 +1,13 @@
 import os
 
 import requests
+from pydantic import BaseModel
+
+
+class GeneratedAudio(BaseModel):
+    content: bytes
+    duration: float
+
 
 class KokoroClient:
     def __init__(self):
@@ -15,10 +22,7 @@ class KokoroClient:
         response = self.session.post(url, json=request_json)
         return response.json()["phonemes"]
 
-    def generate_from_phonemes(self, phonemes: str) -> bytes:
+    def generate_from_phonemes(self, phonemes: str) -> GeneratedAudio:
         url = f"{self.base_url}/api/synthesize"
-        request_json = {
-            "phonemes": phonemes
-        }
-        response = self.session.post(url, json=request_json)
-        return response.content
+        response = self.session.post(url, json={"phonemes": phonemes})
+        return GeneratedAudio(content=response.content, duration=float(response.headers["narrator-speech-duration"]))

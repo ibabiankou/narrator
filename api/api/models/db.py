@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import Optional
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, ForeignKey
+from sqlalchemy import create_engine, ForeignKey, inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker
 
 load_dotenv()
@@ -18,7 +18,12 @@ def get_session():
         yield session
 
 class Base(DeclarativeBase):
-    pass
+    def as_dict(self):
+        return {
+            c.key: getattr(self, c.key)
+            for c in self.__mapper__.columns
+            if not c.primary_key
+        }
 
 
 class TempFile(Base):
@@ -81,4 +86,4 @@ class AudioTrack(Base):
     status: Mapped[str] = mapped_column(default=AudioStatus.missing.value)
     file_name: Mapped[Optional[str]]
 
-    duration: Mapped[Optional[int]]
+    duration: Mapped[Optional[float]]

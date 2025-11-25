@@ -43,10 +43,3 @@ class BookPage(BaseModel):
 
 class BookContent(BaseModel):
     pages: list[BookPage]
-
-class GenerateSpeechMode(StrEnum):
-    single = "single"
-    all_missing_before = "all_missing_before"
-
-class GenerateSpeechRequest(BaseModel):
-    mode: GenerateSpeechMode

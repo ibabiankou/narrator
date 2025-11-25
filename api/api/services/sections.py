@@ -1,6 +1,4 @@
-import threading
 import uuid
-from queue import Queue
 
 from fastapi.params import Depends
 from sqlalchemy import delete, update
@@ -25,60 +23,7 @@ class SectionService:
             session.execute(stmt)
             session.commit()
 
-    def generate_speech(self, sections: list[Section]):
-        LOG.info("Enqueueing speech generation for %s sections: \n%s", len(sections), sections)
-
-        self.update_status(sections, db.AudioStatus.queued)
-
-        for section in sections:
-            SpeechGenerationQueue.singleton.put(self, section)
-
-    def store_speech_file(self, section: Section, speech_data: bytes) -> str:
-        file_name = f"{section.id}.mp3"
-        self.files_service.store_speech_file(section.book_id, file_name, speech_data)
-        return file_name
-
-    def update_status(self, sections: list[Section], status: db.AudioStatus):
+    def set_phonemes(self, section_id: int, phonemes: str):
         with DbSession() as session:
-            for section in sections:
-                session.execute(update(db.Section).where(db.Section.id == section.id).values(speech_status=status))
+            session.execute(update(db.Section).where(db.Section.id == section_id).values(phonemes=phonemes))
             session.commit()
-
-    def update_speech_details(self, section_id: int, phonemes: str, file_name: str):
-        with DbSession() as session:
-            session.execute(update(db.Section).where(db.Section.id == section_id)
-                            .values(phonemes=phonemes, speech_file=file_name, speech_status=db.AudioStatus.ready))
-            session.commit()
-
-
-class SpeechGenerationQueue:
-    singleton = None
-
-    def __init__(self):
-        self.queue = Queue()
-        self.thread = threading.Thread(target=self._thread_target, daemon=True)
-        self.thread.start()
-
-    def put(self, section_service: SectionService, section: Section):
-        self.queue.put((section_service, section))
-
-    def _thread_target(self):
-        LOG.info("Starting speech generation thread...")
-        while True:
-            service, section = self.queue.get()
-            try:
-                self._generate_speech(service, section)
-            except Exception:
-                LOG.exception("Error generating speech for section: \n%s", section)
-                service.update_status([section], db.AudioStatus.failed)
-            finally:
-                self.queue.task_done()
-
-    def _generate_speech(self, section_service: SectionService, section: db.Section):
-        LOG.info("Generating speech for section: \n%s", section)
-        section_service.update_status([section], db.AudioStatus.generating)
-        phonemes = section_service.kokoro_client.phonemize(section.content)
-        speech = section_service.kokoro_client.generate_from_phonemes(phonemes)
-        file_name = section_service.store_speech_file(section, speech)
-
-        section_service.update_speech_details(section.id, phonemes, file_name)

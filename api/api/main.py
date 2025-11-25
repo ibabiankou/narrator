@@ -6,10 +6,11 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
+from api.audio import audio_router
 from api.books import books_router
 from api.files import files_router
 from api.sections import sections_router
-from api.services.sections import SpeechGenerationQueue
+from api.services.audiotracks import SpeechGenerationQueue
 
 
 # logging.basicConfig()
@@ -47,6 +48,7 @@ def health():
     return {"status": "ok"}
 
 
+base_url_router.include_router(audio_router, prefix="/audio")
 base_url_router.include_router(files_router, prefix="/files")
 base_url_router.include_router(books_router, prefix="/books")
 base_url_router.include_router(sections_router, prefix="/sections")

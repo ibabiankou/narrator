@@ -45,11 +45,13 @@ class KokoroService:
                 for result in self.pipeline.generate_from_tokens(tokens=chunk, voice=voice, speed=speed):
                     sf.write(result.audio)
                 sf.write(self._silence(0.25))
-        audio_buf.seek(0)
-        return {
-            "content": audio_buf.read(),
-            "content_type": f"audio/{audio_format}",
-        }
+
+            audio_buf.seek(0)
+            return {
+                "content": audio_buf.read(),
+                "duration": float(sf.frames)/sf.samplerate,
+                "content_type": f"audio/{audio_format}",
+            }
 
     def _silence(self, duration_s: float):
         return np.zeros(int(duration_s * 24000), dtype=np.int16) # 24kHz sample rate

@@ -25,12 +25,12 @@ def upgrade() -> None:
         'audio_tracks',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
         sa.Column('book_id', sa.UUID, sa.ForeignKey('books.id'), nullable=False),
-        sa.Column('section_id', sa.Integer, sa.ForeignKey('sections.id'), nullable=False),
+        sa.Column('section_id', sa.Integer, sa.ForeignKey('sections.id'), nullable=False, unique=True),
 
         sa.Column('status', sa.String, nullable=False, default=AudioStatus.missing.value),
 
         sa.Column('file_name', sa.String, nullable=True),
-        sa.Column('duration', sa.Integer, nullable=True),
+        sa.Column('duration', sa.Float, nullable=True),
     )
 
     # Not moving data, starting from a clean state...
