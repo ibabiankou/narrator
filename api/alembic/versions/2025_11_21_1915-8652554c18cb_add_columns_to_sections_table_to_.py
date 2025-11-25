@@ -10,7 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-from api.models.db import SpeechStatus
+from api.models.db import AudioStatus
 
 # revision identifiers, used by Alembic.
 revision: str = '8652554c18cb'
@@ -27,7 +27,7 @@ def upgrade() -> None:
     )
     op.add_column(
         'sections',
-        sa.Column('speech_status', sa.String, nullable=True, default=SpeechStatus.missing.value)
+        sa.Column('speech_status', sa.String, nullable=True, default=AudioStatus.missing.value)
     )
     op.execute("update sections set speech_status = 'missing' where speech_status is null")
     op.alter_column('sections', 'speech_status', nullable=False)

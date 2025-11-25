@@ -28,7 +28,7 @@ class SectionService:
     def generate_speech(self, sections: list[Section]):
         LOG.info("Enqueueing speech generation for %s sections: \n%s", len(sections), sections)
 
-        self.update_status(sections, db.SpeechStatus.queued)
+        self.update_status(sections, db.AudioStatus.queued)
 
         for section in sections:
             SpeechGenerationQueue.singleton.put(self, section)
@@ -38,7 +38,7 @@ class SectionService:
         self.files_service.store_speech_file(section.book_id, file_name, speech_data)
         return file_name
 
-    def update_status(self, sections: list[Section], status: db.SpeechStatus):
+    def update_status(self, sections: list[Section], status: db.AudioStatus):
         with DbSession() as session:
             for section in sections:
                 session.execute(update(db.Section).where(db.Section.id == section.id).values(speech_status=status))
@@ -47,7 +47,7 @@ class SectionService:
     def update_speech_details(self, section_id: int, phonemes: str, file_name: str):
         with DbSession() as session:
             session.execute(update(db.Section).where(db.Section.id == section_id)
-                            .values(phonemes=phonemes, speech_file=file_name, speech_status=db.SpeechStatus.ready))
+                            .values(phonemes=phonemes, speech_file=file_name, speech_status=db.AudioStatus.ready))
             session.commit()
 
 
@@ -70,13 +70,13 @@ class SpeechGenerationQueue:
                 self._generate_speech(service, section)
             except Exception:
                 LOG.exception("Error generating speech for section: \n%s", section)
-                service.update_status([section], db.SpeechStatus.failed)
+                service.update_status([section], db.AudioStatus.failed)
             finally:
                 self.queue.task_done()
 
     def _generate_speech(self, section_service: SectionService, section: db.Section):
         LOG.info("Generating speech for section: \n%s", section)
-        section_service.update_status([section], db.SpeechStatus.generating)
+        section_service.update_status([section], db.AudioStatus.generating)
         phonemes = section_service.kokoro_client.phonemize(section.content)
         speech = section_service.kokoro_client.generate_from_phonemes(phonemes)
         file_name = section_service.store_speech_file(section, speech)

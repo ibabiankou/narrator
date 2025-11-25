@@ -46,14 +46,6 @@ class Book(Base):
     status: Mapped[str]
 
 
-class SpeechStatus(StrEnum):
-    missing = "missing"
-    queued = "queued"
-    generating = "generating"
-    failed = "failed"
-    ready = "ready"
-
-
 class Section(Base):
     __tablename__ = "sections"
 
@@ -66,10 +58,27 @@ class Section(Base):
     content: Mapped[str]
     phonemes: Mapped[Optional[str]]
 
-    speech_status: Mapped[str] = mapped_column(default=SpeechStatus.missing.value)
-    speech_file: Mapped[Optional[str]]
-
     def __repr__(self) -> str:
         return (f"Section(id={self.id}, book_id={self.book_id}, page_index={self.page_index}, "
-                f"section_index={self.section_index}, speech_status={self.speech_status}, "
-                f"speech_file={self.speech_file})")
+                f"section_index={self.section_index}")
+
+
+class AudioStatus(StrEnum):
+    missing = "missing"
+    queued = "queued"
+    generating = "generating"
+    failed = "failed"
+    ready = "ready"
+
+
+class AudioTrack(Base):
+    __tablename__ = "audio_tracks"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"))
+    section_id: Mapped[int] = mapped_column(ForeignKey("sections.id"))
+
+    status: Mapped[str] = mapped_column(default=AudioStatus.missing.value)
+    file_name: Mapped[Optional[str]]
+
+    duration: Mapped[Optional[int]]
