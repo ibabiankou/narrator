@@ -5,7 +5,6 @@ import { MatIconButton } from '@angular/material/button';
 import { MatInput } from '@angular/material/input';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { SectionsService } from '../../core/services/sections.service';
-import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 
 @Component({
   selector: 'app-section',
@@ -13,10 +12,7 @@ import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
     MatIcon,
     MatIconButton,
     MatInput,
-    CdkTextareaAutosize,
-    MatMenuTrigger,
-    MatMenu,
-    MatMenuItem
+    CdkTextareaAutosize
   ],
   templateUrl: './section.component.html',
   styleUrl: './section.component.scss',
@@ -57,16 +53,5 @@ export class SectionComponent {
 
   cancelEditing() {
     this.isEditing.set(false);
-  }
-
-  generateSpeech(id: number, mode: string) {
-    this.sectionsService.generateSpeech(id, mode)
-      .subscribe({
-        next: () => {
-          console.log("Speech generation triggered...");
-          // TODO: Response should include IDs of all sections for which speech generation was triggered.
-          //  Poll their status.
-        }
-      })
   }
 }

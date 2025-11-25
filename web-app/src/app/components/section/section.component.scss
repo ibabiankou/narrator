@@ -31,15 +31,6 @@
   transform: translateX(0);
 }
 
-.mid-right-controls {
-  top: 50%;
-  right: -45px;
-  transform: translate(-10px, -50%);
-}
-:host:hover .mid-right-controls {
-  transform: translate(0, -50%);
-}
-
 .controls {
   position: absolute;
   opacity: 0; // Hidden by default, show on hover.

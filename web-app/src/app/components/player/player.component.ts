@@ -1,5 +1,5 @@
 import { Component, computed, effect, input, OnInit, signal } from '@angular/core';
-import { Section, SpeechStatus } from '../../core/models/books.dto';
+import { Section } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import { environment } from '../../../environments/environment';
@@ -21,17 +21,17 @@ export class PlayerComponent implements OnInit {
   isPlaying = signal<boolean>(false);
   baseUrl = environment.api_base_url
 
-  currentProgress = signal<number>(25);
-  readyWidth = computed(() => {
-    const total = this.sections().length
-    const ready = this.sections().filter(section => section.speech_status == SpeechStatus.ready).length
-    return ready / total * 100;
-  });
-  missingWidth = computed(() => {
-    const total = this.sections().length
-    const missing = this.sections().filter(section => section.speech_status == SpeechStatus.missing).length;
-    return missing / total * 100;
-  });
+  // currentProgress = signal<number>(25);
+  // readyWidth = computed(() => {
+  //   const total = this.sections().length
+  //   const ready = this.sections().filter(section => section.speech_status == SpeechStatus.ready).length
+  //   return ready / total * 100;
+  // });
+  // missingWidth = computed(() => {
+  //   const total = this.sections().length
+  //   const missing = this.sections().filter(section => section.speech_status == SpeechStatus.missing).length;
+  //   return missing / total * 100;
+  // });
 
   constructor() {
     effect(() => {
@@ -39,24 +39,24 @@ export class PlayerComponent implements OnInit {
       Amplitude.getSongs().forEach((song: { section_id: number; }) => sectionsInPlaylist.add(song.section_id));
 
       const songCount = sectionsInPlaylist.size;
-      this.sections()
-        .filter(section => section.speech_status == SpeechStatus.ready)
-        .filter(section => !sectionsInPlaylist.has(section.id))
-        // .map(section => {
-        //   return {
-        //     "section_id": section.id,
-        //     "url": `${this.baseUrl}/books/${section.book_id}/speech/${section.speech_file}`
-        //   }
-        // });
-        .forEach(section => {
-            Amplitude.addSong(
-              {
-                "section_id": section.id,
-                "url": `${this.baseUrl}/books/${section.book_id}/speech/${section.speech_file}`
-              });
-            console.log("added", section.id);
-          }
-        );
+      // this.sections()
+      //   .filter(section => section.speech_status == SpeechStatus.ready)
+      //   .filter(section => !sectionsInPlaylist.has(section.id))
+      //   // .map(section => {
+      //   //   return {
+      //   //     "section_id": section.id,
+      //   //     "url": `${this.baseUrl}/books/${section.book_id}/speech/${section.speech_file}`
+      //   //   }
+      //   // });
+      //   .forEach(section => {
+      //       Amplitude.addSong(
+      //         {
+      //           "section_id": section.id,
+      //           "url": `${this.baseUrl}/books/${section.book_id}/speech/${section.speech_file}`
+      //         });
+      //       console.log("added", section.id);
+      //     }
+      //   );
       console.log(Amplitude.getSongs())
       if (songCount == 0) {
 
@@ -66,18 +66,18 @@ export class PlayerComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const songs = this.sections().filter(section => section.speech_status == SpeechStatus.ready)
-      .map(section => {
-        return {
-          "section_id": section.id,
-          "url": `${this.baseUrl}/books/${section.book_id}/speech/${section.speech_file}`
-        }
-      });
-
-    Amplitude.init({
-      playback_speed: 1.1
-    });
-    Amplitude.setDebug(true);
+    // const songs = this.sections().filter(section => section.speech_status == SpeechStatus.ready)
+    //   .map(section => {
+    //     return {
+    //       "section_id": section.id,
+    //       "url": `${this.baseUrl}/books/${section.book_id}/speech/${section.speech_file}`
+    //     }
+    //   });
+    //
+    // Amplitude.init({
+    //   playback_speed: 1.1
+    // });
+    // Amplitude.setDebug(true);
   }
 
   // TODO: Implement progress bar. Available, queued, unavailable.

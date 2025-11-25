@@ -33,10 +33,6 @@ class BookSection(BaseModel):
     section_index: int
 
     content: str
-    phonemes: Optional[str]
-
-    speech_status: str
-    speech_file: Optional[str]
 
 
 class BookPage(BaseModel):

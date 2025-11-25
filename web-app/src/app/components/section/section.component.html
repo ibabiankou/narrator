@@ -17,15 +17,6 @@
       <mat-icon>delete_forever</mat-icon>
     </button>
   </div>
-  <div class="mid-right-controls controls">
-    <button matIconButton [matMenuTriggerFor]="menu" aria-label="Generate speech">
-      <mat-icon>text_to_speech</mat-icon>
-    </button>
-    <mat-menu #menu="matMenu">
-      <button mat-menu-item (click)="generateSpeech(section().id, 'all_missing_before')">For all missing above</button>
-      <button mat-menu-item (click)="generateSpeech(section().id, 'single')">Only for this one</button>
-    </mat-menu>
-  </div>
   @for (paragraph of getParagraphs(); track section().id.toString().concat($index.toString())) {
     <p>{{ paragraph }}</p>
   }

@@ -98,7 +98,8 @@ $slider_height: 8px;
     position: absolute;
     height: $slider_height;
 
-    background-color: var(--mat-sys-background);
+    background-color: rgb(159, 174, 180);
+
     width: 100%;
     z-index: -2;
   }
@@ -109,7 +110,7 @@ $slider_height: 8px;
 
     right: 0;
     width: 60%; // Changed programmatically
-    background-color: rgba(159, 174, 180, 0.48);
+    background-color: rgba(255, 177, 177, 0.73);
     z-index: -1;
   }
 }

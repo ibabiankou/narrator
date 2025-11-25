@@ -19,13 +19,13 @@ export interface BookDetails {
   status: string;
 }
 
-export enum SpeechStatus {
-  missing = "missing",
-  queued = "queued",
-  generating = "generating",
-  failed = "failed",
-  ready = "ready"
-}
+// export enum SpeechStatus {
+//   missing = "missing",
+//   queued = "queued",
+//   generating = "generating",
+//   failed = "failed",
+//   ready = "ready"
+// }
 
 
 export interface Section {
@@ -37,10 +37,6 @@ export interface Section {
   page_index: number;
 
   content: string;
-  phonemes: string;
-
-  speech_status: SpeechStatus;
-  speech_file: string;
 }
 
 export interface BookPage {

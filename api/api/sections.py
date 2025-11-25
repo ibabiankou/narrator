@@ -3,7 +3,6 @@ from fastapi.params import Depends
 
 from api import SessionDep, get_logger
 from api.models import db, api
-from api.models.api import GenerateSpeechMode
 from api.services.sections import SectionService
 
 LOG = get_logger(__name__)

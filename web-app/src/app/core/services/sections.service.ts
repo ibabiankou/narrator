@@ -1,9 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { BookContent, BookDetails, CreateBookRequest, Section } from '../models/books.dto';
-import { DomSanitizer } from '@angular/platform-browser';
+import { Section } from '../models/books.dto';
 
 @Injectable({
   providedIn: 'root'
