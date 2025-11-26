@@ -1,9 +1,10 @@
 import uuid
 
-from sqlalchemy import text
+from sqlalchemy import text, update, select
+from sqlalchemy.dialects.postgresql import insert
 
 from api.models import db
-from api.models.db import DbSession
+from api.models.db import DbSession, NotFound
 
 
 class PlaybackProgressService:
@@ -34,3 +35,17 @@ class PlaybackProgressService:
                 narration_stats[type] = length
 
         return None, narration_stats
+
+    def upsert_progress(self, progress: db.PlaybackProgress):
+        with DbSession() as session:
+            stmt = select(db.PlaybackProgress).where(db.PlaybackProgress.book_id == progress.book_id)
+            existing = session.scalar(stmt)
+
+            if existing:
+                stmt = update(db.PlaybackProgress).returning(db.PlaybackProgress).where(
+                    db.PlaybackProgress.id == progress.id).values(progress.as_dict())
+                session.execute(stmt)
+            else:
+                session.add(progress)
+
+            session.commit()

@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from enum import StrEnum
 from typing import Optional
 
 from pydantic import BaseModel
@@ -74,6 +73,12 @@ class PlaybackProgress(BaseModel):
 
     # Percentage of the total book that is not narrated.
     unavailable_percent: float
+
+
+class PlaybackProgressUpdate(BaseModel):
+    book_id: uuid.UUID
+    section_id: int
+    section_progress_seconds: float
 
 
 class Playlist(BaseModel):

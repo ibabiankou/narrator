@@ -13,9 +13,11 @@ pg_url = os.path.expandvars(os.getenv("PG_URL"))
 engine = create_engine(pg_url, pool_recycle=600)
 DbSession = sessionmaker(engine)
 
+
 def get_session():
     with Session(engine) as session:
         yield session
+
 
 class Base(DeclarativeBase):
     def as_dict(self):
@@ -88,6 +90,7 @@ class AudioTrack(Base):
     file_name: Mapped[Optional[str]]
 
     duration: Mapped[Optional[float]]
+
 
 class PlaybackProgress(Base):
     __tablename__ = "playback_progress"

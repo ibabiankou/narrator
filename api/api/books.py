@@ -214,3 +214,12 @@ def get_playlist(book_id: uuid.UUID,
     )
 
     return api.Playlist(progress=progress, tracks=ready_tracks)
+
+
+@books_router.post("/{book_id}/progress")
+def update_progress(request: api.PlaybackProgressUpdate,
+                    progress_service: PlaybackProgressService = Depends()):
+    upsert = db.PlaybackProgress(book_id=request.book_id,
+                                 section_id=request.section_id,
+                                 section_progress=request.section_progress_seconds)
+    progress_service.upsert_progress(upsert)
