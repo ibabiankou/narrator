@@ -26,6 +26,7 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
         sa.Column('book_id', sa.UUID, sa.ForeignKey('books.id'), nullable=False),
         sa.Column('section_id', sa.Integer, sa.ForeignKey('sections.id'), nullable=False, unique=True),
+        sa.Column('playlist_order', sa.Integer, nullable=False),
 
         sa.Column('status', sa.String, nullable=False, default=AudioStatus.missing.value),
 

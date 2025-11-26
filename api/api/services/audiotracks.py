@@ -1,8 +1,10 @@
 import threading
+import uuid
 from queue import Queue
+from typing import List
 
 from fastapi.params import Depends
-from sqlalchemy import update, insert, delete
+from sqlalchemy import update, insert, delete, select
 
 from api import get_logger
 from api.models import db
@@ -35,6 +37,7 @@ class AudioTrackService:
                     {
                         "book_id": section.book_id,
                         "section_id": section.id,
+                        "playlist_order": section.section_index,
                         "status": db.AudioStatus.queued
                     }
                     for section in sections
@@ -64,6 +67,11 @@ class AudioTrackService:
         file_name = f"{section.id}.mp3"
         self.files_service.store_speech_file(section.book_id, file_name, speech_data)
         return file_name
+
+    def get_tracks(self, book_id: uuid.UUID) -> List[db.AudioTrack]:
+        with DbSession() as session:
+            stmt = select(db.AudioTrack).where(db.AudioTrack.book_id == book_id).order_by(db.AudioTrack.playlist_order)
+            return list(session.execute(stmt).scalars().all())
 
 
 class SpeechGenerationQueue:

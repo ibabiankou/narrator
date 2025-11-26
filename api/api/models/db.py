@@ -82,8 +82,18 @@ class AudioTrack(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"))
     section_id: Mapped[int] = mapped_column(ForeignKey("sections.id"))
+    playlist_order: Mapped[int]
 
     status: Mapped[str] = mapped_column(default=AudioStatus.missing.value)
     file_name: Mapped[Optional[str]]
 
     duration: Mapped[Optional[float]]
+
+class PlaybackProgress(Base):
+    __tablename__ = "playback_progress"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"), unique=True)
+
+    section_id: Mapped[int] = mapped_column(ForeignKey("sections.id"))
+    section_progress: Mapped[Optional[float]]

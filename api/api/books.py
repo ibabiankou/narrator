@@ -8,9 +8,10 @@ from sqlalchemy.exc import IntegrityError
 
 from api import SessionDep, get_logger
 from api.models import db, api
-from api.models.db import TempFile, BookStatus
+from api.services.audiotracks import AudioTrackService
 from api.services.books import BookService
 from api.services.files import FilesService
+from api.services.progress import PlaybackProgressService
 from api.services.sections import SectionService
 
 LOG = get_logger(__name__)
@@ -25,7 +26,7 @@ def create_book(book: api.CreateBookRequest,
                 files_service: FilesService = Depends(),
                 book_service: BookService = Depends()) -> api.BookDetails:
     # Load temp_file metadata from DB
-    pdf_temp_file = session.get(TempFile, book.pdf_temp_file_id)
+    pdf_temp_file = session.get(db.TempFile, book.pdf_temp_file_id)
     if pdf_temp_file is None:
         raise HTTPException(status_code=404, detail="PDF file not found")
 
@@ -41,7 +42,7 @@ def create_book(book: api.CreateBookRequest,
                    title=book.title,
                    file_name=pdf_temp_file.file_name,
                    created_time=datetime.now(UTC),
-                   status=BookStatus.processing)
+                   status=db.BookStatus.processing)
     try:
         session.add(book)
         session.commit()
@@ -99,7 +100,7 @@ def reprocess_book(book_id: uuid.UUID,
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    session.execute(update(db.Book).where(db.Book.id == book.id).values(status=BookStatus.processing))
+    session.execute(update(db.Book).where(db.Book.id == book.id).values(status=db.BookStatus.processing))
     session.commit()
 
     section_service.delete_sections(book.id)
@@ -114,7 +115,7 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    if book.status != BookStatus.ready or book.number_of_pages is None:
+    if book.status != db.BookStatus.ready or book.number_of_pages is None:
         # There will be no content, so return immediately.
         return api.BookContent(pages=[])
 
@@ -166,3 +167,49 @@ def get_speech_file(book_id: uuid.UUID, file_name: str, file_service: FilesServi
     if response_dict is None:
         raise HTTPException(status_code=404, detail="Speech file not found")
     return Response(content=response_dict["body"], media_type=response_dict["content_type"])
+
+
+@books_router.get("/{book_id}/playlist")
+def get_playlist(book_id: uuid.UUID,
+                 audiotrack_service: AudioTrackService = Depends(),
+                 progress_service: PlaybackProgressService = Depends()
+                 ) -> api.Playlist:
+    # Read all the audio tracks for this book. Gives us ready and queued sections
+    ready_tracks = [
+        api.AudioTrack(section_id=track.section_id,
+                       status=track.status,
+                       file_name=track.file_name,
+                       duration=track.duration)
+        for track in audiotrack_service.get_tracks(book_id)
+        if track.status == db.AudioStatus.ready
+    ]
+
+    playback_progress, stats = progress_service.get_progress(book_id)
+    section_id = playback_progress.section_id if playback_progress else None
+    section_progress = playback_progress.section_progress if playback_progress else None
+
+    global_progress_seconds = 0
+    if section_id and section_progress:
+        for track in ready_tracks:
+            global_progress_seconds += track.duration
+            if track.section_id == section_id:
+                global_progress_seconds += section_progress
+                break
+    total_duration = sum([track.duration for track in ready_tracks])
+
+    # Percentage here is calculated based on the length of narrated sections
+    available_percent = stats["available"] / stats["total"] * 100
+    unavailable_percent = stats["missing"] / stats["total"] * 100
+    queued_percent = stats["queued"] / stats["total"] * 100
+
+    progress = api.PlaybackProgress(
+        section_id=section_id,
+        section_progress_seconds=section_progress,
+        global_progress_seconds=global_progress_seconds,
+        total_narrated_seconds=total_duration,
+        available_percent=available_percent,
+        queued_percent=queued_percent,
+        unavailable_percent=unavailable_percent
+    )
+
+    return api.Playlist(progress=progress, tracks=ready_tracks)

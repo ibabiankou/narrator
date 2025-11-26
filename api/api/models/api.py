@@ -43,3 +43,38 @@ class BookPage(BaseModel):
 
 class BookContent(BaseModel):
     pages: list[BookPage]
+
+
+class AudioTrack(BaseModel):
+    section_id: int
+    status: str
+    file_name: Optional[str]
+    duration: Optional[float]
+
+
+class PlaybackProgress(BaseModel):
+    # ID of the section that was playing last time progress was recorded.
+    section_id: Optional[int]
+
+    # Seconds within the section_id where playback was last time recorded.
+    section_progress_seconds: Optional[float]
+
+    # Seconds since the start of the book.
+    global_progress_seconds: float
+
+    # Seconds narrated so far.
+    total_narrated_seconds: float
+
+    # Percentage of the total book that is narrated.
+    available_percent: float
+
+    # Percentage of the total book that is queued to be narrated.
+    queued_percent: float
+
+    # Percentage of the total book that is not narrated.
+    unavailable_percent: float
+
+
+class Playlist(BaseModel):
+    progress: PlaybackProgress
+    tracks: list[AudioTrack]
