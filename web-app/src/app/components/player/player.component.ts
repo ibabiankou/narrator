@@ -1,4 +1,4 @@
-import { Component, input, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, input, OnDestroy, OnInit } from '@angular/core';
 import { AudioTrack, Playlist } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
@@ -11,7 +11,7 @@ import {
   map,
   Subject,
   Subscription,
-  takeUntil,
+  takeUntil, tap,
   zip,
 } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
@@ -31,19 +31,17 @@ declare const Amplitude: any;
 export class PlayerComponent implements OnInit, OnDestroy {
   playlist = input.required<Playlist>();
 
-  isPlaying = signal<boolean>(false);
-
   playerState: PlayerState | null = null;
 
   constructor(private bookService: BooksService) {
   }
 
-  ngOnDestroy(): void {
-    this.playerState?.destroy();
-  }
-
   ngOnInit(): void {
     this.playerState = new PlayerState(this.bookService, this.playlist());
+  }
+
+  ngOnDestroy(): void {
+    this.playerState?.destroy();
   }
 
   nowPercent() {
@@ -55,20 +53,14 @@ export class PlayerComponent implements OnInit, OnDestroy {
   //  (upon start and periodically)
   //  and let the page do the scrolling.
 
-  playPause() {
-    if (this.isPlaying()) {
-      Amplitude.pause();
-    } else {
-      Amplitude.play();
-    }
-    this.isPlaying.update(value => !value);
-  }
 }
 
 // A single place for all logic around managing the state of the player.
 class PlayerState {
   $destroy = new Subject<boolean>();
   readerSubscription: Subscription;
+
+  $isPlaying = new BehaviorSubject<boolean>(false);
 
   tracks: AudioTrack[];
   // Holds global book time at which each track starts.
@@ -88,7 +80,6 @@ class PlayerState {
   constructor(private bookService: BooksService, playlist: Playlist) {
     // Read initial values from the playlist.
     this.tracks = playlist.tracks;
-    this.durationSum.push(this.tracks[0].duration);
     for (let i = 0; i < this.tracks.length; i++) {
       this.durationSum.push(this.durationSum[i] + this.tracks[i].duration);
     }
@@ -120,16 +111,19 @@ class PlayerState {
     Amplitude.init({
       songs: this.tracks,
       start_song: trackIndex,
-      playback_speed: 1,
-      debug: !environment.production
+      playback_speed: 1.15,
+      debug: !environment.production,
+      callbacks: {
+        song_change: () => this.readProgress()
+      }
     });
     if (this.tracks) {
       Amplitude.setSongPlayedPercentage(trackProgressSeconds / this.tracks[trackIndex].duration * 100);
     }
 
-
     this.readerSubscription = interval(1000)
       .pipe(
+        tap(() => this.$isPlaying.next(Amplitude.getPlayerState() == "playing")),
         filter(() => Amplitude.getPlayerState() == "playing"),
         takeUntil(this.$destroy),
       ).subscribe(() => this.readProgress());
@@ -137,10 +131,23 @@ class PlayerState {
     // TODO: Start a "timer" to save progress every 5 seconds of playback.
   }
 
-  readProgress() {
+  private readProgress() {
     const track = Amplitude.getActiveSongMetadata();
     this.$currentTrackIndex.next(track.index);
     this.$currentTrackProgressSeconds.next(Amplitude.getSongPlayedSeconds());
+  }
+
+  private isPlaying() {
+    return Amplitude.getPlayerState() == "playing";
+  }
+
+  playPause() {
+    if (this.isPlaying()) {
+      Amplitude.pause();
+    } else {
+      Amplitude.play();
+    }
+    this.$isPlaying.next(this.isPlaying());
   }
 
   destroy() {

@@ -3,8 +3,8 @@
     <button matIconButton class="amplitude-prev">
       <mat-icon>skip_previous</mat-icon>
     </button>
-    <button matIconButton class="play-pause" (click)="playPause()">
-      @if (isPlaying()) {
+    <button matIconButton class="play-pause" (click)="playerState?.playPause()">
+      @if (playerState?.$isPlaying | async) {
         <mat-icon>pause</mat-icon>
       } @else {
         <mat-icon>play_arrow</mat-icon>
