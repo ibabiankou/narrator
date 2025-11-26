@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { BookContent, BookDetails, CreateBookRequest } from '../models/books.dto';
+import { BookContent, BookDetails, CreateBookRequest, Playlist } from '../models/books.dto';
 import { DomSanitizer } from '@angular/platform-browser';
 
 @Injectable({
@@ -41,5 +41,9 @@ export class BooksService {
           page.file_url = this.sanitizer.bypassSecurityTrustResourceUrl(url);
         });
       }));
+  }
+
+  getPlaylist(bookId: string) {
+    return this.http.get<Playlist>(`${this.apiUrl}/${bookId}/playlist`);
   }
 }

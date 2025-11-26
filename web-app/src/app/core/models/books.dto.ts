@@ -54,3 +54,29 @@ export interface BookPage {
 export interface BookContent {
   pages: BookPage[];
 }
+
+export interface AudioTrack {
+  book_id: string;
+  section_id: number;
+  status: string;
+  file_name: string;
+  duration: number;
+  url: string | null;
+}
+
+export interface PlaybackProgress {
+  section_id: number;
+  section_progress_seconds: number;
+
+  global_progress_seconds: number;
+  total_narrated_seconds: number;
+
+  available_percent: number;
+  queued_percent: number;
+  unavailable_percent: number;
+}
+
+export interface Playlist {
+  progress: PlaybackProgress;
+  tracks: AudioTrack[];
+}

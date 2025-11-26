@@ -46,6 +46,7 @@ class BookContent(BaseModel):
 
 
 class AudioTrack(BaseModel):
+    book_id: uuid.UUID
     section_id: int
     status: str
     file_name: Optional[str]

@@ -176,7 +176,8 @@ def get_playlist(book_id: uuid.UUID,
                  ) -> api.Playlist:
     # Read all the audio tracks for this book. Gives us ready and queued sections
     ready_tracks = [
-        api.AudioTrack(section_id=track.section_id,
+        api.AudioTrack(book_id=track.book_id,
+                       section_id=track.section_id,
                        status=track.status,
                        file_name=track.file_name,
                        duration=track.duration)

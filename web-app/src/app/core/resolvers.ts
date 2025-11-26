@@ -1,5 +1,5 @@
 import { RedirectCommand, ResolveFn, Router } from '@angular/router';
-import { BookDetails, BookPage } from './models/books.dto';
+import { BookDetails, BookPage, Playlist } from './models/books.dto';
 import { inject } from '@angular/core';
 import { BooksService } from './services/books.service';
 import { catchError, map, of, tap } from 'rxjs';
@@ -35,6 +35,17 @@ export const bookContentResolver: ResolveFn<BookPage[]> = (route) => {
     catchError(error => {
       console.error('Failed to load book content:', error);
       return of([]);
+    })
+  );
+};
+
+export const playbackProgressResolver: ResolveFn<Playlist> = (route) => {
+  const booksService = inject(BooksService);
+  const bookId = route.paramMap.get('id')!;
+  return booksService.getPlaylist(bookId).pipe(
+    catchError(error => {
+      console.error('Failed to load book playlist:', error);
+      return of();
     })
   );
 };

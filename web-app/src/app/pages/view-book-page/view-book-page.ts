@@ -1,5 +1,5 @@
-import { Component, computed, inject, model, OnInit, signal } from '@angular/core';
-import { BookDetails, BookPage, BookStatus, Section } from '../../core/models/books.dto';
+import { Component, computed, inject, input, model, OnInit, signal } from '@angular/core';
+import { BookDetails, BookPage, BookStatus, Playlist, Section } from '../../core/models/books.dto';
 import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
 import { BooksService } from '../../core/services/books.service';
 import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
@@ -29,6 +29,7 @@ export class ViewBookPage implements OnInit {
 
   book = model.required<BookDetails>();
   pages = model.required<BookPage[]>();
+  playlist = input.required<Playlist>();
   sections = computed<Section[]>(() => this.pages().flatMap(page => page.sections))
 
   isLoading = signal(true);
