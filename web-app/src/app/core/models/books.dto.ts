@@ -65,8 +65,8 @@ export interface AudioTrack {
 }
 
 export interface PlaybackProgress {
-  section_id: number;
-  section_progress_seconds: number;
+  section_id: number | null;
+  section_progress_seconds: number | null;
 
   global_progress_seconds: number;
   total_narrated_seconds: number;
@@ -79,4 +79,10 @@ export interface PlaybackProgress {
 export interface Playlist {
   progress: PlaybackProgress;
   tracks: AudioTrack[];
+}
+
+export interface PlaybackProgressUpdate {
+  book_id: string;
+  section_id: number;
+  section_progress_seconds: number;
 }

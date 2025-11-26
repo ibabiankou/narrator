@@ -30,7 +30,7 @@
     <div class="unavailable" [style]="{ width: playlist().progress.unavailable_percent + '%' }"></div>
   </div>
   <div class="times">
-    <div class="current-progress">{{ nowTime() }}</div>
-    <div class="remaining-progress">{{ remainingTime() }}</div>
+    <div class="current-progress">{{ playerState?.$nowTime | async }}</div>
+    <div class="remaining-progress">{{ playerState?.$remainingTime | async }}</div>
   </div>
 </div>
