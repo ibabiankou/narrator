@@ -192,10 +192,10 @@ def get_playlist(book_id: uuid.UUID,
     global_progress_seconds = 0
     if section_id and section_progress:
         for track in ready_tracks:
-            global_progress_seconds += track.duration
             if track.section_id == section_id:
                 global_progress_seconds += section_progress
                 break
+            global_progress_seconds += track.duration
     total_duration = sum([track.duration for track in ready_tracks])
 
     # Percentage here is calculated based on the length of narrated sections

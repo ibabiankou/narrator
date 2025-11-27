@@ -24,10 +24,10 @@
 
 <div class="progress">
   <div class="slider">
-    <div class="now" [style]="{ width: nowPercent() + '%' }" ></div>
-    <div class="available" [style]="{ width: playlist().progress.available_percent + '%' }" ></div>
+    <div class="now" [style]="{ width: (playerState?.$nowPercent | async) + '%' }"></div>
+    <div class="available" [style]="{ width: (playerState?.$availablePercent | async) + '%' }"></div>
     <div class="queued"></div>
-    <div class="unavailable" [style]="{ width: playlist().progress.unavailable_percent + '%' }"></div>
+    <div class="unavailable" [style]="{ width: (playerState?.$unavailablePercent | async) + '%' }"></div>
   </div>
   <div class="times">
     <div class="current-progress">{{ playerState?.$nowTime | async }}</div>

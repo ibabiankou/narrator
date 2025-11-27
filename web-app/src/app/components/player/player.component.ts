@@ -10,7 +10,7 @@ import {
   interval,
   map,
   Subject,
-  Subscription,
+  Subscription, switchMap, take,
   takeUntil, tap,
   zip,
 } from 'rxjs';
@@ -44,11 +44,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.playerState?.destroy();
   }
 
-  nowPercent() {
-    const progress = this.playlist().progress
-    return progress.available_percent * progress.global_progress_seconds / progress.total_narrated_seconds;
-  }
-
   // TODO: Auto-scroll to the currently played item. I should probably simply emmit event what is being played
   //  (upon start and periodically)
   //  and let the page do the scrolling.
@@ -58,7 +53,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
 // A single place for all logic around managing the state of the player.
 class PlayerState {
   $destroy = new Subject<boolean>();
+  // Interval that reads info from Amplitude.
   readerSubscription: Subscription;
+  // Interval that writes progress to the server.
+  writerSubscription: Subscription;
 
   $isPlaying = new BehaviorSubject<boolean>(false);
 
@@ -77,8 +75,12 @@ class PlayerState {
   $nowTime;
   $remainingTime;
 
+  $nowPercent;
+  $availablePercent;
+  $queuedPercent;
+  $unavailablePercent;
+
   constructor(private bookService: BooksService, playlist: Playlist) {
-    // Read initial values from the playlist.
     this.tracks = playlist.tracks;
     for (let i = 0; i < this.tracks.length; i++) {
       this.durationSum.push(this.durationSum[i] + this.tracks[i].duration);
@@ -102,6 +104,14 @@ class PlayerState {
     this.$remainingTime = combineLatest([this.$progressSeconds, this.$totalNarratedSeconds])
       .pipe(map(([nowTime, totalTime]) => secondsToTimeFormat(nowTime - totalTime)));
 
+    this.$availablePercent = new BehaviorSubject<number>(playlist.progress.available_percent);
+    this.$queuedPercent = new BehaviorSubject<number>(playlist.progress.queued_percent);
+    this.$unavailablePercent = new BehaviorSubject<number>(playlist.progress.unavailable_percent);
+    this.$nowPercent = combineLatest([this.$progressSeconds, this.$totalNarratedSeconds, this.$availablePercent])
+      .pipe(
+        map(([nowTime, totalTime, availablePercent]) =>
+          nowTime / totalTime * availablePercent)
+      );
 
     const baseUrl = environment.api_base_url
     for (let i = 0; i < this.tracks.length; i++) {
@@ -113,13 +123,12 @@ class PlayerState {
       start_song: trackIndex,
       playback_speed: 1.15,
       debug: !environment.production,
+      volume: 75,
+      use_web_audio_api: true,
       callbacks: {
         song_change: () => this.readProgress()
       }
     });
-    if (this.tracks) {
-      Amplitude.setSongPlayedPercentage(trackProgressSeconds / this.tracks[trackIndex].duration * 100);
-    }
 
     this.readerSubscription = interval(1000)
       .pipe(
@@ -128,13 +137,33 @@ class PlayerState {
         takeUntil(this.$destroy),
       ).subscribe(() => this.readProgress());
 
-    // TODO: Start a "timer" to save progress every 5 seconds of playback.
+    this.writerSubscription = interval(5000)
+      .pipe(
+        filter(() => Amplitude.getPlayerState() == "playing"),
+        takeUntil(this.$destroy),
+      ).subscribe(() => this.updateProgress());
   }
 
   private readProgress() {
     const track = Amplitude.getActiveSongMetadata();
     this.$currentTrackIndex.next(track.index);
     this.$currentTrackProgressSeconds.next(Amplitude.getSongPlayedSeconds());
+  }
+
+  private updateProgress() {
+    combineLatest([this.$currentTrackIndex, this.$currentTrackProgressSeconds])
+      .pipe(
+        take(1),
+        switchMap(([trackIndex, progressSeconds]) => {
+          const track = this.tracks[trackIndex];
+          return this.bookService.updateProgress({
+            "book_id": track.book_id,
+            "section_id": track.section_id,
+            "section_progress_seconds": progressSeconds,
+          });
+        })
+        )
+      .subscribe();
   }
 
   private isPlaying() {
