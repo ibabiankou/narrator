@@ -28,9 +28,6 @@
             ],
             "styles": [
               "src/styles.scss"
-            ],
-            "scripts": [
-              "node_modules/amplitudejs/dist/amplitude.min.js"
             ]
           },
           "configurations": {
