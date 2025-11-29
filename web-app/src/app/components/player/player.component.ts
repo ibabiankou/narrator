@@ -189,8 +189,10 @@ class PlayerState {
 interface PlayerTrack {
   audioTrack: AudioTrack
 
-  url: string | null;
+  url?: string;
   index: number;
+
+  audioBuffer?: AudioBuffer;
 }
 
 class AudioPlayer {
@@ -266,15 +268,23 @@ class AudioPlayer {
   }
 
   private playTrack(track: PlayerTrack) {
+    console.log(track);
     if (track.url == null) {
       return throwError(() => new Error("Track URL is null"));
     }
 
-    // TODO: Cache instance of AudioBuffer on PlayerTrack.
+    let audioBuffer;
+    if (track.audioBuffer != null) {
+      audioBuffer = of(track.audioBuffer);
+    } else {
+      audioBuffer = from(fetch(track.url)).pipe(
+        switchMap(response => response.arrayBuffer()),
+        switchMap(arrayBuffer => this.audioContext.decodeAudioData(arrayBuffer)),
+        tap(audioBuffer => track.audioBuffer = audioBuffer)
+      )
+    }
 
-    return from(fetch(track.url)).pipe(
-      switchMap(response => from(response.arrayBuffer())),
-      switchMap(arrayBuffer => this.audioContext.decodeAudioData(arrayBuffer)),
+    return audioBuffer.pipe(
       switchMap(audioBuffer => this.playAudio(audioBuffer))
     ).subscribe(audioNode => this.$currentTrackSourceNode.next(audioNode));
   }
