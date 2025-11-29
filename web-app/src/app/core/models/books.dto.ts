@@ -61,7 +61,6 @@ export interface AudioTrack {
   status: string;
   file_name: string;
   duration: number;
-  url: string | null;
 }
 
 export interface PlaybackProgress {

@@ -4,7 +4,7 @@
       <mat-icon>skip_previous</mat-icon>
     </button>
     <button matIconButton class="play-pause" (click)="playerState?.playPause()">
-      @if (playerState?.$isPlaying | async) {
+      @if (playerState.audioPlayer.$isPlaying | async) {
         <mat-icon>pause</mat-icon>
       } @else {
         <mat-icon>play_arrow</mat-icon>
