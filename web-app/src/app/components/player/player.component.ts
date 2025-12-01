@@ -6,21 +6,18 @@ import { environment } from '../../../environments/environment';
 import { BooksService } from '../../core/services/books.service';
 import {
   BehaviorSubject,
-  combineLatest,
+  combineLatest, combineLatestWith,
   filter, from,
   interval,
-  map, Observable, of,
+  map, of,
   Subject,
   Subscription,
   switchMap,
   take,
   takeUntil,
   tap, throwError,
-  zip,
 } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
-
-declare const Amplitude: any;
 
 @Component({
   selector: 'app-player',
@@ -59,65 +56,37 @@ class PlayerState {
   audioPlayer: AudioPlayer = new AudioPlayer();
 
   $destroy = new Subject<boolean>();
-  // Interval that reads info from Amplitude.
-  // readerSubscription: Subscription;
   // Interval that writes progress to the server.
   // writerSubscription: Subscription;
 
-  // tracks: AudioTrack[] = [];
-  // // Holds global book time at which each track starts.
+  // Holds global book time at which each track starts.
   durationSum: number[] = [];
 
-  private readonly $currentTrackIndex = new BehaviorSubject<number>(0);
-  private readonly $currentTrackProgressSeconds = new BehaviorSubject<number>(0);
-
   // Progress from the start of the book.
-  private readonly $progressSeconds;
+  private readonly $progressSeconds = combineLatest([this.audioPlayer.$currentTrackIndex, this.audioPlayer.$currentTrackProgressSeconds])
+    .pipe(map(([index, progress]) => this.durationSum[index] + progress));
+
   // Total duration of the narrated part.
   private readonly $totalNarratedSeconds = new BehaviorSubject<number>(0)
 
-  $nowTime;
-  $remainingTime;
+  $nowTime = this.$progressSeconds.pipe(
+    map(progressSeconds => secondsToTimeFormat(progressSeconds))
+  );
+  $remainingTime = combineLatest([this.$progressSeconds, this.$totalNarratedSeconds])
+    .pipe(map(([nowTime, totalTime]) => secondsToTimeFormat(nowTime - totalTime)));
 
-  $nowPercent;
   $availablePercent = new BehaviorSubject<number>(0);
   $queuedPercent = new BehaviorSubject<number>(0);
   $unavailablePercent = new BehaviorSubject<number>(0);
 
-  constructor(private bookService: BooksService) {
-    this.$progressSeconds = zip(this.$currentTrackIndex, this.$currentTrackProgressSeconds)
-      .pipe(map(([index, progress]) => this.durationSum[index] + progress));
-    this.$nowTime = this.$progressSeconds.pipe(
-      map(progressSeconds => secondsToTimeFormat(progressSeconds))
+  $nowPercent = combineLatest([this.$progressSeconds, this.$totalNarratedSeconds, this.$availablePercent])
+    .pipe(
+      map(([nowTime, totalTime, availablePercent]) =>
+        totalTime > 0 ? (nowTime / totalTime * availablePercent) : 0
+      )
     );
-    this.$remainingTime = combineLatest([this.$progressSeconds, this.$totalNarratedSeconds])
-      .pipe(map(([nowTime, totalTime]) => secondsToTimeFormat(nowTime - totalTime)));
-    this.$nowPercent = combineLatest([this.$progressSeconds, this.$totalNarratedSeconds, this.$availablePercent])
-      .pipe(
-        map(([nowTime, totalTime, availablePercent]) =>
-          totalTime > 0 ? (nowTime / totalTime * availablePercent) : 0
-        )
-      );
 
-    // Amplitude.init({
-    //   songs: this.tracks,
-    //   start_song: trackIndex,
-    //   playback_speed: 1.15,
-    //   debug: !environment.production,
-    //   volume: 75,
-    //   use_web_audio_api: true,
-    //   callbacks: {
-    //     song_change: () => this.readProgress()
-    //   }
-    // });
-
-    // this.readerSubscription = interval(1000)
-    //   .pipe(
-    //     tap(() => this.$isPlaying.next(Amplitude.getPlayerState() == "playing")),
-    //     filter(() => Amplitude.getPlayerState() == "playing"),
-    //     takeUntil(this.$destroy),
-    //   ).subscribe(() => this.readProgress());
-    //
+  constructor(private bookService: BooksService) {
     // this.writerSubscription = interval(5000)
     //   .pipe(
     //     filter(() => Amplitude.getPlayerState() == "playing"),
@@ -126,8 +95,6 @@ class PlayerState {
   }
 
   setPlaylist(playlist: Playlist) {
-    this.audioPlayer.setTracks(playlist.tracks);
-
     this.durationSum = [0];
     for (let i = 0; i < playlist.tracks.length; i++) {
       this.durationSum.push(this.durationSum[i] + playlist.tracks[i].duration);
@@ -137,9 +104,9 @@ class PlayerState {
     if (playlist.progress.section_id) {
       trackIndex = playlist.tracks.findIndex(t => t.section_id == playlist.progress.section_id);
     }
-    this.$currentTrackIndex.next(trackIndex);
+    const trackProgress = playlist.progress.section_progress_seconds || 0;
+    this.audioPlayer.setTracks(playlist.tracks, trackIndex, trackProgress);
 
-    this.$currentTrackProgressSeconds.next(playlist.progress.section_progress_seconds || 0)
     this.$totalNarratedSeconds.next(playlist.progress.total_narrated_seconds);
 
     this.$availablePercent.next(playlist.progress.available_percent);
@@ -147,14 +114,8 @@ class PlayerState {
     this.$unavailablePercent.next(playlist.progress.unavailable_percent);
   }
 
-  private readProgress() {
-    const track = Amplitude.getActiveSongMetadata();
-    this.$currentTrackIndex.next(track.index);
-    this.$currentTrackProgressSeconds.next(Amplitude.getSongPlayedSeconds());
-  }
-
   private updateProgress() {
-    combineLatest([this.$currentTrackIndex, this.$currentTrackProgressSeconds])
+    combineLatest([this.audioPlayer.$currentTrackIndex, this.audioPlayer.$currentTrackProgressSeconds])
       .pipe(
         take(1),
         switchMap(([trackIndex, progressSeconds]) => {
@@ -176,11 +137,11 @@ class PlayerState {
       } else {
         this.audioPlayer.play();
       }
-    })
+    });
   }
 
   destroy() {
-    Amplitude.pause();
+    this.audioPlayer.destroy();
     this.$destroy.next(true);
     this.$destroy.complete();
   }
@@ -192,12 +153,22 @@ interface PlayerTrack {
   url?: string;
   index: number;
 
+  // Caching decoded audio might end up taking a lot of memory.
   audioBuffer?: AudioBuffer;
 }
 
+/**
+ * Responsible for playback logic: Playing each track, navigating back and forth, changing tracks.
+ */
 class AudioPlayer {
   private audioContext: AudioContext;
   private tracks: PlayerTrack[] = [];
+
+  $destroy = new Subject<boolean>();
+
+  // Interval that reads info from Amplitude.
+  readerSubscription: Subscription;
+
   private $currentTrackSourceNode = new BehaviorSubject<AudioBufferSourceNode | null>(null);
 
   $currentTrackIndex = new BehaviorSubject<number>(0);
@@ -206,9 +177,20 @@ class AudioPlayer {
 
   constructor() {
     this.audioContext = new window.AudioContext();
+
+    this.readerSubscription = interval(1000)
+      .pipe(
+        combineLatestWith(this.$isPlaying),
+        filter(([_, isPlaying]) => isPlaying),
+        takeUntil(this.$destroy),
+      ).subscribe(() => this.readProgress());
   }
 
-  setTracks(tracks: AudioTrack[]) {
+  private readProgress() {
+    this.$currentTrackProgressSeconds.next(this.audioContext.currentTime);
+  }
+
+  setTracks(tracks: AudioTrack[], startTrackIndex: number = 0, startTrackProgressSeconds: number = 0) {
     this.stop();
     const baseUrl = environment.api_base_url
 
@@ -217,17 +199,15 @@ class AudioPlayer {
       url: `${baseUrl}/books/${track.book_id}/speech/${track.file_name}`,
       index: index
     }));
-    this.$currentTrackIndex.next(0);
-    this.$currentTrackProgressSeconds.next(0);
+    this.$currentTrackIndex.next(startTrackIndex);
+    this.$currentTrackProgressSeconds.next(startTrackProgressSeconds);
   }
 
-  play(index: number | null = null, position_seconds: number = 0) {
-    // Start playing track[index], from position_seconds
-    // if the index is null, and resume playing the current track or do nothing if it is playing.
+  play() {
     combineLatest([this.$currentTrackIndex, this.$currentTrackProgressSeconds])
       .pipe(take(1))
       .subscribe(([trackIndex, trackProgressSeconds]) => {
-        return this.playTrack(this.tracks[trackIndex]);
+        return this.playTrack(this.tracks[trackIndex], trackProgressSeconds);
       });
   }
 
@@ -242,14 +222,6 @@ class AudioPlayer {
     )
   }
 
-  nextTrack() {
-    // Play the next track.
-  }
-
-  previousTrack() {
-    // Play the previous track.
-  }
-
   private playAudio(audioBuffer: AudioBuffer, offset_seconds: number = 0) {
     // Create an AudioBufferSourceNode
     const source = this.audioContext.createBufferSource();
@@ -260,15 +232,11 @@ class AudioPlayer {
     // Connect the source node to the destination (the speakers)
     source.connect(this.audioContext.destination);
     source.start(0, offset_seconds); // Start at time 0 seconds
-    source.onended = () => {
-      source.disconnect(this.audioContext.destination);
-    };
 
     return of(source);
   }
 
-  private playTrack(track: PlayerTrack) {
-    console.log(track);
+  private playTrack(track: PlayerTrack, offsetSeconds: number) {
     if (track.url == null) {
       return throwError(() => new Error("Track URL is null"));
     }
@@ -285,12 +253,22 @@ class AudioPlayer {
     }
 
     return audioBuffer.pipe(
-      switchMap(audioBuffer => this.playAudio(audioBuffer))
+      switchMap(audioBuffer => this.playAudio(audioBuffer, offsetSeconds)),
+      tap(source => {
+        source.addEventListener("ended", () => {
+          this.$currentTrackSourceNode.next(null);
+          this.readProgress();
+        });
+      })
     ).subscribe(audioNode => this.$currentTrackSourceNode.next(audioNode));
   }
 
   getTrack(trackIndex: number) {
     return this.tracks[trackIndex].audioTrack;
+  }
+
+  destroy() {
+    this.$destroy.next(true);
   }
 }
 
