@@ -1,23 +1,24 @@
 import { Component, input, OnDestroy, OnInit } from '@angular/core';
-import { AudioTrack, PlaybackProgress, Playlist } from '../../core/models/books.dto';
+import { AudioTrack, BookStatus, PlaybackProgress, Playlist } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
-  combineLatest, combineLatestWith,
+  combineLatest, combineLatestWith, defer,
   filter, from,
   interval,
-  map, of,
+  map, of, repeat,
   Subject,
   Subscription,
   switchMap,
   take,
-  takeUntil,
-  tap, throwError, zip,
+  takeUntil, takeWhile,
+  tap, throwError, timer, zip,
 } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { PlaylistsService } from '../../core/services/playlists.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-player',
@@ -34,8 +35,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   playerState: PlayerState;
 
-  constructor(private playlistService: PlaylistsService) {
-    this.playerState = new PlayerState(this.playlistService);
+  constructor(private playlistService: PlaylistsService,
+              private activeRoute: ActivatedRoute) {
+    this.playerState = new PlayerState(this.playlistService, this.activeRoute);
   }
 
   ngOnInit(): void {
@@ -60,7 +62,7 @@ class PlayerState {
   writerSubscription: Subscription;
 
   // Holds global book time at which each track starts.
-  durationSum: number[] = [];
+  durationSum: number[] = [0];
 
   // Progress from the start of the book.
   private readonly $progressSeconds = combineLatest([this.audioPlayer.$trackIndex, this.audioPlayer.$currentTrackProgressSeconds])
@@ -86,7 +88,9 @@ class PlayerState {
       )
     );
 
-  constructor(private playlistService: PlaylistsService) {
+  private isGenerating = false;
+
+  constructor(private playlistService: PlaylistsService, private activeRoute: ActivatedRoute) {
     this.writerSubscription = interval(5000)
       .pipe(
         combineLatestWith(this.audioPlayer.$isPlaying),
@@ -94,25 +98,54 @@ class PlayerState {
         takeUntil(this.$destroy),
       ).subscribe(() => this.updateProgress());
 
-    // TODO: Listen to the track index changes and trigger speech generation if it's second to the last track.
-    //  Poll audio tracks until all are ready. Once ready, add to the player.
+    // Trigger generation of the next sections when reaching the end of available tracks.
+    const bookId = this.activeRoute.snapshot.paramMap.get("id")!;
+    this.audioPlayer.$trackIndex
+      .pipe(
+        takeUntil(this.$destroy),
+        filter(trackIndex => this.audioPlayer.getNumberOfTracks() > 0 && trackIndex >= this.audioPlayer.getNumberOfTracks() - 5),
+        filter(() => !this.isGenerating),
+        tap(() => this.isGenerating = true),
+        switchMap(() => this.playlistService.generateTracks(bookId))
+      ).subscribe((playlist) => {
+      let sectionIds = playlist.tracks.map(t => t.section_id);
+      defer(() => of(sectionIds)).pipe(
+        repeat({
+          delay: () => timer(5_000 * (0.75 + 0.5 * Math.random()))
+        }),
+        takeWhile(( sections) => sections.length > 0),
+        switchMap(sectionIds => this.playlistService.getTracks(bookId, sectionIds))
+      ).subscribe(tracks => {
+        const readyTracks = tracks.tracks.filter(t => t.status == BookStatus.ready);
+        this.addTracks(readyTracks);
+
+        sectionIds = tracks.tracks.filter(t => t.status != BookStatus.ready).map(t => t.section_id);
+        this.setAvailability(tracks.progress);
+        if (sectionIds.length == 0) {
+          this.isGenerating = false;
+        }
+      })
+    });
   }
 
   setPlaylist(playlist: Playlist) {
-    this.durationSum = [0];
-    for (let i = 0; i < playlist.tracks.length; i++) {
-      this.durationSum.push(this.durationSum[i] + playlist.tracks[i].duration);
-    }
+    this.addTracks(playlist.tracks);
 
     let trackIndex = 0;
     if (playlist.progress.section_id) {
       trackIndex = playlist.tracks.findIndex(t => t.section_id == playlist.progress.section_id);
     }
     const trackProgress = playlist.progress.section_progress_seconds || 0;
-    this.audioPlayer.addTracks(playlist.tracks);
     this.audioPlayer.setProgress(trackIndex, trackProgress);
 
     this.setAvailability(playlist.progress);
+  }
+
+  addTracks(tracks: AudioTrack[]) {
+    for (let i = 0; i < tracks.length; i++) {
+      this.durationSum.push(this.durationSum[this.durationSum.length-1] + tracks[i].duration);
+    }
+    this.audioPlayer.addTracks(tracks);
   }
 
   setAvailability(progress: PlaybackProgress) {
@@ -135,8 +168,7 @@ class PlayerState {
             "section_progress_seconds": progressSeconds,
           });
         })
-      )
-      .subscribe();
+      ).subscribe();
   }
 
   playPause() {
@@ -186,7 +218,6 @@ class AudioPlayer {
 
   $destroy = new Subject<boolean>();
 
-  // Interval that reads info from Amplitude.
   readerSubscription: Subscription;
 
   $trackIndex = new BehaviorSubject<number>(0);
@@ -269,6 +300,10 @@ class AudioPlayer {
       });
   }
 
+  getNumberOfTracks() {
+    return this.tracks.length;
+  }
+
   addTracks(tracks: AudioTrack[]) {
     const baseUrl = environment.api_base_url
 
@@ -309,6 +344,30 @@ class AudioPlayer {
           this.$status.next(PlayerStatus.paused);
         }
       )
+  }
+
+  next() {
+    this.$trackIndex.pipe(take(1)).subscribe(
+      (current) => {
+        const next = current + 1;
+        if (next >= this.tracks.length) {
+          return;
+        }
+        this.$trackIndex.next(next);
+        this.$trackOffset.next(0);
+      });
+  }
+
+  previous() {
+    this.$trackIndex.pipe(take(1)).subscribe(
+      (current) => {
+        const prev = current - 1;
+        if (prev < 0) {
+          return;
+        }
+        this.$trackIndex.next(prev);
+        this.$trackOffset.next(0);
+      });
   }
 
   private connectSource(audioContext: AudioContext, audioBuffer: AudioBuffer) {

@@ -70,9 +70,12 @@ class AudioTrackService:
         self.files_service.store_speech_file(section.book_id, file_name, speech_data)
         return file_name
 
-    def get_tracks(self, book_id: uuid.UUID) -> List[db.AudioTrack]:
+    def get_tracks(self, book_id: uuid.UUID, sections: List[int] = None) -> List[db.AudioTrack]:
         with DbSession() as session:
-            stmt = select(db.AudioTrack).where(db.AudioTrack.book_id == book_id).order_by(db.AudioTrack.playlist_order)
+            stmt = select(db.AudioTrack).where(db.AudioTrack.book_id == book_id)
+            if sections:
+                stmt = stmt.where(db.AudioTrack.section_id.in_(sections))
+            stmt = stmt.order_by(db.AudioTrack.playlist_order)
             return list(session.execute(stmt).scalars().all())
 
 

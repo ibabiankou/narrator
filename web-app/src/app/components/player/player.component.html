@@ -1,6 +1,6 @@
 <div id="controls">
   <div class="main-controls">
-    <button matIconButton class="amplitude-prev">
+    <button matIconButton (click)="playerState.audioPlayer.previous()">
       <mat-icon>skip_previous</mat-icon>
     </button>
     <button matIconButton class="play-pause" (click)="playerState.playPause()">
@@ -10,7 +10,7 @@
         <mat-icon>play_arrow</mat-icon>
       }
     </button>
-    <button matIconButton class="amplitude-next">
+    <button matIconButton (click)="playerState.audioPlayer.next()">
       <mat-icon>skip_next</mat-icon>
     </button>
   </div>

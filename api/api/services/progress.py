@@ -41,6 +41,8 @@ class PlaybackProgressService:
 
         narration_stats = {}
         with DbSession() as session:
+            # TODO: For some reason the result of the query is cached between requests. Find a way to disable the cache
+            #  in this particular case.
             rs = session.execute(text(query), {"book_id": book_id})
             for length, stat_type in rs:
                 narration_stats[stat_type] = length

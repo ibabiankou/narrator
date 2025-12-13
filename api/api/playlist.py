@@ -1,8 +1,8 @@
 import uuid
-from typing import Set, Optional
+from typing import Set, Optional, List, Annotated
 
 from fastapi import APIRouter, HTTPException
-from fastapi.params import Depends
+from fastapi.params import Depends, Query
 from sqlalchemy import select
 
 from api import get_logger, SessionDep
@@ -57,6 +57,7 @@ def _progress(playback_progress, stats):
         unavailable_percent=unavailable_percent
     )
 
+
 @playlists_router.post("/{book_id}/progress")
 def update_progress(request: api.PlaybackProgressUpdate,
                     progress_service: PlaybackProgressService = Depends()):
@@ -69,12 +70,11 @@ def update_progress(request: api.PlaybackProgressUpdate,
 @playlists_router.post("/{book_id}/generate")
 def generate_speech(book_id: uuid.UUID,
                     sections: Optional[Set[int]],
-                    limit: Optional[int],
                     session: SessionDep,
+                    limit: Optional[int] = None,
                     audio_track_service: AudioTrackService = Depends(),
                     progress_service: PlaybackProgressService = Depends()
                     ) -> api.Playlist:
-
     if not sections and not limit:
         raise HTTPException(status_code=400, detail="Either sections or limit must be provided")
     if sections and limit:
@@ -109,3 +109,21 @@ def generate_speech(book_id: uuid.UUID,
     ]
     progress = _progress(*progress_service.get_progress(book_id))
     return api.Playlist(progress=progress, tracks=new_tracks)
+
+
+@playlists_router.get("/{book_id}/tracks")
+def get_tracks(book_id: uuid.UUID,
+               sections: Annotated[Set[int], Query()] = None,
+               audio_track_service: AudioTrackService = Depends(),
+               progress_service: PlaybackProgressService = Depends()
+               ) -> api.Playlist:
+    tracks = [
+        api.AudioTrack(book_id=track.book_id,
+                       section_id=track.section_id,
+                       status=track.status,
+                       file_name=track.file_name,
+                       duration=track.duration)
+        for track in audio_track_service.get_tracks(book_id, sections)
+    ]
+    progress = _progress(*progress_service.get_progress(book_id))
+    return api.Playlist(progress=progress, tracks=tracks)
