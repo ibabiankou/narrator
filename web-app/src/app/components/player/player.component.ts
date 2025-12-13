@@ -106,7 +106,8 @@ class PlayerState {
       trackIndex = playlist.tracks.findIndex(t => t.section_id == playlist.progress.section_id);
     }
     const trackProgress = playlist.progress.section_progress_seconds || 0;
-    this.audioPlayer.setTracks(playlist.tracks, trackIndex, trackProgress);
+    this.audioPlayer.setTracks(playlist.tracks);
+    this.audioPlayer.setProgress(trackIndex, trackProgress);
 
     this.$totalNarratedSeconds.next(playlist.progress.total_narrated_seconds);
 
@@ -261,7 +262,7 @@ class AudioPlayer {
       });
   }
 
-  setTracks(tracks: AudioTrack[], startTrackIndex: number = 0, trackOffsetSeconds: number = 0) {
+  setTracks(tracks: AudioTrack[]) {
     this.stop();
     const baseUrl = environment.api_base_url
 
@@ -270,6 +271,9 @@ class AudioPlayer {
       url: `${baseUrl}/books/${track.book_id}/speech/${track.file_name}`,
       index: index
     }));
+  }
+
+  setProgress(startTrackIndex: number, trackOffsetSeconds: number) {
     this.$trackIndex.next(startTrackIndex);
     this.$trackOffset.next(trackOffsetSeconds);
   }
