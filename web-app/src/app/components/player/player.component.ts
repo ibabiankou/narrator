@@ -15,7 +15,7 @@ import {
   switchMap,
   take,
   takeUntil,
-  tap, throwError,
+  tap, throwError, zip,
 } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 
@@ -156,22 +156,29 @@ interface PlayerTrack {
 
   arrayBuffer?: ArrayBuffer;
   // Caching decoded audio might end up taking a lot of memory.
-  // audioBuffer?: AudioBuffer;
+  audioBuffer?: AudioBuffer;
+}
+
+enum PlayerStatus {
+  stopped = "stopped",
+  playing = "playing",
+  paused = "paused",
 }
 
 /**
  * Responsible for playback logic: Playing each track, navigating back and forth, changing tracks.
  */
 class AudioPlayer {
+  private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.stopped);
   private $audioContext = new BehaviorSubject<AudioContext | null>(null);
+  private $currentTrackSourceNode = new BehaviorSubject<AudioBufferSourceNode | null>(null);
+
   private tracks: PlayerTrack[] = [];
 
   $destroy = new Subject<boolean>();
 
   // Interval that reads info from Amplitude.
   readerSubscription: Subscription;
-
-  private $currentTrackSourceNode = new BehaviorSubject<AudioBufferSourceNode | null>(null);
 
   $trackIndex = new BehaviorSubject<number>(0);
   $trackOffset = new BehaviorSubject<number>(0);
@@ -180,13 +187,73 @@ class AudioPlayer {
   $currentTrackProgressSeconds = combineLatest([this.$trackOffset, this.$contextTimeOnStart, this.$currentContextTime])
     .pipe(map(([offset, timeOnStart, currentTime]) => offset + currentTime - timeOnStart));
 
-  // Whether the audioContext is paused.
-  $isPaused = new BehaviorSubject<boolean>(false);
-
-  $isPlaying = combineLatest([this.$currentTrackSourceNode, this.$isPaused])
-    .pipe(map(([sourceNode, isPaused]) => sourceNode != null && !isPaused));
+  $isPlaying = combineLatest([this.$currentTrackSourceNode, this.$status])
+    .pipe(map(([sourceNode, status]) => sourceNode != null && status == PlayerStatus.playing));
 
   constructor() {
+    zip([this.$trackIndex, this.$trackOffset])
+      .pipe(
+        takeUntil(this.$destroy),
+        filter(([trackIndex, _]) => trackIndex >= 0 && trackIndex < this.tracks.length),
+        // switchMap(([trackIndex, trackOffset]) =>
+        //   this.$status.pipe(switchMap(status => {
+        //     if (status == PlayerStatus.playing) {
+        //       console.log("Playing, so returning track");
+        //       return of([trackIndex, trackOffset]);
+        //     } else {
+        //       console.log("Not playing, so returning empty");
+        //       return EMPTY;
+        //     }
+        //   }))
+        // ),
+        switchMap(
+          ([trackIndex, trackOffset]) => {
+            // take one from status. If it's playing, then continue, otherwise, do nothing.
+            return this.$status.pipe(
+              take(1),
+              filter(status => status == PlayerStatus.playing),
+              switchMap(() => {
+                // main logic
+                console.log("Play track", trackIndex, "offset", trackOffset);
+                this.$audioContext.pipe(take(1)).subscribe(ac => ac?.close());
+
+                const track = this.tracks[trackIndex];
+                if (track == null) {
+                  return throwError(() => new Error("Invalid track index"));
+                }
+
+                let audioContext = new AudioContext();
+                this.$audioContext.next(audioContext);
+
+                let audioBuffer;
+                if (track.audioBuffer != null) {
+                  audioBuffer = of(track.audioBuffer);
+                } else if (track.url) {
+                  audioBuffer = from(fetch(track.url)).pipe(
+                    switchMap(response => response.arrayBuffer()),
+                    switchMap(arrayBuffer => audioContext.decodeAudioData(arrayBuffer)),
+                    tap(audioBuffer => track.audioBuffer = audioBuffer)
+                  )
+                } else {
+                  return throwError(() => new Error("Track without URL"));
+                }
+
+                return audioBuffer.pipe(
+                  switchMap(audioBuffer => this.connectSource(audioContext, audioBuffer)),
+                  tap(source => {
+                    source.start(0, trackOffset);
+                    source.addEventListener("ended", () => {
+                      this.$currentTrackSourceNode.next(null);
+                      this.readProgress();
+                    });
+                    this.$currentTrackSourceNode.next(source);
+                  })
+                );
+              }));
+          }
+        )
+      ).subscribe();
+
     this.readerSubscription = interval(1000)
       .pipe(
         combineLatestWith(this.$isPlaying),
@@ -199,6 +266,7 @@ class AudioPlayer {
     this.$audioContext
       .pipe(filter(ac => ac != null), take(1))
       .subscribe((audioContext) => {
+        console.log("Current context time:", audioContext.currentTime)
         this.$currentContextTime.next(audioContext.currentTime);
       });
   }
@@ -217,23 +285,14 @@ class AudioPlayer {
   }
 
   play() {
-    combineLatest([this.$trackIndex, this.$trackOffset, this.$audioContext])
-      .pipe(take(1))
-      .subscribe(([trackIndex, trackOffset, audioContext]) => {
-        if (audioContext == null) {
-          this.playTrack(trackIndex, trackOffset)
-            .subscribe(source => {
-              source.addEventListener("ended", (ev) => {
-                this.$trackIndex.pipe(take(1))
-                  .subscribe(trackIndex => {
-                    // TODO: this approach does not work... Need to subscribe. So refactor this to an actual subscription.
-                    this.playTrack(trackIndex + 1, 0);
-                  });
-              });
-            });
-        } else {
-          audioContext.resume();
-          this.$isPaused.next(false);
+    combineLatest([this.$status, this.$audioContext, this.$trackIndex, this.$trackOffset]).pipe(take(1)).subscribe(
+      ([status, audioContext, index, offset]) => {
+        this.$status.next(PlayerStatus.playing);
+        if (status == PlayerStatus.paused) {
+          audioContext?.resume();
+        } else if (status == PlayerStatus.stopped) {
+          this.$trackIndex.next(index);
+          this.$trackOffset.next(offset);
         }
       });
   }
@@ -243,7 +302,8 @@ class AudioPlayer {
       .subscribe(
         (audioContext) => {
           audioContext.suspend();
-          this.$isPaused.next(true);
+          this.readProgress();
+          this.$status.next(PlayerStatus.paused);
         }
       )
   }
@@ -259,61 +319,11 @@ class AudioPlayer {
     );
   }
 
-  private playAudio(audioContext: AudioContext, audioBuffer: AudioBuffer, offset_seconds: number = 0) {
+  private connectSource(audioContext: AudioContext, audioBuffer: AudioBuffer) {
     const source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(audioContext.destination);
-    source.start(0, offset_seconds); // Start with 0 second delay
     return of(source);
-  }
-
-  private playTrack(trackIndex: number, offsetSeconds: number) {
-    console.log("Play track", trackIndex, "offset", offsetSeconds);
-
-    if (trackIndex < 0 || trackIndex >= this.tracks.length) {
-      return throwError(() => new Error("Invalid track index"));
-    }
-    const track = this.tracks[trackIndex];
-
-    if (track.url == null) {
-      return throwError(() => new Error("Track URL is null"));
-    }
-
-    this.$trackIndex.next(trackIndex);
-    this.$trackOffset.next(offsetSeconds);
-
-    let arrayBuffer;
-    if (track.arrayBuffer != null) {
-      arrayBuffer = of(track.arrayBuffer);
-    } else {
-      arrayBuffer = from(fetch(track.url)).pipe(
-        switchMap(response => response.arrayBuffer()),
-        tap(arrayBuffer => track.arrayBuffer = arrayBuffer)
-      )
-    }
-
-    return this.$audioContext.pipe(
-      take(1),
-      switchMap(context => {
-        let audioContext = context;
-        if (audioContext == null) {
-          audioContext = new AudioContext();
-          this.$audioContext.next(audioContext);
-        }
-
-        return arrayBuffer.pipe(
-          switchMap(arrayBuffer => audioContext.decodeAudioData(arrayBuffer)),
-          switchMap(audioBuffer => this.playAudio(audioContext, audioBuffer, offsetSeconds)),
-          tap(source => {
-            source.addEventListener("ended", () => {
-              this.$currentTrackSourceNode.next(null);
-              this.readProgress();
-            });
-            this.$currentTrackSourceNode.next(source);
-          })
-        );
-      })
-    );
   }
 
   getTrack(trackIndex: number) {

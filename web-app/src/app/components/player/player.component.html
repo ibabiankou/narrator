@@ -3,7 +3,7 @@
     <button matIconButton class="amplitude-prev">
       <mat-icon>skip_previous</mat-icon>
     </button>
-    <button matIconButton class="play-pause" (click)="playerState?.playPause()">
+    <button matIconButton class="play-pause" (click)="playerState.playPause()">
       @if (playerState.audioPlayer.$isPlaying | async) {
         <mat-icon>pause</mat-icon>
       } @else {
@@ -24,13 +24,13 @@
 
 <div class="progress">
   <div class="slider">
-    <div class="now" [style]="{ width: (playerState?.$nowPercent | async) + '%' }"></div>
-    <div class="available" [style]="{ width: (playerState?.$availablePercent | async) + '%' }"></div>
+    <div class="now" [style]="{ width: (playerState.$nowPercent | async) + '%' }"></div>
+    <div class="available" [style]="{ width: (playerState.$availablePercent | async) + '%' }"></div>
     <div class="queued"></div>
-    <div class="unavailable" [style]="{ width: (playerState?.$unavailablePercent | async) + '%' }"></div>
+    <div class="unavailable" [style]="{ width: (playerState.$unavailablePercent | async) + '%' }"></div>
   </div>
   <div class="times">
-    <div class="current-progress">{{ playerState?.$nowTime | async }}</div>
-    <div class="remaining-progress">{{ playerState?.$remainingTime | async }}</div>
+    <div class="current-progress">{{ playerState.$nowTime | async }}</div>
+    <div class="remaining-progress">{{ playerState.$remainingTime | async }}</div>
   </div>
 </div>
