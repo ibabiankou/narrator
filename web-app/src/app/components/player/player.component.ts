@@ -195,25 +195,12 @@ class AudioPlayer {
       .pipe(
         takeUntil(this.$destroy),
         filter(([trackIndex, _]) => trackIndex >= 0 && trackIndex < this.tracks.length),
-        // switchMap(([trackIndex, trackOffset]) =>
-        //   this.$status.pipe(switchMap(status => {
-        //     if (status == PlayerStatus.playing) {
-        //       console.log("Playing, so returning track");
-        //       return of([trackIndex, trackOffset]);
-        //     } else {
-        //       console.log("Not playing, so returning empty");
-        //       return EMPTY;
-        //     }
-        //   }))
-        // ),
         switchMap(
           ([trackIndex, trackOffset]) => {
-            // take one from status. If it's playing, then continue, otherwise, do nothing.
             return this.$status.pipe(
               take(1),
               filter(status => status == PlayerStatus.playing),
               switchMap(() => {
-                // main logic
                 console.log("Play track", trackIndex, "offset", trackOffset);
                 this.$audioContext.pipe(take(1)).subscribe(ac => ac?.close());
 
@@ -245,6 +232,10 @@ class AudioPlayer {
                     source.addEventListener("ended", () => {
                       this.$currentTrackSourceNode.next(null);
                       this.readProgress();
+                      if (this.tracks.length > trackIndex + 1) {
+                        this.$trackIndex.next(trackIndex + 1);
+                        this.$trackOffset.next(0);
+                      }
                     });
                     this.$currentTrackSourceNode.next(source);
                   })
