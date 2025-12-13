@@ -57,7 +57,7 @@ class PlayerState {
 
   $destroy = new Subject<boolean>();
   // Interval that writes progress to the server.
-  // writerSubscription: Subscription;
+  writerSubscription: Subscription;
 
   // Holds global book time at which each track starts.
   durationSum: number[] = [];
@@ -87,11 +87,12 @@ class PlayerState {
     );
 
   constructor(private bookService: BooksService) {
-    // this.writerSubscription = interval(5000)
-    //   .pipe(
-    //     filter(() => Amplitude.getPlayerState() == "playing"),
-    //     takeUntil(this.$destroy),
-    //   ).subscribe(() => this.updateProgress());
+    this.writerSubscription = interval(5000)
+      .pipe(
+        combineLatestWith(this.audioPlayer.$isPlaying),
+        filter(([_, isPlaying]) => isPlaying),
+        takeUntil(this.$destroy),
+      ).subscribe(() => this.updateProgress());
   }
 
   setPlaylist(playlist: Playlist) {
@@ -201,7 +202,6 @@ class AudioPlayer {
               take(1),
               filter(status => status == PlayerStatus.playing),
               switchMap(() => {
-                console.log("Play track", trackIndex, "offset", trackOffset);
                 this.$audioContext.pipe(take(1)).subscribe(ac => ac?.close());
 
                 const track = this.tracks[trackIndex];
@@ -257,7 +257,6 @@ class AudioPlayer {
     this.$audioContext
       .pipe(filter(ac => ac != null), take(1))
       .subscribe((audioContext) => {
-        console.log("Current context time:", audioContext.currentTime)
         this.$currentContextTime.next(audioContext.currentTime);
       });
   }
