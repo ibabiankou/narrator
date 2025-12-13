@@ -17,6 +17,15 @@ class PlaybackProgressService:
                 from sections s 
                 where s.book_id = :book_id
                 union
+                select sum(a.duration) as length, 'played_duration' as type
+                from audio_tracks a
+                where a.book_id = :book_id
+                  and a.section_id < (select section_id from playback_progress where book_id = :book_id)
+                union
+                select sum(a.duration) as length, 'narrated_duration' as type
+                from audio_tracks a
+                where a.book_id = :book_id
+                union
                 select coalesce(sum(length(s.content)), 0) as length, 'available' as type
                 from sections s join audio_tracks a on s.id = a.section_id
                 where s.book_id = :book_id and a.status = 'ready'

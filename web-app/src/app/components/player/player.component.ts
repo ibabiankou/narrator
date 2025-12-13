@@ -1,5 +1,5 @@
 import { Component, input, OnDestroy, OnInit } from '@angular/core';
-import { AudioTrack, Playlist } from '../../core/models/books.dto';
+import { AudioTrack, PlaybackProgress, Playlist } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import { environment } from '../../../environments/environment';
@@ -93,6 +93,9 @@ class PlayerState {
         filter(([_, isPlaying]) => isPlaying),
         takeUntil(this.$destroy),
       ).subscribe(() => this.updateProgress());
+
+    // TODO: Listen to the track index changes and trigger speech generation if it's second to the last track.
+    //  Poll audio tracks until all are ready. Once ready, add to the player.
   }
 
   setPlaylist(playlist: Playlist) {
@@ -106,14 +109,18 @@ class PlayerState {
       trackIndex = playlist.tracks.findIndex(t => t.section_id == playlist.progress.section_id);
     }
     const trackProgress = playlist.progress.section_progress_seconds || 0;
-    this.audioPlayer.setTracks(playlist.tracks);
+    this.audioPlayer.addTracks(playlist.tracks);
     this.audioPlayer.setProgress(trackIndex, trackProgress);
 
-    this.$totalNarratedSeconds.next(playlist.progress.total_narrated_seconds);
+    this.setAvailability(playlist.progress);
+  }
 
-    this.$availablePercent.next(playlist.progress.available_percent);
-    this.$queuedPercent.next(playlist.progress.queued_percent);
-    this.$unavailablePercent.next(playlist.progress.unavailable_percent);
+  setAvailability(progress: PlaybackProgress) {
+    this.$totalNarratedSeconds.next(progress.total_narrated_seconds);
+
+    this.$availablePercent.next(progress.available_percent);
+    this.$queuedPercent.next(progress.queued_percent);
+    this.$unavailablePercent.next(progress.unavailable_percent);
   }
 
   private updateProgress() {
@@ -262,15 +269,17 @@ class AudioPlayer {
       });
   }
 
-  setTracks(tracks: AudioTrack[]) {
-    this.stop();
+  addTracks(tracks: AudioTrack[]) {
     const baseUrl = environment.api_base_url
 
-    this.tracks = tracks.map((track, index) => ({
+    const length = tracks.length;
+    let newTracks: PlayerTrack[] = tracks.map((track, index) => ({
       audioTrack: track,
       url: `${baseUrl}/books/${track.book_id}/speech/${track.file_name}`,
-      index: index
+      index: length + index
     }));
+
+    this.tracks.push(...newTracks);
   }
 
   setProgress(startTrackIndex: number, trackOffsetSeconds: number) {
@@ -300,17 +309,6 @@ class AudioPlayer {
           this.$status.next(PlayerStatus.paused);
         }
       )
-  }
-
-  stop() {
-    this.$currentTrackSourceNode.pipe(take(1)).subscribe(
-      (source) => {
-        if (source) {
-          source.stop();
-          this.$currentTrackSourceNode.next(null);
-        }
-      }
-    );
   }
 
   private connectSource(audioContext: AudioContext, audioBuffer: AudioBuffer) {

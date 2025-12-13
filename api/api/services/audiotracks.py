@@ -25,7 +25,7 @@ class AudioTrackService:
         self.files_service = files_service
         self.kokoro_client = kokoro_client
 
-    def generate_speech(self, sections: list[db.Section]):
+    def generate_speech(self, sections: list[db.Section]) -> List[db.AudioTrack]:
         LOG.info("Enqueueing speech generation for %s sections: \n%s", len(sections), sections)
         self.delete_for_sections(sections)
 
@@ -49,6 +49,8 @@ class AudioTrackService:
 
         for section in sections:
             SpeechGenerationQueue.singleton.put(self, section, track_map[section.id])
+
+        return inserted_tracks
 
     def delete_for_sections(self, sections: list[db.Section]):
         with DbSession() as session:
