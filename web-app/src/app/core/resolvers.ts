@@ -3,6 +3,7 @@ import { BookDetails, BookPage, Playlist } from './models/books.dto';
 import { inject } from '@angular/core';
 import { BooksService } from './services/books.service';
 import { catchError, map, of, tap } from 'rxjs';
+import { PlaylistsService } from './services/playlists.service';
 
 export const bookResolver: ResolveFn<BookDetails | RedirectCommand> = (route) => {
   const booksService = inject(BooksService);
@@ -40,9 +41,9 @@ export const bookContentResolver: ResolveFn<BookPage[]> = (route) => {
 };
 
 export const playbackProgressResolver: ResolveFn<Playlist> = (route) => {
-  const booksService = inject(BooksService);
+  const service = inject(PlaylistsService);
   const bookId = route.paramMap.get('id')!;
-  return booksService.getPlaylist(bookId).pipe(
+  return service.getPlaylist(bookId).pipe(
     catchError(error => {
       console.error('Failed to load book playlist:', error);
       return of();

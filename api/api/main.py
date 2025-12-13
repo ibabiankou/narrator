@@ -9,6 +9,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from api.audio import audio_router
 from api.books import books_router
 from api.files import files_router
+from api.playlist import playlists_router
 from api.sections import sections_router
 from api.services.audiotracks import SpeechGenerationQueue
 
@@ -51,5 +52,6 @@ def health():
 base_url_router.include_router(audio_router, prefix="/audio")
 base_url_router.include_router(files_router, prefix="/files")
 base_url_router.include_router(books_router, prefix="/books")
+base_url_router.include_router(playlists_router, prefix="/playlists")
 base_url_router.include_router(sections_router, prefix="/sections")
 app.include_router(base_url_router)

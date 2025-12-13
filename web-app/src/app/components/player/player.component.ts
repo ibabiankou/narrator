@@ -3,7 +3,6 @@ import { AudioTrack, Playlist } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import { environment } from '../../../environments/environment';
-import { BooksService } from '../../core/services/books.service';
 import {
   BehaviorSubject,
   combineLatest, combineLatestWith,
@@ -18,6 +17,7 @@ import {
   tap, throwError, zip,
 } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
+import { PlaylistsService } from '../../core/services/playlists.service';
 
 @Component({
   selector: 'app-player',
@@ -34,8 +34,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   playerState: PlayerState;
 
-  constructor(private bookService: BooksService) {
-    this.playerState = new PlayerState(this.bookService);
+  constructor(private playlistService: PlaylistsService) {
+    this.playerState = new PlayerState(this.playlistService);
   }
 
   ngOnInit(): void {
@@ -86,7 +86,7 @@ class PlayerState {
       )
     );
 
-  constructor(private bookService: BooksService) {
+  constructor(private playlistService: PlaylistsService) {
     this.writerSubscription = interval(5000)
       .pipe(
         combineLatestWith(this.audioPlayer.$isPlaying),
@@ -122,7 +122,7 @@ class PlayerState {
         take(1),
         switchMap(([trackIndex, progressSeconds]) => {
           const track = this.audioPlayer.getTrack(trackIndex);
-          return this.bookService.updateProgress({
+          return this.playlistService.updateProgress({
             "book_id": track.book_id,
             "section_id": track.section_id,
             "section_progress_seconds": progressSeconds,
