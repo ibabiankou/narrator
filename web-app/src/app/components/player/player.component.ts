@@ -109,22 +109,33 @@ class PlayerState {
         switchMap(() => this.playlistService.generateTracks(bookId))
       ).subscribe((playlist) => {
       let sectionIds = playlist.tracks.map(t => t.section_id);
-      defer(() => of(sectionIds)).pipe(
-        repeat({
-          delay: () => timer(5_000 * (0.75 + 0.5 * Math.random()))
-        }),
-        takeWhile(( sections) => sections.length > 0),
-        switchMap(sectionIds => this.playlistService.getTracks(bookId, sectionIds))
-      ).subscribe(tracks => {
-        const readyTracks = tracks.tracks.filter(t => t.status == BookStatus.ready);
+      defer(() => of(sectionIds))
+        .pipe(
+          repeat({delay: () => timer(5_000 * (0.75 + 0.5 * Math.random()))}),
+          takeWhile((sections) => sections.length > 0),
+          switchMap(sectionIds => this.playlistService.getTracks(bookId, sectionIds))
+        ).subscribe((tracks) => {
+        const readyTracks: AudioTrack[] = [];
+        const incompleteSectionIds: number[] = [];
+        let skipReady = false;
+        for (let i = 0; i < tracks.tracks.length; i++) {
+          if (!skipReady && tracks.tracks[i].status != BookStatus.ready) {
+            skipReady = true;
+          }
+          if (skipReady) {
+            incompleteSectionIds.push(tracks.tracks[i].section_id);
+          } else {
+            readyTracks.push(tracks.tracks[i]);
+          }
+        }
         this.addTracks(readyTracks);
+        sectionIds = incompleteSectionIds;
 
-        sectionIds = tracks.tracks.filter(t => t.status != BookStatus.ready).map(t => t.section_id);
         this.setAvailability(tracks.progress);
         if (sectionIds.length == 0) {
           this.isGenerating = false;
         }
-      })
+      });
     });
   }
 
@@ -143,7 +154,7 @@ class PlayerState {
 
   addTracks(tracks: AudioTrack[]) {
     for (let i = 0; i < tracks.length; i++) {
-      this.durationSum.push(this.durationSum[this.durationSum.length-1] + tracks[i].duration);
+      this.durationSum.push(this.durationSum[this.durationSum.length - 1] + tracks[i].duration);
     }
     this.audioPlayer.addTracks(tracks);
   }
