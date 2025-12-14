@@ -103,6 +103,10 @@ export class ViewBookPage implements OnInit {
   }
 
   loadAndScrollToSection(sectionId: number) {
+    if (sectionId == 0) {
+      this.$scrollToSectionId.next(0);
+      return;
+    }
     const bookId = this.book().id;
     const pages = this.pages();
     const section = pages.flatMap(page => page.sections).find(s => s.id == sectionId);

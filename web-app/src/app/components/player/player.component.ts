@@ -1,4 +1,4 @@
-import { Component, HostListener, input, OnDestroy, OnInit, output } from '@angular/core';
+import { Component, HostListener, input, model, OnDestroy, OnInit, output } from '@angular/core';
 import { AudioTrack, BookStatus, PlaybackProgress, Playlist } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
@@ -33,6 +33,7 @@ import { ActivatedRoute } from '@angular/router';
 export class PlayerComponent implements OnInit, OnDestroy {
   playlist = input.required<Playlist>();
   sectionPlayed = output<number>();
+  emitSectionId = model(true);
 
   playerState: PlayerState;
 
@@ -40,6 +41,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
               private activeRoute: ActivatedRoute) {
     this.playerState = new PlayerState(this.playlistService, this.activeRoute);
     this.playerState.audioPlayer.$audioTrack
+      .pipe(filter(() => this.emitSectionId()))
       .subscribe(track => this.sectionPlayed.emit(track.section_id));
   }
 
@@ -78,12 +80,18 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.playerState?.destroy();
+    this.playerState.destroy();
   }
 
-  // TODO: Auto-scroll to the currently played item. I should probably simply emmit event what is being played
-  //  (upon start and periodically)
-  //  and let the page do the scrolling.
+  toggleSync() {
+    this.emitSectionId.set(!this.emitSectionId());
+    if (!this.emitSectionId()) {
+      this.sectionPlayed.emit(0);
+    } else {
+      this.playerState.audioPlayer.$audioTrack.pipe(take(1))
+        .subscribe(track => this.sectionPlayed.emit(track.section_id));
+    }
+  }
 }
 
 // A single place for all logic around managing the state of the player.
@@ -256,7 +264,6 @@ enum PlayerStatus {
 class AudioPlayer {
   private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.stopped);
   private $audioContext = new BehaviorSubject<AudioContext | null>(null);
-  private $currentTrackSourceNode = new BehaviorSubject<AudioBufferSourceNode | null>(null);
 
   private tracks: PlayerTrack[] = [];
 
@@ -271,8 +278,7 @@ class AudioPlayer {
   $currentTrackProgressSeconds = combineLatest([this.$trackOffset, this.$contextTimeOnStart, this.$currentContextTime])
     .pipe(map(([offset, timeOnStart, currentTime]) => offset + currentTime - timeOnStart));
 
-  $isPlaying = combineLatest([this.$currentTrackSourceNode, this.$status])
-    .pipe(map(([sourceNode, status]) => sourceNode != null && status == PlayerStatus.playing));
+  $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
 
   $audioTrack = combineLatest([this.$trackIndex, this.$isPlaying])
     .pipe(
@@ -321,14 +327,12 @@ class AudioPlayer {
                   tap(source => {
                     source.start(0, trackOffset);
                     source.addEventListener("ended", () => {
-                      this.$currentTrackSourceNode.next(null);
                       this.readProgress();
                       if (this.tracks.length > trackIndex + 1) {
                         this.$trackIndex.next(trackIndex + 1);
                         this.$trackOffset.next(0);
                       }
                     });
-                    this.$currentTrackSourceNode.next(source);
                   })
                 );
               }));

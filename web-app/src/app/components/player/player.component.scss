@@ -59,6 +59,10 @@ div#controls {
     display: flex;
     align-items: center;
     justify-content: space-between;
+
+    .active {
+      color: var(--mat-sys-on-primary-container);
+    }
   }
 }
 

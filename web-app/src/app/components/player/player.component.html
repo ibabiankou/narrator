@@ -21,7 +21,7 @@
     </button>
   </div>
   <div class="settings">
-    <button matIconButton>
+    <button matIconButton (click)="toggleSync()" [class]="{'active': emitSectionId()}">
       <mat-icon>sync_arrow_down</mat-icon>
     </button>
   </div>
