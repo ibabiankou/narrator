@@ -1,7 +1,10 @@
 <div id="controls">
   <div class="main-controls">
-    <button matIconButton (click)="playerState.audioPlayer.previous()">
+    <button matIconButton (click)="previous($event)">
       <mat-icon>skip_previous</mat-icon>
+    </button>
+    <button matIconButton (click)="replay($event)">
+      <mat-icon>replay_5</mat-icon>
     </button>
     <button matIconButton class="play-pause" (click)="playerState.playPause()">
       @if (playerState.audioPlayer.$isPlaying | async) {
@@ -10,7 +13,10 @@
         <mat-icon>play_arrow</mat-icon>
       }
     </button>
-    <button matIconButton (click)="playerState.audioPlayer.next()">
+    <button matIconButton (click)="forward($event)">
+      <mat-icon>forward_5</mat-icon>
+    </button>
+    <button matIconButton (click)="next($event)">
       <mat-icon>skip_next</mat-icon>
     </button>
   </div>

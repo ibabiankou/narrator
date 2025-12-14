@@ -1,4 +1,4 @@
-import { Component, input, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, input, OnDestroy, OnInit } from '@angular/core';
 import { AudioTrack, BookStatus, PlaybackProgress, Playlist } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
@@ -42,6 +42,36 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.playerState.setPlaylist(this.playlist());
+  }
+
+  @HostListener("document:keydown.shift.arrowleft", ["$event"])
+  previous(e: Event) {
+    e.preventDefault();
+    this.playerState.audioPlayer.previous();
+  }
+
+  @HostListener("document:keydown.arrowleft", ["$event"])
+  replay(e: Event) {
+    e.preventDefault();
+    this.playerState.audioPlayer.seek(-5);
+  }
+
+  @HostListener("window:keydown.space", ["$event"])
+  playpause(e: Event) {
+    e.preventDefault();
+    this.playerState.playPause();
+  }
+
+  @HostListener("document:keydown.arrowright", ["$event"])
+  forward(e: Event) {
+    e.preventDefault();
+    this.playerState.audioPlayer.seek(5);
+  }
+
+  @HostListener("document:keydown.shift.arrowright", ["$event"])
+  next(e: Event) {
+    e.preventDefault();
+    this.playerState.audioPlayer.next();
   }
 
   ngOnDestroy(): void {
@@ -394,6 +424,49 @@ class AudioPlayer {
 
   destroy() {
     this.$destroy.next(true);
+  }
+
+  seek(adjustment: number) {
+    this.readProgress();
+    combineLatest([this.$trackIndex, this.$currentTrackProgressSeconds]).pipe(take(1)).subscribe(
+      ([trackIndex, trackProgressSeconds]) => {
+        let track = this.getTrack(trackIndex);
+        let newProgress = trackProgressSeconds + adjustment;
+
+        if (newProgress < 0) {
+          if (trackIndex == 0) {
+            // Start from the beginning if it's the first track.
+            this.$trackIndex.next(0);
+            this.$trackOffset.next(0);
+            return;
+          } else {
+            // It's not the first track, so go to the previous track.
+            track = this.getTrack(trackIndex - 1);
+            newProgress += track.duration;
+            this.$trackIndex.next(trackIndex - 1);
+            this.$trackOffset.next(newProgress);
+            return;
+          }
+        } else if (newProgress > track.duration) {
+          if (trackIndex == this.tracks.length - 1) {
+            // It's the last track, so seek the end. It should stop playback.
+            this.$trackIndex.next(trackIndex);
+            this.$trackOffset.next(track.duration);
+            return;
+          } else {
+            // Go to the next track.
+            newProgress -= track.duration;
+            this.$trackIndex.next(trackIndex + 1);
+            this.$trackOffset.next(newProgress);
+            return;
+          }
+        } else {
+          // We are within the current track, so simply change the progress.
+          this.$trackIndex.next(trackIndex);
+          this.$trackOffset.next(newProgress);
+          return;
+        }
+      });
   }
 }
 
