@@ -1,11 +1,11 @@
-import { Component, HostListener, input, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, input, OnDestroy, OnInit, output } from '@angular/core';
 import { AudioTrack, BookStatus, PlaybackProgress, Playlist } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
-  combineLatest, combineLatestWith, defer,
+  combineLatest, combineLatestWith, defer, distinct,
   filter, from,
   interval,
   map, of, repeat,
@@ -32,12 +32,15 @@ import { ActivatedRoute } from '@angular/router';
 })
 export class PlayerComponent implements OnInit, OnDestroy {
   playlist = input.required<Playlist>();
+  sectionPlayed = output<number>();
 
   playerState: PlayerState;
 
   constructor(private playlistService: PlaylistsService,
               private activeRoute: ActivatedRoute) {
     this.playerState = new PlayerState(this.playlistService, this.activeRoute);
+    this.playerState.audioPlayer.$audioTrack
+      .subscribe(track => this.sectionPlayed.emit(track.section_id));
   }
 
   ngOnInit(): void {
@@ -270,6 +273,14 @@ class AudioPlayer {
 
   $isPlaying = combineLatest([this.$currentTrackSourceNode, this.$status])
     .pipe(map(([sourceNode, status]) => sourceNode != null && status == PlayerStatus.playing));
+
+  $audioTrack = combineLatest([this.$trackIndex, this.$isPlaying])
+    .pipe(
+      filter(([_, isPlaying]) => isPlaying),
+      map(([trackIndex, _]) => this.tracks[trackIndex]?.audioTrack),
+      filter(track => track != null),
+      distinct()
+    );
 
   constructor() {
     zip([this.$trackIndex, this.$trackOffset])

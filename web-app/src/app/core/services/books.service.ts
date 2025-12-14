@@ -11,6 +11,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 export class BooksService {
 
   private apiUrl = `${environment.api_base_url}/books`;
+
   constructor(private http: HttpClient, private sanitizer: DomSanitizer) {
   }
 
@@ -27,13 +28,21 @@ export class BooksService {
     return this.http.get<BookDetails[]>(`${this.apiUrl}/`);
   }
 
-  getBookContent(bookId: string, lastPageIndex: number = 0, limit: number = 10): Observable<BookContent> {
-    const httpParams = new HttpParams({
-      fromObject: {
-        last_page_idx: lastPageIndex,
-        limit: limit
-      }
-    });
+  getBookContent(bookId: string,
+                 lastPageIndex: number | null = null,
+                 sectionId: number | null = null,
+                 limit: number | null = null
+  ): Observable<BookContent> {
+    let httpParams = new HttpParams();
+    if (lastPageIndex) {
+      httpParams = httpParams.set('last_page_idx', lastPageIndex.toString());
+    }
+    if (sectionId) {
+      httpParams = httpParams.set('section_id', sectionId.toString());
+    }
+    if (limit) {
+      httpParams = httpParams.set('limit', limit.toString());
+    }
     return this.http.get<BookContent>(`${this.apiUrl}/${bookId}/content`, {params: httpParams})
       .pipe(tap(content => {
         content.pages.forEach(page => {

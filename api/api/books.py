@@ -107,8 +107,12 @@ def reprocess_book(book_id: uuid.UUID,
 
 
 @books_router.get("/{book_id}/content")
-def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int = 0,
-                     limit: int = 10) -> api.BookContent:
+def get_book_content(book_id: uuid.UUID,
+                     session: SessionDep,
+                     last_page_idx: int = None,
+                     section_id: int = None,
+                     limit: int = 10,
+                     ) -> api.BookContent:
     book = session.get(db.Book, book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -117,27 +121,29 @@ def get_book_content(book_id: uuid.UUID, session: SessionDep, last_page_idx: int
         # There will be no content, so return immediately.
         return api.BookContent(pages=[])
 
+    section_page_idx = 0
+    if section_id is not None:
+        section = session.get(db.Section, section_id)
+        if section is None:
+            raise HTTPException(status_code=404, detail="Section not found")
+        section_page_idx = section.page_index
+
     stmt = select(db.Section).where(db.Section.book_id == book_id)
-    # Treat the default value as a special case because page index is 0 based, otherwise we always miss the first page.
-    if last_page_idx == 0:
-        stmt = stmt.where(db.Section.page_index >= 0).where(db.Section.page_index < limit)
-    else:
-        stmt = stmt.where(db.Section.page_index > last_page_idx).where(
-            db.Section.page_index <= last_page_idx + limit)
-    stmt = stmt.order_by(db.Section.section_index)
+
+    if last_page_idx is not None:
+        # If the last known page is provided, don't load pages before that index.
+        stmt = stmt.where(db.Section.page_index > last_page_idx)
+
+    # If section ID is provided, we want to load "limit" pages after that section.
+    max_page_index = min(max(last_page_idx or 0, section_page_idx or 0) + limit, book.number_of_pages)
+    stmt = stmt.where(db.Section.page_index < max_page_index).order_by(db.Section.section_index)
     db_sections = session.execute(stmt).scalars().all()
 
     # Convert into the API model.
     pages = []
     pages_dict = {}
-    # For now I simply generate pages, but I might need to store that data explicitly instead.
-    # TODO: consider persisting number of pages as a metadata on Book level.
-
-    # Skip offset for the initial request.
-    first_page_offset = 0 if last_page_idx == 0 else 1
-    # Don't go beyond the total number of pages.
-    last_page = min(last_page_idx + limit + first_page_offset, book.number_of_pages)
-    for i in range(last_page_idx + first_page_offset, last_page):
+    # For now, I simply generate pages, but I might need to store that data explicitly instead.
+    for i in range(0 if last_page_idx is None else last_page_idx + 1, max_page_index):
         pages.append(api.BookPage(index=i, file_name=f"{i}.pdf", sections=[]))
         pages_dict[i] = pages[-1]
 

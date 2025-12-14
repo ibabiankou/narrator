@@ -2,13 +2,28 @@ import { Component, computed, inject, input, model, OnInit, signal } from '@angu
 import { BookDetails, BookPage, BookStatus, Playlist, Section } from '../../core/models/books.dto';
 import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
 import { BooksService } from '../../core/services/books.service';
-import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
+import {
+  BehaviorSubject,
+  defer,
+  filter,
+  first,
+  map,
+  of,
+  repeat,
+  retry,
+  switchMap,
+  take,
+  tap,
+  throwError,
+  timer
+} from 'rxjs';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatIcon } from '@angular/material/icon';
 import { MatToolbar } from '@angular/material/toolbar';
 import { RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
 import { PlayerComponent } from '../../components/player/player.component';
+import { AsyncPipe, ViewportScroller } from '@angular/common';
 
 @Component({
   selector: 'app-view-book-page',
@@ -19,7 +34,8 @@ import { PlayerComponent } from '../../components/player/player.component';
     MatToolbar,
     RouterLink,
     SectionComponent,
-    PlayerComponent
+    PlayerComponent,
+    AsyncPipe
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
@@ -33,6 +49,11 @@ export class ViewBookPage implements OnInit {
   sections = computed<Section[]>(() => this.pages().flatMap(page => page.sections))
 
   isLoading = signal(true);
+
+  $scrollToSectionId = new BehaviorSubject<number>(0);
+
+  constructor(private viewportScroller: ViewportScroller) {
+  }
 
   ngOnInit() {
     const book = this.book();
@@ -59,6 +80,56 @@ export class ViewBookPage implements OnInit {
         }
       );
     }
+    this.$scrollToSectionId
+      .pipe(
+        filter(id => id > 0),
+        map(id => `section-${id}`),
+        switchMap(selector => {
+          const element = document.getElementById(selector);
+          if (element) {
+            return of(element);
+          } else {
+            return throwError(() => new Error("Element not found"));
+          }
+        }),
+        retry({
+          count: 5,
+          delay: (_, count) => timer(2 ^ count * 300 * (0.75 + 0.5 * Math.random()))
+        })
+      )
+      .subscribe(element => {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+  }
+
+  loadAndScrollToSection(sectionId: number) {
+    const bookId = this.book().id;
+    const pages = this.pages();
+    const section = pages.flatMap(page => page.sections).find(s => s.id == sectionId);
+    const $section = of(section);
+    const $loadSection =
+      this.booksService.getBookContent(bookId, pages[pages.length - 1].index, sectionId)
+        .pipe(
+          tap(content => {
+            this.pages.set([...pages, ...content.pages])
+          }),
+          switchMap(content => {
+            const section = content.pages.flatMap(page => page.sections).find(s => s.id == sectionId);
+            if (section) {
+              return of(section);
+            } else {
+              return throwError(() => new Error("Section is not loaded"));
+            }
+          })
+        );
+    defer(() => section ? $section : $loadSection)
+      .pipe(filter(section => section != null))
+      .subscribe({
+        next: section => {
+          this.$scrollToSectionId.next(section.id);
+        },
+        error: err => {console.log(err)}
+      });
   }
 
   loadMorePages() {

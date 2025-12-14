@@ -21,7 +21,7 @@
           </div>
           <div class="sections">
             @for (section of page.sections; track section.section_index) {
-              <app-section [section]="section" (sectionDeleted)="deleteSection(section)"></app-section>
+              <app-section id="section-{{section.id}}" [class]="{'current': section.id == ($scrollToSectionId | async)}" [section]="section" (sectionDeleted)="deleteSection(section)"></app-section>
             }
           </div>
         </div>
@@ -31,4 +31,4 @@
     </div>
   }
 </div>
-<app-player [playlist]="playlist()"></app-player>
+<app-player [playlist]="playlist()" (sectionPlayed)="loadAndScrollToSection($event)"></app-player>
