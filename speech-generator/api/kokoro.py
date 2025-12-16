@@ -44,7 +44,7 @@ class KokoroService:
                     continue
                 for result in self.pipeline.generate_from_tokens(tokens=chunk, voice=voice, speed=speed):
                     sf.write(result.audio)
-                sf.write(self._silence(0.25))
+                sf.write(self._silence(0.1))
 
             audio_buf.seek(0)
             return {
