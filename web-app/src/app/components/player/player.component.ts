@@ -15,7 +15,7 @@ import {
   takeUntil, takeWhile,
   tap, timer,
 } from 'rxjs';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { PlaylistsService } from '../../core/services/playlists.service';
 import { ActivatedRoute } from '@angular/router';
 import { AudioPlayer } from './audioplayer';
@@ -25,7 +25,8 @@ import { AudioPlayer } from './audioplayer';
   imports: [
     MatIcon,
     MatIconButton,
-    AsyncPipe
+    AsyncPipe,
+    DecimalPipe
   ],
   templateUrl: './player.component.html',
   styleUrl: './player.component.scss',
@@ -189,6 +190,18 @@ export class PlayerComponent implements OnInit, OnDestroy {
   next(e: Event) {
     e.preventDefault();
     this.audioPlayer.next();
+  }
+
+  @HostListener("document:keydown.shift.arrowup", ["$event"])
+  increasePlaybackRate(e: Event) {
+    e.preventDefault();
+    this.audioPlayer.adjustPlaybackRate(0.05);
+  }
+
+  @HostListener("document:keydown.shift.arrowdown", ["$event"])
+  lowerPlaybackRate(e: Event) {
+    e.preventDefault();
+    this.audioPlayer.adjustPlaybackRate(-0.05);
   }
 
   ngOnDestroy(): void {

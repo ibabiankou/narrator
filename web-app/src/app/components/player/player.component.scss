@@ -63,6 +63,10 @@ div#controls {
     .active {
       color: var(--mat-sys-on-primary-container);
     }
+
+    .playbackSpeed {
+      font-size: 14px;
+    }
   }
 }
 

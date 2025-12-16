@@ -5,13 +5,12 @@ import {
   combineLatest, combineLatestWith, distinct,
   filter,
   interval,
-  map, of,
+  map,
   Subject,
   Subscription,
-  switchMap,
   take,
   takeUntil,
-  throwError, zip,
+  zip,
 } from 'rxjs';
 
 interface PlayerTrack {
@@ -40,7 +39,7 @@ export class AudioPlayer {
 
   private $destroy = new Subject<boolean>();
 
-  readerSubscription: Subscription;
+  private readerSubscription: Subscription;
 
   $trackIndex = new BehaviorSubject<number>(0);
   private $trackOffset = new BehaviorSubject<number>(0);
@@ -68,49 +67,49 @@ export class AudioPlayer {
   $globalProgressSeconds = combineLatest([this.$trackIndex, this.$currentContextTime])
     .pipe(map(([index, progress]) => this.durationSum[index] + progress));
 
+  $playbackRate = new BehaviorSubject<number>(1);
+
   constructor() {
+    this.$playbackRate.subscribe(() => {
+      if (this.audio) {
+        this.audio.playbackRate = this.$playbackRate.value;
+      }
+    });
     zip([this.$trackIndex, this.$trackOffset])
       .pipe(
         takeUntil(this.$destroy),
         filter(([trackIndex, _]) => trackIndex >= 0 && trackIndex < this.tracks.length),
-        switchMap(
-          ([trackIndex, trackOffset]) => {
-            return this.$status.pipe(
-              take(1),
-              filter(status => status == PlayerStatus.playing),
-              switchMap(() => {
-                this.audio?.pause();
+        filter(() => this.$status.value == PlayerStatus.playing)
+      ).subscribe(([trackIndex, trackOffset]) => {
+          this.audio?.pause();
 
-                const track = this.tracks[trackIndex];
-                if (track == null) {
-                  return throwError(() => new Error("Invalid track index"));
-                }
-
-                const audio = new Audio(track.url);
-                this.audio = audio;
-
-                audio.addEventListener('timeupdate', () => this.readProgress());
-                audio.addEventListener('ended', () => {
-                  if (this.tracks.length > trackIndex + 1) {
-                    this.playTrack(trackIndex + 1, 0);
-                  }
-                });
-
-                audio.addEventListener('error', (err) => {
-                  console.log('Unable to load audio.', err);
-                });
-
-                audio.currentTime = trackOffset;
-                audio.preservesPitch = true;
-                audio.playbackRate = 1;
-                audio.volume = 0.8;
-                audio.play();
-
-                return of(audio);
-              }));
+          const track = this.tracks[trackIndex];
+          if (track == null) {
+            console.log("Invalid track index");
+            return;
           }
-        )
-      ).subscribe();
+
+          const audio = new Audio(track.url);
+          this.audio = audio;
+
+          audio.addEventListener('timeupdate', () => this.readProgress());
+          audio.addEventListener('ended', () => {
+            if (this.tracks.length > trackIndex + 1) {
+              this.playTrack(trackIndex + 1, 0);
+            }
+          });
+
+          audio.addEventListener('error', (err) => {
+            console.log('Unable to load audio.', err);
+          });
+
+          audio.currentTime = trackOffset;
+          audio.preservesPitch = true;
+          audio.playbackRate = this.$playbackRate.value;
+
+          audio.play();
+        }
+      );
 
     this.readerSubscription = interval(1000)
       .pipe(
@@ -200,6 +199,7 @@ export class AudioPlayer {
 
   destroy() {
     this.$destroy.next(true);
+    this.readerSubscription.unsubscribe();
   }
 
   seek(adjustment: number) {
@@ -238,5 +238,12 @@ export class AudioPlayer {
           return;
         }
       });
+  }
+
+  adjustPlaybackRate(adjustment: number) {
+    const maxValue = 2;
+    const minValue = 0.5;
+    const newRate = this.$playbackRate.value + adjustment;
+    this.$playbackRate.next(Math.max(Math.min(newRate, maxValue), minValue));
   }
 }

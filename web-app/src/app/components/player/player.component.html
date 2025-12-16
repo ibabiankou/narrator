@@ -24,6 +24,9 @@
     <button matIconButton (click)="toggleSync()" [class]="{'active': emitSectionId()}">
       <mat-icon>sync_arrow_down</mat-icon>
     </button>
+    <button class="playbackSpeed" matIconButton>
+      <span>x{{ (audioPlayer.$playbackRate | async | number : '1.1-2')  }}</span>
+    </button>
   </div>
 
 </div>
