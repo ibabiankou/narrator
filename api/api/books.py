@@ -170,4 +170,8 @@ def get_speech_file(book_id: uuid.UUID, file_name: str, file_service: FilesServi
     response_dict = file_service.get_speech_file(book_id, file_name)
     if response_dict is None:
         raise HTTPException(status_code=404, detail="Speech file not found")
-    return Response(content=response_dict["body"], media_type=response_dict["content_type"])
+    # Have no idea why, but this header enables seeking in the HTMLAudioElement.
+    headers = {
+        "Accept-Ranges": "bytes"
+    }
+    return Response(content=response_dict["body"], media_type=response_dict["content_type"], headers=headers)

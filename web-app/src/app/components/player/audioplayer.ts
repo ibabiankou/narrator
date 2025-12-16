@@ -3,7 +3,7 @@ import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
   combineLatest, combineLatestWith, distinct,
-  filter, from,
+  filter,
   interval,
   map, of,
   Subject,
@@ -11,18 +11,14 @@ import {
   switchMap,
   take,
   takeUntil,
-  tap, throwError, zip,
+  throwError, zip,
 } from 'rxjs';
 
 interface PlayerTrack {
   audioTrack: AudioTrack
 
-  url?: string;
+  url: string;
   index: number;
-
-  arrayBuffer?: ArrayBuffer;
-  // Caching decoded audio might end up taking a lot of memory.
-  audioBuffer?: AudioBuffer;
 }
 
 enum PlayerStatus {
@@ -36,7 +32,7 @@ enum PlayerStatus {
  */
 export class AudioPlayer {
   private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.stopped);
-  private $audioContext = new BehaviorSubject<AudioContext | null>(null);
+  private audio: HTMLAudioElement | null = null;
 
   private tracks: PlayerTrack[] = [];
   // Holds global book time at which each track starts.
@@ -49,8 +45,6 @@ export class AudioPlayer {
   $trackIndex = new BehaviorSubject<number>(0);
   private $trackOffset = new BehaviorSubject<number>(0);
   private $currentContextTime = new BehaviorSubject<number>(0);
-  private $currentTrackProgressSeconds = combineLatest([this.$trackOffset, this.$currentContextTime])
-    .pipe(map(([offset, currentTime]) => offset + currentTime));
 
   $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
 
@@ -62,7 +56,7 @@ export class AudioPlayer {
       distinct()
     );
 
-  $trackProgress = combineLatest([this.$trackIndex, this.$currentTrackProgressSeconds])
+  $trackProgress = combineLatest([this.$trackIndex, this.$currentContextTime])
     .pipe(
       map(([trackIndex, progress]) => ({
         track: this.tracks[trackIndex]?.audioTrack,
@@ -71,7 +65,7 @@ export class AudioPlayer {
     );
 
   // Progress from the start of the book.
-  $globalProgressSeconds = combineLatest([this.$trackIndex, this.$currentTrackProgressSeconds])
+  $globalProgressSeconds = combineLatest([this.$trackIndex, this.$currentContextTime])
     .pipe(map(([index, progress]) => this.durationSum[index] + progress));
 
   constructor() {
@@ -85,42 +79,34 @@ export class AudioPlayer {
               take(1),
               filter(status => status == PlayerStatus.playing),
               switchMap(() => {
-                this.$audioContext.pipe(take(1)).subscribe(ac => ac?.close());
+                this.audio?.pause();
 
                 const track = this.tracks[trackIndex];
                 if (track == null) {
                   return throwError(() => new Error("Invalid track index"));
                 }
 
-                let audioContext = new AudioContext();
-                this.$audioContext.next(audioContext);
+                const audio = new Audio(track.url);
+                this.audio = audio;
 
-                let audioBuffer;
-                if (track.audioBuffer != null) {
-                  audioBuffer = of(track.audioBuffer);
-                } else if (track.url) {
-                  audioBuffer = from(fetch(track.url)).pipe(
-                    switchMap(response => response.arrayBuffer()),
-                    switchMap(arrayBuffer => audioContext.decodeAudioData(arrayBuffer)),
-                    tap(audioBuffer => track.audioBuffer = audioBuffer)
-                  )
-                } else {
-                  return throwError(() => new Error("Track without URL"));
-                }
+                audio.addEventListener('timeupdate', () => this.readProgress());
+                audio.addEventListener('ended', () => {
+                  if (this.tracks.length > trackIndex + 1) {
+                    this.playTrack(trackIndex + 1, 0);
+                  }
+                });
 
-                return audioBuffer.pipe(
-                  switchMap(audioBuffer => this.connectSource(audioContext, audioBuffer)),
-                  tap(source => {
-                    source.start(0, trackOffset);
-                    source.addEventListener("ended", () => {
-                      this.readProgress();
-                      if (this.tracks.length > trackIndex + 1) {
-                        this.$trackIndex.next(trackIndex + 1);
-                        this.$trackOffset.next(0);
-                      }
-                    });
-                  })
-                );
+                audio.addEventListener('error', (err) => {
+                  console.log('Unable to load audio.', err);
+                });
+
+                audio.currentTime = trackOffset;
+                audio.preservesPitch = true;
+                audio.playbackRate = 1;
+                audio.volume = 0.8;
+                audio.play();
+
+                return of(audio);
               }));
           }
         )
@@ -135,11 +121,9 @@ export class AudioPlayer {
   }
 
   private readProgress() {
-    this.$audioContext
-      .pipe(filter(ac => ac != null), take(1))
-      .subscribe((audioContext) => {
-        this.$currentContextTime.next(audioContext.currentTime);
-      });
+    if (this.audio) {
+      this.$currentContextTime.next(this.audio.currentTime);
+    }
   }
 
   getNumberOfTracks() {
@@ -163,33 +147,29 @@ export class AudioPlayer {
     this.tracks.push(...newTracks);
   }
 
-  setProgress(startTrackIndex: number, trackOffsetSeconds: number) {
-    this.$trackIndex.next(startTrackIndex);
-    this.$trackOffset.next(trackOffsetSeconds);
+  playTrack(trackIndex: number, offsetSeconds: number) {
+    this.$trackIndex.next(trackIndex);
+    this.$trackOffset.next(offsetSeconds);
   }
 
   play() {
-    combineLatest([this.$status, this.$audioContext, this.$trackIndex, this.$trackOffset]).pipe(take(1)).subscribe(
-      ([status, audioContext, index, offset]) => {
+    combineLatest([this.$status, this.$trackIndex, this.$trackOffset]).pipe(take(1)).subscribe(
+      ([status, index, offset]) => {
         this.$status.next(PlayerStatus.playing);
         if (status == PlayerStatus.paused) {
-          audioContext?.resume();
+          this.audio?.play();
         } else if (status == PlayerStatus.stopped) {
-          this.$trackIndex.next(index);
-          this.$trackOffset.next(offset);
+          this.playTrack(index, offset);
         }
       });
   }
 
   pause() {
-    this.$audioContext.pipe(filter(ac => ac != null), take(1))
-      .subscribe(
-        (audioContext) => {
-          audioContext.suspend();
-          this.readProgress();
-          this.$status.next(PlayerStatus.paused);
-        }
-      )
+    if (this.audio) {
+      this.audio.pause();
+      this.readProgress();
+      this.$status.next(PlayerStatus.paused);
+    }
   }
 
   next() {
@@ -199,8 +179,7 @@ export class AudioPlayer {
         if (next >= this.tracks.length) {
           return;
         }
-        this.$trackIndex.next(next);
-        this.$trackOffset.next(0);
+        this.playTrack(next, 0);
       });
   }
 
@@ -211,16 +190,8 @@ export class AudioPlayer {
         if (prev < 0) {
           return;
         }
-        this.$trackIndex.next(prev);
-        this.$trackOffset.next(0);
+        this.playTrack(prev, 0);
       });
-  }
-
-  private connectSource(audioContext: AudioContext, audioBuffer: AudioBuffer) {
-    const source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(audioContext.destination);
-    return of(source);
   }
 
   getTrack(trackIndex: number) {
@@ -233,7 +204,7 @@ export class AudioPlayer {
 
   seek(adjustment: number) {
     this.readProgress();
-    combineLatest([this.$trackIndex, this.$currentTrackProgressSeconds]).pipe(take(1)).subscribe(
+    combineLatest([this.$trackIndex, this.$currentContextTime]).pipe(take(1)).subscribe(
       ([trackIndex, trackProgressSeconds]) => {
         let track = this.getTrack(trackIndex);
         let newProgress = trackProgressSeconds + adjustment;
@@ -241,34 +212,29 @@ export class AudioPlayer {
         if (newProgress < 0) {
           if (trackIndex == 0) {
             // Start from the beginning if it's the first track.
-            this.$trackIndex.next(0);
-            this.$trackOffset.next(0);
+            this.playTrack(0, 0);
             return;
           } else {
             // It's not the first track, so go to the previous track.
             track = this.getTrack(trackIndex - 1);
             newProgress += track.duration;
-            this.$trackIndex.next(trackIndex - 1);
-            this.$trackOffset.next(newProgress);
+            this.playTrack(trackIndex - 1, newProgress);
             return;
           }
         } else if (newProgress > track.duration) {
           if (trackIndex == this.tracks.length - 1) {
             // It's the last track, so seek the end. It should stop playback.
-            this.$trackIndex.next(trackIndex);
-            this.$trackOffset.next(track.duration);
+            this.playTrack(trackIndex, track.duration);
             return;
           } else {
             // Go to the next track.
             newProgress -= track.duration;
-            this.$trackIndex.next(trackIndex + 1);
-            this.$trackOffset.next(newProgress);
+            this.playTrack(trackIndex + 1, newProgress);
             return;
           }
         } else {
           // We are within the current track, so simply change the progress.
-          this.$trackIndex.next(trackIndex);
-          this.$trackOffset.next(newProgress);
+          this.playTrack(trackIndex, newProgress);
           return;
         }
       });

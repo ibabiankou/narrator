@@ -140,7 +140,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
       trackIndex = playlist.tracks.findIndex(t => t.section_id == playlist.progress.section_id);
     }
     const trackProgress = playlist.progress.section_progress_seconds || 0;
-    this.audioPlayer.setProgress(trackIndex, trackProgress);
+    this.audioPlayer.playTrack(trackIndex, trackProgress);
 
     this.setAvailability(playlist.progress);
   }
