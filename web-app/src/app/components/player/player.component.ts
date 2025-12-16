@@ -102,27 +102,20 @@ class PlayerState {
   // Interval that writes progress to the server.
   writerSubscription: Subscription;
 
-  // Holds global book time at which each track starts.
-  durationSum: number[] = [0];
-
-  // Progress from the start of the book.
-  private readonly $progressSeconds = combineLatest([this.audioPlayer.$trackIndex, this.audioPlayer.$currentTrackProgressSeconds])
-    .pipe(map(([index, progress]) => this.durationSum[index] + progress));
-
   // Total duration of the narrated part.
   private readonly $totalNarratedSeconds = new BehaviorSubject<number>(0)
 
-  $nowTime = this.$progressSeconds.pipe(
+  $nowTime = this.audioPlayer.$globalProgressSeconds.pipe(
     map(progressSeconds => secondsToTimeFormat(progressSeconds))
   );
-  $remainingTime = combineLatest([this.$progressSeconds, this.$totalNarratedSeconds])
+  $remainingTime = combineLatest([this.audioPlayer.$globalProgressSeconds, this.$totalNarratedSeconds])
     .pipe(map(([nowTime, totalTime]) => secondsToTimeFormat(nowTime - totalTime)));
 
   $availablePercent = new BehaviorSubject<number>(0);
   $queuedPercent = new BehaviorSubject<number>(0);
   $unavailablePercent = new BehaviorSubject<number>(0);
 
-  $nowPercent = combineLatest([this.$progressSeconds, this.$totalNarratedSeconds, this.$availablePercent])
+  $nowPercent = combineLatest([this.audioPlayer.$globalProgressSeconds, this.$totalNarratedSeconds, this.$availablePercent])
     .pipe(
       map(([nowTime, totalTime, availablePercent]) =>
         totalTime > 0 ? (nowTime / totalTime * availablePercent) : 0
@@ -169,7 +162,7 @@ class PlayerState {
             readyTracks.push(tracks.tracks[i]);
           }
         }
-        this.addTracks(readyTracks);
+        this.audioPlayer.addTracks(readyTracks);
         sectionIds = incompleteSectionIds;
 
         this.setAvailability(tracks.progress);
@@ -181,7 +174,7 @@ class PlayerState {
   }
 
   setPlaylist(playlist: Playlist) {
-    this.addTracks(playlist.tracks);
+    this.audioPlayer.addTracks(playlist.tracks);
 
     let trackIndex = 0;
     if (playlist.progress.section_id) {
@@ -193,13 +186,6 @@ class PlayerState {
     this.setAvailability(playlist.progress);
   }
 
-  addTracks(tracks: AudioTrack[]) {
-    for (let i = 0; i < tracks.length; i++) {
-      this.durationSum.push(this.durationSum[this.durationSum.length - 1] + tracks[i].duration);
-    }
-    this.audioPlayer.addTracks(tracks);
-  }
-
   setAvailability(progress: PlaybackProgress) {
     this.$totalNarratedSeconds.next(progress.total_narrated_seconds);
 
@@ -209,17 +195,15 @@ class PlayerState {
   }
 
   private updateProgress() {
-    combineLatest([this.audioPlayer.$trackIndex, this.audioPlayer.$currentTrackProgressSeconds])
-      .pipe(
-        take(1),
-        switchMap(([trackIndex, progressSeconds]) => {
-          const track = this.audioPlayer.getTrack(trackIndex);
-          return this.playlistService.updateProgress({
-            "book_id": track.book_id,
-            "section_id": track.section_id,
-            "section_progress_seconds": progressSeconds,
-          });
-        })
+    this.audioPlayer.$trackProgress.pipe(
+      take(1),
+      switchMap(({track, progressSeconds}) => {
+        return this.playlistService.updateProgress({
+          "book_id": track.book_id,
+          "section_id": track.section_id,
+          "section_progress_seconds": progressSeconds,
+        });
+      })
       ).subscribe();
   }
 
@@ -266,17 +250,18 @@ class AudioPlayer {
   private $audioContext = new BehaviorSubject<AudioContext | null>(null);
 
   private tracks: PlayerTrack[] = [];
+  // Holds global book time at which each track starts.
+  private durationSum: number[] = [0];
 
-  $destroy = new Subject<boolean>();
+  private $destroy = new Subject<boolean>();
 
   readerSubscription: Subscription;
 
   $trackIndex = new BehaviorSubject<number>(0);
-  $trackOffset = new BehaviorSubject<number>(0);
-  $contextTimeOnStart = new BehaviorSubject<number>(0);
-  $currentContextTime = new BehaviorSubject<number>(0);
-  $currentTrackProgressSeconds = combineLatest([this.$trackOffset, this.$contextTimeOnStart, this.$currentContextTime])
-    .pipe(map(([offset, timeOnStart, currentTime]) => offset + currentTime - timeOnStart));
+  private $trackOffset = new BehaviorSubject<number>(0);
+  private $currentContextTime = new BehaviorSubject<number>(0);
+  private $currentTrackProgressSeconds = combineLatest([this.$trackOffset, this.$currentContextTime])
+    .pipe(map(([offset, currentTime]) => offset + currentTime));
 
   $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
 
@@ -287,6 +272,18 @@ class AudioPlayer {
       filter(track => track != null),
       distinct()
     );
+
+  $trackProgress = combineLatest([this.$trackIndex, this.$currentTrackProgressSeconds])
+    .pipe(
+      map(([trackIndex, progress]) => ({
+        track: this.tracks[trackIndex]?.audioTrack,
+        progressSeconds: progress,
+      }))
+    );
+
+  // Progress from the start of the book.
+  $globalProgressSeconds = combineLatest([this.$trackIndex, this.$currentTrackProgressSeconds])
+    .pipe(map(([index, progress]) => this.durationSum[index] + progress));
 
   constructor() {
     zip([this.$trackIndex, this.$trackOffset])
@@ -369,6 +366,10 @@ class AudioPlayer {
       url: `${baseUrl}/books/${track.book_id}/speech/${track.file_name}`,
       index: length + index
     }));
+
+    for (let i = 0; i < tracks.length; i++) {
+      this.durationSum.push(this.durationSum[this.durationSum.length - 1] + tracks[i].duration);
+    }
 
     this.tracks.push(...newTracks);
   }
