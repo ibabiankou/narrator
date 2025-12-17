@@ -53,3 +53,11 @@ class SectionService:
         with DbSession() as session:
             session.execute(update(db.Section).where(db.Section.id == section_id).values(phonemes=phonemes))
             session.commit()
+
+    def set_content(self, section_id: int, content: str) -> list[db.AudioTrack]:
+        with DbSession() as session:
+            stmt = update(db.Section).returning(db.Section).where(db.Section.id == section_id).values(content=content)
+            updated_section = session.execute(stmt).scalars().first()
+            LOG.info("Updated section: \n%s", updated_section)
+            session.commit()
+            return self.audiotracks_service.generate_speech([updated_section]) if updated_section else []

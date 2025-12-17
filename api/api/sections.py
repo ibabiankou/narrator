@@ -13,14 +13,9 @@ sections_router = APIRouter()
 @sections_router.post("/{section_id}")
 def update_section(section_id: int,
                    api_section: api.BookSection,
-                   session: SessionDep):
-    db_section = session.get(db.Section, section_id)
-    if db_section is None:
+                   section_service: SectionService = Depends()):
+    if not section_service.set_content(section_id, api_section.content):
         raise HTTPException(status_code=404, detail="Section not found")
-
-    db_section.content = api_section.content
-    # TODO: consider if other fields should be updated as well
-    session.commit()
 
 
 @sections_router.delete("/{section_id}", status_code=204)
