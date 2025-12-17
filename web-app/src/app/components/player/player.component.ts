@@ -36,7 +36,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   playlist = input.required<Playlist>();
   sectionPlayed = output<number>();
-  emitSectionId = model(true);
+  syncCurrentSection = model(true);
 
   handleKeyBindings = input(true);
 
@@ -67,7 +67,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   constructor(private playlistService: PlaylistsService,
               private activeRoute: ActivatedRoute) {
     this.audioPlayer.$audioTrack
-      .pipe(filter(() => this.emitSectionId()))
+      .pipe(filter(() => this.syncCurrentSection()))
       .subscribe(track => this.sectionPlayed.emit(track.section_id));
 
     this.writerSubscription = interval(5000)
@@ -119,15 +119,18 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   private updateProgress() {
-    this.audioPlayer.$trackProgress.pipe(
-      take(1),
-      switchMap(({track, progressSeconds}) => {
-        return this.playlistService.updateProgress({
-          "book_id": track.book_id,
-          "section_id": track.section_id,
-          "section_progress_seconds": progressSeconds,
-        });
-      })
+    combineLatest([this.audioPlayer.$trackProgress, this.audioPlayer.$playbackRate])
+      .pipe(
+        take(1),
+        switchMap(([{track, progressSeconds}, playbackRate]) => {
+          return this.playlistService.updateProgress({
+            "book_id": track.book_id,
+            "section_id": track.section_id,
+            "section_progress_seconds": progressSeconds,
+            "sync_current_section": this.syncCurrentSection(),
+            "playback_rate": playbackRate
+          });
+        })
     ).subscribe();
   }
 
@@ -137,6 +140,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   setPlaylist(playlist: Playlist) {
     this.audioPlayer.addTracks(playlist.tracks);
+    this.syncCurrentSection.set(playlist.progress.sync_current_section);
+    this.audioPlayer.setPlaybackRate(playlist.progress.playback_rate);
 
     let trackIndex = 0;
     if (playlist.progress.section_id) {
@@ -235,8 +240,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   toggleSync() {
-    this.emitSectionId.set(!this.emitSectionId());
-    if (!this.emitSectionId()) {
+    this.syncCurrentSection.set(!this.syncCurrentSection());
+    if (!this.syncCurrentSection()) {
       this.sectionPlayed.emit(0);
     } else {
       this.audioPlayer.$audioTrack.pipe(take(1))

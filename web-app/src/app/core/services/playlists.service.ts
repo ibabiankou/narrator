@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { PlaybackProgressUpdate, Playlist } from '../models/books.dto';
+import { PlaybackStateUpdate, Playlist } from '../models/books.dto';
 
 @Injectable({
   providedIn: 'root'
@@ -17,7 +17,7 @@ export class PlaylistsService {
     return this.http.get<Playlist>(`${this.apiUrl}/${bookId}`);
   }
 
-  updateProgress(progress: PlaybackProgressUpdate) {
+  updateProgress(progress: PlaybackStateUpdate) {
     return this.http.post<void>(`${this.apiUrl}/${progress.book_id}/progress`, progress);
   }
 

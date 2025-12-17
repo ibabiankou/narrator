@@ -35,11 +35,13 @@ def get_playlist(book_id: uuid.UUID,
     return api.Playlist(progress=progress, tracks=ready_tracks)
 
 
-def _progress(playback_progress, stats):
+def _progress(playback_progress: db.PlaybackProgress, stats):
     section_id = playback_progress.section_id if playback_progress else None
-    section_progress = playback_progress.section_progress if playback_progress else None
+    section_progress = playback_progress.section_progress if playback_progress else 0
+    sync_current_section = playback_progress.sync_current_section if playback_progress else True
+    playback_rate = playback_progress.playback_rate if playback_progress else 1.0
 
-    global_progress_seconds = stats["played_duration"] + section_progress or 0
+    global_progress_seconds = stats["played_duration"] + section_progress
     total_duration = stats["narrated_duration"]
 
     # Percentage here is calculated based on the length of narrated sections
@@ -54,16 +56,20 @@ def _progress(playback_progress, stats):
         total_narrated_seconds=total_duration,
         available_percent=available_percent,
         queued_percent=queued_percent,
-        unavailable_percent=unavailable_percent
+        unavailable_percent=unavailable_percent,
+        sync_current_section=sync_current_section,
+        playback_rate=playback_rate
     )
 
 
 @playlists_router.post("/{book_id}/progress")
-def update_progress(request: api.PlaybackProgressUpdate,
+def update_progress(request: api.PlaybackStateUpdate,
                     progress_service: PlaybackProgressService = Depends()):
     upsert = db.PlaybackProgress(book_id=request.book_id,
                                  section_id=request.section_id,
-                                 section_progress=request.section_progress_seconds)
+                                 section_progress=request.section_progress_seconds,
+                                 sync_current_section=request.sync_current_section,
+                                 playback_rate=request.playback_rate)
     progress_service.upsert_progress(upsert)
 
 

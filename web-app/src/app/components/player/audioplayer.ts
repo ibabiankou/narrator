@@ -246,4 +246,8 @@ export class AudioPlayer {
     const newRate = this.$playbackRate.value + adjustment;
     this.$playbackRate.next(Math.max(Math.min(newRate, maxValue), minValue));
   }
+
+  setPlaybackRate(playback_rate: number) {
+    this.$playbackRate.next(playback_rate);
+  }
 }

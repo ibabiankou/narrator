@@ -11,18 +11,18 @@ LOG = get_logger(__name__)
 
 class PlaybackProgressService:
 
-    def get_progress(self, book_id: uuid.UUID) -> (db.PlaybackProgress, dict[str, int]):
+    def get_progress(self, book_id: uuid.UUID) -> tuple[db.PlaybackProgress, dict[str, int]]:
         query = """
-                select sum(length(s.content)) as length, 'total' as type
+                select coalesce(sum(length(s.content)), 0) as length, 'total' as type
                 from sections s 
                 where s.book_id = :book_id
                 union
-                select sum(a.duration) as length, 'played_duration' as type
+                select coalesce(sum(a.duration), 0) as length, 'played_duration' as type
                 from audio_tracks a
                 where a.book_id = :book_id
                   and a.section_id < (select section_id from playback_progress where book_id = :book_id)
                 union
-                select sum(a.duration) as length, 'narrated_duration' as type
+                select coalesce(sum(a.duration), 0) as length, 'narrated_duration' as type
                 from audio_tracks a
                 where a.book_id = :book_id
                 union

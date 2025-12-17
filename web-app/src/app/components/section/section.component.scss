@@ -17,12 +17,22 @@
   background-color: lightgray;
 }
 
-:host:hover {
+:host:hover, :host.hover {
   border: 1px solid #e0e0e0;
   box-shadow: 0 4px 4px rgba(0, 0, 0, 0.08);
 
   // Active host should be above the inactive hosts.
   z-index: 20;
+
+  .top-right-controls {
+    transform: translateX(0);
+  }
+
+  .controls {
+    opacity: 1;
+    // Active controls should be over the content of the active section.
+    z-index: 25;
+  }
 }
 
 /* Styling for the container that holds the top right controls. */
@@ -30,9 +40,6 @@
   top: -45px;
   right: 0;
   transform: translateX(10px);
-}
-:host:hover .top-right-controls {
-  transform: translateX(0);
 }
 
 .controls {
@@ -50,12 +57,6 @@
   background-color: rgba(var(--mat-sys-surface), 0.75);
   backdrop-filter: blur(3px);
   border-radius: 20px;
-}
-
-:host:hover .controls {
-  opacity: 1;
-  // Active controls should be over the content of the active section.
-  z-index: 25;
 }
 
 textarea {

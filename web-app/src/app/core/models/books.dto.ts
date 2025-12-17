@@ -73,6 +73,9 @@ export interface PlaybackProgress {
   available_percent: number;
   queued_percent: number;
   unavailable_percent: number;
+
+  sync_current_section: boolean;
+  playback_rate: number;
 }
 
 export interface Playlist {
@@ -80,8 +83,10 @@ export interface Playlist {
   tracks: AudioTrack[];
 }
 
-export interface PlaybackProgressUpdate {
+export interface PlaybackStateUpdate {
   book_id: string;
   section_id: number;
   section_progress_seconds: number;
+  sync_current_section: boolean;
+  playback_rate: number;
 }

@@ -74,11 +74,19 @@ class PlaybackProgress(BaseModel):
     # Percentage of the total book that is not narrated.
     unavailable_percent: float
 
+    # Whether to scroll to the currently playing section.
+    sync_current_section: bool
 
-class PlaybackProgressUpdate(BaseModel):
+    playback_rate: float
+
+
+class PlaybackStateUpdate(BaseModel):
     book_id: uuid.UUID
     section_id: int
     section_progress_seconds: float
+
+    sync_current_section: bool
+    playback_rate: float
 
 
 class Playlist(BaseModel):

@@ -100,3 +100,6 @@ class PlaybackProgress(Base):
 
     section_id: Mapped[int] = mapped_column(ForeignKey("sections.id"))
     section_progress: Mapped[Optional[float]]
+
+    sync_current_section: Mapped[bool]
+    playback_rate: Mapped[float]
