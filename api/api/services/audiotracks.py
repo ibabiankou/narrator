@@ -11,17 +11,14 @@ from api.models import db
 from api.models.db import DbSession
 from api.services.files import FilesService
 from api.services.kokoro import KokoroClient
-from api.services.sections import SectionService
 
 LOG = get_logger(__name__)
 
 
 class AudioTrackService:
     def __init__(self,
-                 section_service: SectionService = Depends(),
                  files_service: FilesService = Depends(),
                  kokoro_client: KokoroClient = Depends()):
-        self.section_service = section_service
         self.files_service = files_service
         self.kokoro_client = kokoro_client
 
@@ -58,6 +55,8 @@ class AudioTrackService:
             stmt = delete(db.AudioTrack).where(db.AudioTrack.section_id.in_(ids)).returning(db.AudioTrack)
             deleted_tracks = session.scalars(stmt).all()
             LOG.info("Deleted %s tracks: \n%s", len(deleted_tracks), deleted_tracks)
+            for track in deleted_tracks:
+                self.files_service.delete_speech_file(track.book_id, track.file_name)
             session.commit()
 
     def save_track(self, track: db.AudioTrack):
@@ -110,7 +109,8 @@ class SpeechGenerationQueue:
         audiotrack_service.save_track(track)
 
         phonemes = audiotrack_service.kokoro_client.phonemize(section.content)
-        audiotrack_service.section_service.set_phonemes(section.id, phonemes)
+        # TODO: this thing is causing circular dependency. Drop it for now.
+        # audiotrack_service.section_service.set_phonemes(section.id, phonemes)
 
         audio = audiotrack_service.kokoro_client.generate_from_phonemes(phonemes)
         file_name = audiotrack_service.store_speech_file(section, audio.content)

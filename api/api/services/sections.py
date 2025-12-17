@@ -1,27 +1,53 @@
 import uuid
 
 from fastapi.params import Depends
-from sqlalchemy import delete, update
+from sqlalchemy import delete, update, select
 
 from api import get_logger
 from api.models import db
-from api.models.db import Section, DbSession
-from api.services.files import FilesService
-from api.services.kokoro import KokoroClient
+from api.models.db import DbSession
+from api.services.audiotracks import AudioTrackService
 
 LOG = get_logger(__name__)
 
 
 class SectionService:
-    def __init__(self, files_service: FilesService = Depends(), kokoro_client: KokoroClient = Depends()):
-        self.files_service = files_service
-        self.kokoro_client = kokoro_client
+    def __init__(self,
+                 audiotracks_service: AudioTrackService = Depends()
+                 ):
+        self.audiotracks_service = audiotracks_service
 
-    def delete_sections(self, book_id: uuid.UUID):
+    def delete_sections(self, book_id: uuid.UUID = None, section_ids: list[int] = None):
+        if not book_id and not section_ids:
+            raise ValueError("Either book_id or section_ids must be provided")
+
+        # Load the sections to be deleted.
         with DbSession() as session:
-            stmt = delete(Section).where(Section.book_id == book_id)
-            session.execute(stmt)
+            stmt = select(db.Section)
+            if book_id:
+                stmt = stmt.where(db.Section.book_id == book_id)
+            if section_ids:
+                stmt = stmt.where(db.Section.id.in_(section_ids))
+            sections = session.scalars(stmt).all()
+
+        if not sections:
+            return []
+
+        # Delete audio tracks corresponding to the sections being deleted.
+        self.audiotracks_service.delete_for_sections(sections)
+
+        # Delete the sections.
+        with DbSession() as session:
+            stmt = delete(db.Section).returning(db.Section)
+            if book_id:
+                stmt = stmt.where(db.Section.book_id == book_id)
+            if section_ids:
+                stmt = stmt.where(db.Section.id.in_(section_ids))
+            deleted_sections = session.execute(stmt).scalars().all()
+            LOG.info("Deleted %s sections: \n%s", len(deleted_sections), deleted_sections)
             session.commit()
+
+        return deleted_sections
 
     def set_phonemes(self, section_id: int, phonemes: str):
         with DbSession() as session:

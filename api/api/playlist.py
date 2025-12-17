@@ -99,14 +99,18 @@ def generate_speech(book_id: uuid.UUID,
 
         db_sections = session.execute(stmt).scalars().all()
 
-    new_tracks = [
-        api.AudioTrack(book_id=track.book_id,
-                       section_id=track.section_id,
-                       status=track.status,
-                       file_name=track.file_name,
-                       duration=track.duration)
-        for track in audio_track_service.generate_speech(db_sections)
-    ]
+    if not db_sections:
+        LOG.info("No sections found to generate speech for")
+        new_tracks = []
+    else:
+        new_tracks = [
+            api.AudioTrack(book_id=track.book_id,
+                           section_id=track.section_id,
+                           status=track.status,
+                           file_name=track.file_name,
+                           duration=track.duration)
+            for track in audio_track_service.generate_speech(db_sections)
+        ]
     progress = _progress(*progress_service.get_progress(book_id))
     return api.Playlist(progress=progress, tracks=new_tracks)
 

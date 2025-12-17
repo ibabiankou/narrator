@@ -101,7 +101,7 @@ def reprocess_book(book_id: uuid.UUID,
     session.execute(update(db.Book).where(db.Book.id == book.id).values(status=db.BookStatus.processing))
     session.commit()
 
-    section_service.delete_sections(book.id)
+    section_service.delete_sections(book_id=book.id.value)
 
     background_tasks.add_task(book_service.extract_text, book)
 

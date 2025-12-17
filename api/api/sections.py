@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.params import Depends
 
 from api import SessionDep, get_logger
 from api.models import db, api
+from api.services.sections import SectionService
 
 LOG = get_logger(__name__)
 
@@ -22,10 +24,6 @@ def update_section(section_id: int,
 
 
 @sections_router.delete("/{section_id}", status_code=204)
-def delete_section(section_id: int, session: SessionDep):
-    section = session.get(db.Section, section_id)
-    if section is None:
+def delete_section(section_id: int, section_service: SectionService = Depends()):
+    if not section_service.delete_sections(section_ids=[section_id]):
         raise HTTPException(status_code=404, detail="Section not found")
-
-    session.delete(section)
-    session.commit()
