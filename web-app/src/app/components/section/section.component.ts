@@ -22,6 +22,8 @@ export class SectionComponent {
   sectionDeleted = output();
   isEditing = signal(false)
 
+  editingModeChanged = output<boolean>();
+
   constructor(private sectionsService: SectionsService) {
   }
 
@@ -40,18 +42,20 @@ export class SectionComponent {
 
   editSection() {
     this.isEditing.set(true);
+    this.editingModeChanged.emit(this.isEditing());
   }
 
   saveSection(value: string) {
     this.section().content = value;
     this.sectionsService.updateSection(this.section()).subscribe({
       next: () => {
-        this.isEditing.set(false);
+        this.cancelEditing();
       }
     });
   }
 
   cancelEditing() {
     this.isEditing.set(false);
+    this.editingModeChanged.emit(this.isEditing());
   }
 }

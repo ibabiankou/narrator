@@ -38,6 +38,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
   sectionPlayed = output<number>();
   emitSectionId = model(true);
 
+  handleKeyBindings = input(true);
+
   audioPlayer: AudioPlayer = new AudioPlayer();
 
   // Total duration of the narrated part.
@@ -156,18 +158,27 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   @HostListener("document:keydown.shift.arrowleft", ["$event"])
   previous(e: Event) {
+    if (!this.handleKeyBindings()) {
+      return;
+    }
     e.preventDefault();
     this.audioPlayer.previous();
   }
 
   @HostListener("document:keydown.arrowleft", ["$event"])
   replay(e: Event) {
+    if (!this.handleKeyBindings()) {
+      return;
+    }
     e.preventDefault();
     this.audioPlayer.seek(-5);
   }
 
   @HostListener("window:keydown.space", ["$event"])
   playPause(e: Event) {
+    if (!this.handleKeyBindings()) {
+      return;
+    }
     e.preventDefault();
 
     this.audioPlayer.$isPlaying
@@ -182,24 +193,36 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   @HostListener("document:keydown.arrowright", ["$event"])
   forward(e: Event) {
+    if (!this.handleKeyBindings()) {
+      return;
+    }
     e.preventDefault();
     this.audioPlayer.seek(5);
   }
 
   @HostListener("document:keydown.shift.arrowright", ["$event"])
   next(e: Event) {
+    if (!this.handleKeyBindings()) {
+      return;
+    }
     e.preventDefault();
     this.audioPlayer.next();
   }
 
   @HostListener("document:keydown.shift.arrowup", ["$event"])
   increasePlaybackRate(e: Event) {
+    if (!this.handleKeyBindings()) {
+      return;
+    }
     e.preventDefault();
     this.audioPlayer.adjustPlaybackRate(0.05);
   }
 
   @HostListener("document:keydown.shift.arrowdown", ["$event"])
   lowerPlaybackRate(e: Event) {
+    if (!this.handleKeyBindings()) {
+      return;
+    }
     e.preventDefault();
     this.audioPlayer.adjustPlaybackRate(-0.05);
   }

@@ -50,6 +50,8 @@ export class ViewBookPage implements OnInit {
 
   isLoading = signal(true);
 
+  isEditingSection = model(false);
+
   $scrollToSectionId = new BehaviorSubject<number>(0);
 
   constructor(private viewportScroller: ViewportScroller) {
@@ -151,5 +153,9 @@ export class ViewBookPage implements OnInit {
     const pages = this.pages();
     const page = pages[section.page_index]
     page.sections = page.sections.filter(s => s.id != section.id);
+  }
+
+  protected setEditingSection(isEditing: boolean) {
+    this.isEditingSection.set(isEditing);
   }
 }
