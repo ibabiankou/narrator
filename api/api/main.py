@@ -10,7 +10,7 @@ from api.books import books_router
 from api.files import files_router
 from api.playlist import playlists_router
 from api.sections import sections_router
-from api.services.audiotracks import SpeechGenerationQueue
+from api.services.rmq import RMQClient
 
 
 # logging.basicConfig()
@@ -23,8 +23,9 @@ from api.services.audiotracks import SpeechGenerationQueue
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    SpeechGenerationQueue.singleton = SpeechGenerationQueue()
+    RMQClient.create()
     yield
+    RMQClient.instance.close()
 
 app = FastAPI(lifespan=lifespan)
 origins = [

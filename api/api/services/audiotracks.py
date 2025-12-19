@@ -1,6 +1,4 @@
-import threading
 import uuid
-from queue import Queue
 from typing import List
 
 from fastapi.params import Depends
@@ -9,8 +7,10 @@ from sqlalchemy import update, insert, delete, select
 from api import get_logger
 from api.models import db
 from api.models.db import DbSession
+from api.models.rmq import PhonemizeText
 from api.services.files import FilesService
 from api.services.kokoro import KokoroClient
+from api.services.rmq import RMQClient
 
 LOG = get_logger(__name__)
 
@@ -18,9 +18,11 @@ LOG = get_logger(__name__)
 class AudioTrackService:
     def __init__(self,
                  files_service: FilesService = Depends(),
-                 kokoro_client: KokoroClient = Depends()):
+                 kokoro_client: KokoroClient = Depends(),
+                 rmq_client: RMQClient = Depends(RMQClient.create)):
         self.files_service = files_service
         self.kokoro_client = kokoro_client
+        self.rmq_client = rmq_client
 
     def generate_speech(self, sections: list[db.Section]) -> List[db.AudioTrack]:
         LOG.info("Enqueueing speech generation for %s sections: \n%s", len(sections), sections)
@@ -45,7 +47,7 @@ class AudioTrackService:
                 track_map[track.section_id] = track
 
         for section in sections:
-            SpeechGenerationQueue.singleton.put(self, section, track_map[section.id])
+            self.rmq_client.publish("phonemize", PhonemizeText(section_id=section.id, text=section.content))
 
         return inserted_tracks
 
@@ -78,45 +80,45 @@ class AudioTrackService:
             return list(session.execute(stmt).scalars().all())
 
 
-class SpeechGenerationQueue:
-    singleton = None
-
-    def __init__(self):
-        self.queue = Queue()
-        self.thread = threading.Thread(target=self._thread_target, daemon=True)
-        self.thread.start()
-
-    def put(self, audiotrack_service: AudioTrackService, section: db.Section, track: db.AudioTrack):
-        self.queue.put((audiotrack_service, section, track))
-
-    def _thread_target(self):
-        LOG.info("Starting speech generation thread...")
-        while True:
-            service, section, track = self.queue.get()
-            try:
-                self._generate_speech(service, section, track)
-            except Exception:
-                LOG.exception("Error generating speech for section: \n%s", section)
-                track.status = db.AudioStatus.failed
-                service.save_track(track)
-            finally:
-                self.queue.task_done()
-
-    def _generate_speech(self, audiotrack_service: AudioTrackService, section: db.Section, track: db.AudioTrack):
-        LOG.info("Generating speech for section: \n%s", section)
-
-        track.status = db.AudioStatus.generating
-        audiotrack_service.save_track(track)
-
-        phonemes = audiotrack_service.kokoro_client.phonemize(section.content)
-        # TODO: this thing is causing circular dependency. Drop it for now.
-        # audiotrack_service.section_service.set_phonemes(section.id, phonemes)
-
-        audio = audiotrack_service.kokoro_client.generate_from_phonemes(phonemes)
-        file_name = audiotrack_service.store_speech_file(section, audio.content)
-
-        track.status = db.AudioStatus.ready
-        track.file_name = file_name
-        track.duration = audio.duration
-
-        audiotrack_service.save_track(track)
+# class SpeechGenerationQueue:
+#     singleton = None
+#
+#     def __init__(self):
+#         self.queue = Queue()
+#         self.thread = threading.Thread(target=self._thread_target, daemon=True)
+#         self.thread.start()
+#
+#     def put(self, audiotrack_service: AudioTrackService, section: db.Section, track: db.AudioTrack):
+#         self.queue.put((audiotrack_service, section, track))
+#
+#     def _thread_target(self):
+#         LOG.info("Starting speech generation thread...")
+#         while True:
+#             service, section, track = self.queue.get()
+#             try:
+#                 self._generate_speech(service, section, track)
+#             except Exception:
+#                 LOG.exception("Error generating speech for section: \n%s", section)
+#                 track.status = db.AudioStatus.failed
+#                 service.save_track(track)
+#             finally:
+#                 self.queue.task_done()
+#
+#     def _generate_speech(self, audiotrack_service: AudioTrackService, section: db.Section, track: db.AudioTrack):
+#         LOG.info("Generating speech for section: \n%s", section)
+#
+#         track.status = db.AudioStatus.generating
+#         audiotrack_service.save_track(track)
+#
+#         phonemes = audiotrack_service.kokoro_client.phonemize(section.content)
+#         # TODO: this thing is causing circular dependency. Drop it for now.
+#         # audiotrack_service.section_service.set_phonemes(section.id, phonemes)
+#
+#         audio = audiotrack_service.kokoro_client.generate_from_phonemes(phonemes)
+#         file_name = audiotrack_service.store_speech_file(section, audio.content)
+#
+#         track.status = db.AudioStatus.ready
+#         track.file_name = file_name
+#         track.duration = audio.duration
+#
+#         audiotrack_service.save_track(track)

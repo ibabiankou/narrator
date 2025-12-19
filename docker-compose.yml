@@ -28,24 +28,33 @@ services:
       POSTGRES_DB: narrator
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
-      interval: 5s
       retries: 5
     ports:
       - "5432:5432"
   s3:
     image: localstack/localstack:s3-latest
     ports:
-      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+      - "4566:4566"            # LocalStack Gateway
     environment:
       - DEBUG=${DEBUG:-0}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
-      interval: 5s
       retries: 5
     volumes:
       - "./scripts/init-s3.py:/etc/localstack/init/ready.d/init-s3.py"
       - "./volume:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
+  rmq:
+    image: rabbitmq:4.2-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: narrator
+      RABBITMQ_DEFAULT_PASS: narrator
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      retries: 5
 
   web-app:
     image: ibabiankou/home-lab:narrator-web-app
