@@ -4,7 +4,7 @@ import time
 from threading import Thread
 from typing import Optional
 
-from pika import BlockingConnection, ConnectionParameters, BasicProperties
+from pika import BlockingConnection, ConnectionParameters, BasicProperties, PlainCredentials
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import ConnectionWrongStateError
 from pika.exchange_type import ExchangeType
@@ -27,6 +27,7 @@ class RMQClient:
 
     def __init__(self):
         self.exchange = "narrator"
+        self.queue = "api"
         self.publisher_connection: Optional[BlockingConnection] = None
         self.consumer_connection: Optional[BlockingConnection] = None
 
@@ -47,7 +48,7 @@ class RMQClient:
         params = ConnectionParameters(
             host=os.getenv("RMQ_HOST"),
             port=int(os.getenv("RMQ_PORT")),
-            credentials={"username": os.getenv("RMQ_USERNAME"), "password": os.getenv("RMQ_PASSWORD")},
+            credentials=PlainCredentials(os.getenv("RMQ_USERNAME"), os.getenv("RMQ_PASSWORD")),
             client_properties={"connection_name": os.getenv("HOSTNAME", "narrator-api")}
         )
 
@@ -66,7 +67,9 @@ class RMQClient:
 
         channel = self.publisher_connection.channel()
         channel.exchange_declare(self.exchange, ExchangeType.topic, durable=True)
-        channel.queue_declare("api", durable=True, arguments={"x-queue-type": "quorum"})
+        channel.queue_declare(self.queue, durable=True, arguments={"x-queue-type": "quorum"})
+        channel.queue_bind(self.queue, self.exchange, routing_key="phonemes")
+        channel.queue_bind(self.queue, self.exchange, routing_key="speech")
         channel.close()
 
     def add_consumer(self):

@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 from http.client import HTTPConnection
 
+from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
@@ -20,6 +21,8 @@ from api.services.rmq import RMQClient
 # HTTPConnection.debuglevel = 1
 # logging.getLogger("requests.packages.urllib3").setLevel(logging.DEBUG)
 # logging.getLogger("requests.packages.urllib3").propagate = True
+
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

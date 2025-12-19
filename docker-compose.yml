@@ -8,11 +8,18 @@ services:
       S3_ACCESS: test
       S3_SECRET: test
       KOKORO_BASEURL: http://speech:8001
+      RMQ_HOST: rmq
+      RMQ_PORT: 5672
+      RMQ_USERNAME: narrator
+      RMQ_PASSWORD: narrator
     depends_on:
       pg:
         condition: service_healthy
         restart: true
       s3:
+        condition: service_healthy
+        restart: true
+      rmq:
         condition: service_healthy
         restart: true
       speech:
@@ -67,3 +74,15 @@ services:
     build: ./speech-generator
     ports:
       - "8001:8001"
+    environment:
+      RMQ_HOST: rmq
+      RMQ_PORT: 5672
+      RMQ_USERNAME: narrator
+      RMQ_PASSWORD: narrator
+    depends_on:
+      s3:
+        condition: service_healthy
+        restart: true
+      rmq:
+        condition: service_healthy
+        restart: true

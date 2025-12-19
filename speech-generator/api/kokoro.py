@@ -17,10 +17,10 @@ class KokoroService:
         self.pipeline = KPipeline(lang_code, model=self.model, repo_id="hexgrad/Kokoro-82M")
 
     @classmethod
-    def initialize(cls):
-        if cls.instance is not None:
-            LOG.warning("Initialize is called after already initialized")
-        cls.instance = KokoroService()
+    def create(cls):
+        if cls.instance is None:
+            cls.instance = KokoroService()
+        return cls.instance
 
     def phonemize(self, text: str, voice: str = "am_adam"):
         phonemes = []
