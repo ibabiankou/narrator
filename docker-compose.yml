@@ -73,7 +73,9 @@ services:
 
   speech:
     image: ibabiankou/home-lab:narrator-speech
-    build: ./speech-generator
+    build:
+      context: .
+      dockerfile: ./speech-generator/Dockerfile
     ports:
       - "8001:8001"
     environment:

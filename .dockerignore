@@ -1,0 +1,25 @@
+# Docker
+.dockerignore
+Dockerfile
+
+# Poetry / Python
+**/.poetry/
+**/.venv/
+**/__pycache__/
+*.pyc
+
+# Git
+.git/
+.gitignore
+
+# IDE / OS
+**/.idea/
+*.DS_Store
+
+# Angular
+**/node_modules/
+**/.angular/
+
+# Other
+volume/
+**/dist/

@@ -5,7 +5,6 @@ WORKDIR /app
 RUN pip install poetry
 RUN poetry self add poetry-plugin-export
 
-COPY common-lib/poetry.lock common-lib/pyproject.toml ./common-lib/
 COPY api/poetry.lock api/pyproject.toml ./api/
 
 RUN poetry --project=api export -f requirements.txt --output requirements.txt --without-hashes

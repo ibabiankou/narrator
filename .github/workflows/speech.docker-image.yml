@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths:
       - 'speech-generator/**'
+      - 'common-lib/**'
       - '.github/workflows/speech.docker-image.yml'
   workflow_dispatch:
 
@@ -47,7 +48,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: speech-generator
+          context: .
+          file: speech-generator/Dockerfile
           platforms: linux/arm64
           push: true
           tags: ${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
