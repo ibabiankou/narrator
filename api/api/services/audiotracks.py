@@ -7,10 +7,10 @@ from sqlalchemy import update, insert, delete, select
 from api import get_logger
 from api.models import db
 from api.models.db import DbSession
-from api.models.rmq import PhonemizeText
 from api.services.files import FilesService
 from api.services.kokoro import KokoroClient
-from api.services.rmq import RMQClient
+from common_lib import RMQClient
+from common_lib.models import rmq
 
 LOG = get_logger(__name__)
 
@@ -47,7 +47,7 @@ class AudioTrackService:
                 track_map[track.section_id] = track
 
         for section in sections:
-            self.rmq_client.publish("phonemize", PhonemizeText(section_id=section.id, text=section.content))
+            self.rmq_client.publish("phonemize", rmq.PhonemizeText(section_id=section.id, text=section.content))
 
         return inserted_tracks
 

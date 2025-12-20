@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 import time
@@ -8,26 +9,24 @@ from pika import BlockingConnection, ConnectionParameters, BasicProperties, Plai
 from pika.spec import Basic
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import ConnectionWrongStateError, ChannelError, AMQPChannelError
-from pika.exchange_type import ExchangeType
 from pydantic import BaseModel
 
-from api import get_logger
+LOG = logging.getLogger(__name__)
 
-LOG = get_logger(__name__)
 
 class RMQClient:
     instance = None
 
     @staticmethod
-    def create():
+    def create(exchange_to_publish: str, queue_to_consume: str):
         """Returns a singleton instance of the RMQClient for FastAPI dependency injection."""
         if RMQClient.instance is None:
-            RMQClient.instance = RMQClient()
+            RMQClient.instance = RMQClient(exchange_to_publish, queue_to_consume)
         return RMQClient.instance
 
-    def __init__(self):
-        self.exchange = "narrator"
-        self.queue = "speech-generator"
+    def __init__(self, exchange:str, queue: str):
+        self.exchange = exchange
+        self.queue = queue
 
         self.connection_params = ConnectionParameters(
             host=os.getenv("RMQ_HOST"),
@@ -42,7 +41,6 @@ class RMQClient:
         self._reconnect = True
         self._connection_watchdog_thread = Thread(target=self._connect, daemon=True)
         self._connection_watchdog_thread.start()
-        self.configure()
 
         self.publisher_channel: Optional[BlockingChannel] = None
         self.consumer_watchdog_thread = Thread(target=self._consume, daemon=True)
@@ -64,16 +62,13 @@ class RMQClient:
                 LOG.exception("Failed to connect to RMQ.")
             time.sleep(1 + random.random())
 
-    def configure(self):
+    def configure(self, configure_callback):
         LOG.info("Configuring topology...")
         while self.publisher_connection is None:
             time.sleep(0.25)
 
         channel = self.publisher_connection.channel()
-        channel.exchange_declare(self.exchange, ExchangeType.topic, durable=True)
-        channel.queue_declare(self.queue, durable=True, arguments={"x-queue-type": "quorum"})
-        channel.queue_bind(self.queue, self.exchange, "phonemize")
-        channel.queue_bind(self.queue, self.exchange, "synthesize")
+        configure_callback(channel)
         channel.close()
 
     def set_consumer(self, message_type: str, cls: type[BaseModel], message_handler):

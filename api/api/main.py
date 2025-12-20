@@ -1,32 +1,31 @@
-import logging
 from contextlib import asynccontextmanager
-from http.client import HTTPConnection
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pika.adapters.blocking_connection import BlockingChannel
+from pika.exchange_type import ExchangeType
 from starlette.middleware.gzip import GZipMiddleware
 
 from api.books import books_router
 from api.files import files_router
 from api.playlist import playlists_router
 from api.sections import sections_router
-from api.services.rmq import RMQClient
-
-
-# logging.basicConfig()
-# logging.getLogger("sqlalchemy.engine").setLevel(logging.DEBUG)
-#
-# # Debug requests library
-# HTTPConnection.debuglevel = 1
-# logging.getLogger("requests.packages.urllib3").setLevel(logging.DEBUG)
-# logging.getLogger("requests.packages.urllib3").propagate = True
+from common_lib import RMQClient
 
 load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    RMQClient.create()
+    exchange = "narrator"
+    queue = "api"
+    rmq = RMQClient.create(exchange, queue)
+    def configure(channel: BlockingChannel):
+        channel.exchange_declare(exchange, ExchangeType.topic, durable=True)
+        channel.queue_declare(queue, durable=True, arguments={"x-queue-type": "quorum"})
+        channel.queue_bind(queue, exchange, "phonemes")
+        channel.queue_bind(queue, exchange, "speech")
+    rmq.configure(configure)
     yield
     RMQClient.instance.close()
 

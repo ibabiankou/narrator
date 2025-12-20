@@ -27,8 +27,18 @@ loggers:
     handlers:
       - access
     propagate: no
+  sqlalchemy.engine:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+  requests.packages.urllib3:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
 root:
-  level: DEBUG
+  level: INFO
   handlers:
     - default
   propagate: no

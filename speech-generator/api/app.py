@@ -2,13 +2,15 @@ from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from pika import BasicProperties
+from pika.adapters.blocking_connection import BlockingChannel
+from pika.exchange_type import ExchangeType
 from pydantic import BaseModel
 
 from api.kokoro import KokoroService
 from fastapi import FastAPI, APIRouter, Response
 
-from api.models.rmq import PhonemizeText, PhonemesResponse
-from api.rmq import RMQClient
+from common_lib import RMQClient
+from common_lib.models import rmq
 
 load_dotenv()
 
@@ -16,14 +18,23 @@ load_dotenv()
 async def lifespan(app: FastAPI):
     kokoro_service = KokoroService.create()
 
-    rmq_client: RMQClient = RMQClient.create()
+    exchange = "narrator"
+    queue = "speech-generator"
+    rmq_client: RMQClient = RMQClient.create(exchange, queue)
 
-    def phonemize(payload: PhonemizeText, prop: BasicProperties):
+    def configure(channel: BlockingChannel):
+        channel.exchange_declare(exchange, ExchangeType.topic, durable=True)
+        channel.queue_declare(queue, durable=True, arguments={"x-queue-type": "quorum"})
+        channel.queue_bind(queue, exchange, "phonemize")
+        channel.queue_bind(queue, exchange, "synthesize")
+    rmq_client.configure(configure)
+
+    def phonemize(payload: rmq.PhonemizeText, prop: BasicProperties):
         phonemes = kokoro_service.phonemize(payload.text)
-        payload = PhonemesResponse(section_id=payload.section_id, phonemes=phonemes)
+        payload = rmq.PhonemesResponse(section_id=payload.section_id, phonemes=phonemes)
         rmq_client.publish(routing_key="phonemes", payload=payload)
 
-    rmq_client.set_consumer("phonemize", PhonemizeText, phonemize)
+    rmq_client.set_consumer("phonemize", rmq.PhonemizeText, phonemize)
     rmq_client.start_consuming()
     yield
 

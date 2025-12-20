@@ -1,7 +1,9 @@
 services:
   api:
     image: ibabiankou/home-lab:narrator-api
-    build: ./api
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
     environment:
       PG_URL: postgresql://narrator:narrator@pg:5432/narrator
       S3_ENDPOINT: http://s3:4566

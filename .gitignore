@@ -26,6 +26,10 @@ tmp/
 
 # IDE settings
 .idea/
+*.iml
+
+# Mac files
+.DS_Store
 
 # Log files
 *.log
