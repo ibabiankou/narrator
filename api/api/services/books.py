@@ -1,19 +1,20 @@
 from io import BytesIO
+from typing import Annotated
 
-from fastapi.params import Depends
 from pypdf import PdfReader, PdfWriter
-from sqlalchemy import update, delete
+from sqlalchemy import update
 
 from api import get_logger
 from api.models.db import Book, Section, DbSession, BookStatus
-from api.services.files import FilesService
+from api.services.files import FilesServiceDep
 from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader
+from common_lib.service import Service
 
 LOG = get_logger(__name__)
 
 
-class BookService:
-    def __init__(self, files_service: FilesService = Depends()):
+class BookService(Service):
+    def __init__(self, files_service: FilesServiceDep):
         self.files_service = files_service
 
     def split_pages(self, book: Book):
@@ -93,3 +94,5 @@ def split_into_sections(pdf_reader: PdfReader):
         sections.append(section_builder.build())
 
     return sections
+
+BookServiceDep = Annotated[BookService, BookService.dep()]

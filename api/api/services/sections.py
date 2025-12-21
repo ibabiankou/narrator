@@ -1,20 +1,19 @@
 import uuid
+from typing import Annotated
 
-from fastapi.params import Depends
 from sqlalchemy import delete, update, select
 
 from api import get_logger
 from api.models import db
 from api.models.db import DbSession
-from api.services.audiotracks import AudioTrackService
+from api.services.audiotracks import AudioTrackServiceDep
+from common_lib.service import Service
 
 LOG = get_logger(__name__)
 
 
-class SectionService:
-    def __init__(self,
-                 audiotracks_service: AudioTrackService = Depends()
-                 ):
+class SectionService(Service):
+    def __init__(self, audiotracks_service: AudioTrackServiceDep):
         self.audiotracks_service = audiotracks_service
 
     def delete_sections(self, book_id: uuid.UUID = None, section_ids: list[int] = None):
@@ -61,3 +60,6 @@ class SectionService:
             LOG.info("Updated section: \n%s", updated_section)
             session.commit()
             return self.audiotracks_service.generate_speech([updated_section]) if updated_section else []
+
+
+SectionServiceDep = Annotated[SectionService, SectionService.dep()]

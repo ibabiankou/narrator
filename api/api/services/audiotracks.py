@@ -1,28 +1,26 @@
 import uuid
-from typing import List
+from typing import List, Annotated
 
-from fastapi.params import Depends
 from sqlalchemy import update, insert, delete, select
 
 from api import get_logger
 from api.models import db
 from api.models.db import DbSession
-from api.services.files import FilesService
-from api.services.kokoro import KokoroClient
-from common_lib import RMQClient
+from api.services.files import FilesServiceDep
+from common_lib import RMQClientDep
 from common_lib.models import rmq
+from common_lib.service import Service
 
 LOG = get_logger(__name__)
 
 
-class AudioTrackService:
+class AudioTrackService(Service):
     def __init__(self,
-                 files_service: FilesService = Depends(),
-                 kokoro_client: KokoroClient = Depends(),
-                 rmq_client: RMQClient = Depends(RMQClient.create)):
+                 files_service: FilesServiceDep,
+                 rmq_client: RMQClientDep):
         self.files_service = files_service
-        self.kokoro_client = kokoro_client
         self.rmq_client = rmq_client
+        # TODO: configure RMQ message handler
 
     def generate_speech(self, sections: list[db.Section]) -> List[db.AudioTrack]:
         LOG.info("Enqueueing speech generation for %s sections: \n%s", len(sections), sections)
@@ -122,3 +120,5 @@ class AudioTrackService:
 #         track.duration = audio.duration
 #
 #         audiotrack_service.save_track(track)
+
+AudioTrackServiceDep = Annotated[AudioTrackService, AudioTrackService.dep()]

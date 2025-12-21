@@ -11,19 +11,12 @@ from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import ConnectionWrongStateError, ChannelError, AMQPChannelError
 from pydantic import BaseModel
 
+from common_lib.service import Service
+
 LOG = logging.getLogger(__name__)
 
 
-class RMQClient:
-    instance = None
-
-    @staticmethod
-    def create(exchange_to_publish: str, queue_to_consume: str):
-        """Returns a singleton instance of the RMQClient for FastAPI dependency injection."""
-        if RMQClient.instance is None:
-            RMQClient.instance = RMQClient(exchange_to_publish, queue_to_consume)
-        return RMQClient.instance
-
+class RMQClient(Service):
     def __init__(self, exchange:str, queue: str):
         self.exchange = exchange
         self.queue = queue

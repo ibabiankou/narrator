@@ -11,21 +11,37 @@ from api.books import books_router
 from api.files import files_router
 from api.playlist import playlists_router
 from api.sections import sections_router
+from api.services.audiotracks import AudioTrackService
+from api.services.books import BookService
+from api.services.files import FilesService
+from api.services.progress import PlaybackProgressService
+from api.services.sections import SectionService
 from common_lib import RMQClient
 
 load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    load_dotenv()
+
+    # Initialize services.
+    files_svc = FilesService()
+    books_svc = BookService(files_svc)
+    playback_svc = PlaybackProgressService()
+
     exchange = "narrator"
     queue = "api"
-    rmq = RMQClient.create(exchange, queue)
+    rmq_client = RMQClient(exchange, queue)
     def configure(channel: BlockingChannel):
         channel.exchange_declare(exchange, ExchangeType.topic, durable=True)
         channel.queue_declare(queue, durable=True, arguments={"x-queue-type": "quorum"})
         channel.queue_bind(queue, exchange, "phonemes")
         channel.queue_bind(queue, exchange, "speech")
-    rmq.configure(configure)
+    rmq_client.configure(configure)
+
+    audiotrack_svc = AudioTrackService(files_svc, rmq_client)
+    section_svc = SectionService(audiotrack_svc)
+
     yield
     RMQClient.instance.close()
 

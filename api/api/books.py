@@ -2,15 +2,14 @@ import uuid
 from datetime import datetime, UTC
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
-from fastapi.params import Depends
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from api import SessionDep, get_logger
 from api.models import db, api
-from api.services.books import BookService
-from api.services.files import FilesService
-from api.services.sections import SectionService
+from api.services.books import BookServiceDep
+from api.services.files import FilesServiceDep
+from api.services.sections import SectionServiceDep
 
 LOG = get_logger(__name__)
 
@@ -21,8 +20,8 @@ books_router = APIRouter()
 def create_book(book: api.CreateBookRequest,
                 session: SessionDep,
                 background_tasks: BackgroundTasks,
-                files_service: FilesService = Depends(),
-                book_service: BookService = Depends()) -> api.BookDetails:
+                files_service: FilesServiceDep,
+                book_service: BookServiceDep) -> api.BookDetails:
     # Load temp_file metadata from DB
     pdf_temp_file = session.get(db.TempFile, book.pdf_temp_file_id)
     if pdf_temp_file is None:
@@ -51,6 +50,7 @@ def create_book(book: api.CreateBookRequest,
     # Process the book in the background
     background_tasks.add_task(book_service.split_pages, book)
     background_tasks.add_task(book_service.extract_text, book)
+    # TODO: Generate text for the first 10-20 sections.
 
     return api.BookDetails(id=book.id,
                            title=book.title,
@@ -92,8 +92,8 @@ def get_book(book_id: uuid.UUID, session: SessionDep) -> api.BookDetails:
 def reprocess_book(book_id: uuid.UUID,
                    session: SessionDep,
                    background_tasks: BackgroundTasks,
-                   book_service: BookService = Depends(),
-                   section_service: SectionService = Depends()):
+                   book_service: BookServiceDep,
+                   section_service: SectionServiceDep):
     book = session.get(db.Book, book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -158,7 +158,7 @@ def get_book_content(book_id: uuid.UUID,
 
 
 @books_router.get("/{book_id}/pages/{page_file_name}")
-def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesService = Depends()):
+def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesServiceDep):
     response_dict = file_service.get_book_page_file(book_id, page_file_name)
     if response_dict is None:
         raise HTTPException(status_code=404, detail="Page not found")
@@ -166,7 +166,7 @@ def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesSe
 
 
 @books_router.get("/{book_id}/speech/{file_name}")
-def get_speech_file(book_id: uuid.UUID, file_name: str, file_service: FilesService = Depends()):
+def get_speech_file(book_id: uuid.UUID, file_name: str, file_service: FilesServiceDep):
     response_dict = file_service.get_speech_file(book_id, file_name)
     if response_dict is None:
         raise HTTPException(status_code=404, detail="Speech file not found")

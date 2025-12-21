@@ -1,15 +1,16 @@
 import uuid
+from typing import Annotated
 
 from sqlalchemy import text, update, select
 
 from api import get_logger
 from api.models import db
 from api.models.db import DbSession
-
+from common_lib.service import Service
 
 LOG = get_logger(__name__)
 
-class PlaybackProgressService:
+class PlaybackProgressService(Service):
 
     def get_progress(self, book_id: uuid.UUID) -> tuple[db.PlaybackProgress, dict[str, int]]:
         query = """
@@ -63,3 +64,5 @@ class PlaybackProgressService:
                 session.add(progress)
 
             session.commit()
+
+PlaybackProgressServiceDep = Annotated[PlaybackProgressService, PlaybackProgressService.dep()]

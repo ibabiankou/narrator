@@ -37,6 +37,11 @@ loggers:
     handlers:
       - default
     propagate: no
+  common_lib.service:
+    level: DEBUG
+    handlers:
+      - default
+    propagate: no
 root:
   level: INFO
   handlers:

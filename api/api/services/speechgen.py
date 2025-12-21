@@ -9,7 +9,7 @@ class GeneratedAudio(BaseModel):
     duration: float
 
 
-class KokoroClient:
+class SpeechGenService:
     def __init__(self):
         self.session = requests.Session()
         self.base_url = os.getenv("KOKORO_BASEURL")

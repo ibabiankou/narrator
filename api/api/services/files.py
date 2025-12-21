@@ -3,13 +3,14 @@ import mimetypes
 import os
 import uuid
 from io import BytesIO
+from typing import Annotated
 
 import boto3
 from botocore.exceptions import ClientError
-from dotenv import load_dotenv
 
 from api import get_logger
 from api.models.db import TempFile, Book
+from common_lib.service import Service
 
 LOG = get_logger(__name__)
 boto3.set_stream_logger('botocore.endpoint', logging.DEBUG)
@@ -17,11 +18,10 @@ boto3.set_stream_logger('botocore.parsers', logging.DEBUG)
 boto3.set_stream_logger('botocore.retryhandler', logging.DEBUG)
 
 
-class FilesService:
+class FilesService(Service):
     """A service to manage files stored in an object store."""
 
     def __init__(self):
-        load_dotenv()
         self.s3_client = boto3.client(
             "s3",
             endpoint_url=os.getenv("S3_ENDPOINT"),
@@ -114,3 +114,5 @@ class FilesService:
         except ClientError as e:
             logging.error(e)
             raise e
+
+FilesServiceDep = Annotated[FilesService, FilesService.dep()]

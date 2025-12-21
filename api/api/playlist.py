@@ -1,14 +1,14 @@
 import uuid
-from typing import Set, Optional, List, Annotated
+from typing import Set, Optional, Annotated
 
 from fastapi import APIRouter, HTTPException
-from fastapi.params import Depends, Query
+from fastapi.params import Query
 from sqlalchemy import select
 
 from api import get_logger, SessionDep
 from api.models import db, api
-from api.services.audiotracks import AudioTrackService
-from api.services.progress import PlaybackProgressService
+from api.services.audiotracks import AudioTrackServiceDep
+from api.services.progress import PlaybackProgressServiceDep
 
 LOG = get_logger(__name__)
 
@@ -17,8 +17,8 @@ playlists_router = APIRouter()
 
 @playlists_router.get("/{book_id}")
 def get_playlist(book_id: uuid.UUID,
-                 audiotrack_service: AudioTrackService = Depends(),
-                 progress_service: PlaybackProgressService = Depends()
+                 audiotrack_service: AudioTrackServiceDep,
+                 progress_service: PlaybackProgressServiceDep
                  ) -> api.Playlist:
     # Read all the audio tracks for this book. Gives us ready and queued sections
     ready_tracks = [
@@ -64,7 +64,7 @@ def _progress(playback_progress: db.PlaybackProgress, stats):
 
 @playlists_router.post("/{book_id}/progress")
 def update_progress(request: api.PlaybackStateUpdate,
-                    progress_service: PlaybackProgressService = Depends()):
+                    progress_service: PlaybackProgressServiceDep):
     upsert = db.PlaybackProgress(book_id=request.book_id,
                                  section_id=request.section_id,
                                  section_progress=request.section_progress_seconds,
@@ -77,9 +77,9 @@ def update_progress(request: api.PlaybackStateUpdate,
 def generate_speech(book_id: uuid.UUID,
                     sections: Optional[Set[int]],
                     session: SessionDep,
-                    limit: Optional[int] = None,
-                    audio_track_service: AudioTrackService = Depends(),
-                    progress_service: PlaybackProgressService = Depends()
+                    audio_track_service: AudioTrackServiceDep,
+                    progress_service: PlaybackProgressServiceDep,
+                    limit: Optional[int] = None
                     ) -> api.Playlist:
     if not sections and not limit:
         raise HTTPException(status_code=400, detail="Either sections or limit must be provided")
@@ -123,9 +123,9 @@ def generate_speech(book_id: uuid.UUID,
 
 @playlists_router.get("/{book_id}/tracks")
 def get_tracks(book_id: uuid.UUID,
-               sections: Annotated[Set[int], Query()] = None,
-               audio_track_service: AudioTrackService = Depends(),
-               progress_service: PlaybackProgressService = Depends()
+               audio_track_service: AudioTrackServiceDep,
+               progress_service: PlaybackProgressServiceDep,
+               sections: Annotated[Set[int], Query()] = None
                ) -> api.Playlist:
     tracks = [
         api.AudioTrack(book_id=track.book_id,
