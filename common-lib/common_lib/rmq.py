@@ -59,7 +59,6 @@ class RMQClient(Service):
                 self.publisher_connection = self.reconnect_if_closed(self.publisher_connection)
                 self.publisher_connection.process_data_events()
                 self.consumer_connection = self.reconnect_if_closed(self.consumer_connection)
-                self.consumer_connection.process_data_events()
             except RuntimeError:
                 LOG.exception("Failed to connect to RMQ.")
             time.sleep(1 + random.random())
@@ -100,8 +99,8 @@ class RMQClient(Service):
                     consumer["handler"](payload, properties)
                     channel.basic_ack(delivery_tag=method.delivery_tag)
                 except Exception:
-                    LOG.exception(f"Error while handling message of type {msg_type}. Rejecting it...")
-                    channel.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
+                    LOG.exception(f"Error while handling message of type {msg_type}. Ignoring it...")
+                    channel.basic_reject(delivery_tag=method.delivery_tag)
             else:
                 LOG.info(f"Received message of type {msg_type}, but no handler is registered. Rejecting it...")
                 channel.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
@@ -112,11 +111,7 @@ class RMQClient(Service):
                 ch.basic_qos(prefetch_count=1)
                 ch.basic_consume(queue=self.queue, on_message_callback=_message_handler)
                 ch.start_consuming()
-            except ChannelError:
-                LOG.exception("Error while consuming from RMQ.")
-                time.sleep(1 + random.random())
-                continue
-            except AMQPChannelError:
+            except Exception:
                 LOG.exception("Error while consuming from RMQ.")
                 time.sleep(1 + random.random())
                 continue

@@ -17,7 +17,7 @@ LOG = get_logger(__name__)
 
 class SectionService(Service):
     def __init__(self, audiotracks_service: AudioTrackServiceDep,
-                       progress_service: PlaybackProgressServiceDep):
+                 progress_service: PlaybackProgressServiceDep):
         self.audiotracks_service = audiotracks_service
         self.progress_service = progress_service
 
@@ -62,7 +62,8 @@ class SectionService(Service):
     def handle_phonemes_msg(self, payload: rmq.PhonemesResponse, prop: BasicProperties):
         LOG.debug("Got phonemes for track %s, requesting speech synthesis...", payload.track_id)
         self.set_phonemes(payload.section_id, payload.phonemes)
-        self.audiotracks_service.synthesize_speech(payload.track_id, payload.phonemes)
+        self.audiotracks_service.synthesize_speech(payload.book_id, payload.section_id, payload.track_id,
+                                                   payload.phonemes)
 
     def set_content(self, section_id: int, content: str) -> list[api.AudioTrack]:
         with DbSession() as session:

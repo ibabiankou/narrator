@@ -47,7 +47,8 @@ class SpeechGenService(Service):
     def handle_phonemize_msg(self, payload: rmq.PhonemizeText, prop: BasicProperties):
         LOG.debug("Converting text into phonemes for track %s.", payload.track_id)
         phonemes = self.phonemize(payload.text)
-        payload = rmq.PhonemesResponse(section_id=payload.section_id, track_id=payload.track_id, phonemes=phonemes)
+        payload = rmq.PhonemesResponse(book_id=payload.book_id, section_id=payload.section_id,
+                                       track_id=payload.track_id, phonemes=phonemes)
         self.rmq_client.publish(routing_key="phonemes", payload=payload)
 
     def synthesize(self, phonemes: str, voice: str = "am_adam", speed: float = 1.1) -> dict:
@@ -77,7 +78,8 @@ class SpeechGenService(Service):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
         result = self.synthesize(payload.phonemes)
         self._upload_file(payload.file_path, result.get("content_type"), result.get("content"))
-        payload = rmq.SpeechResponse(track_id=payload.track_id, file_path=payload.file_path, duration=result.get("duration"))
+        payload = rmq.SpeechResponse(book_id=payload.book_id, section_id=payload.section_id, track_id=payload.track_id,
+                                     file_path=payload.file_path, duration=result.get("duration"))
         self.rmq_client.publish(routing_key="speech", payload=payload)
 
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):

@@ -44,8 +44,13 @@ class AudioTrackService(Service):
             for track in inserted_tracks:
                 track_map[track.section_id] = track
             for section in sections:
-                msg = rmq.PhonemizeText(section_id=section.id, track_id=track_map[section.id].id, text=section.content)
-                self.rmq_client.publish("phonemize", msg)
+                track_id = track_map[section.id].id
+                # Use existing phonemes, if present.
+                if section.phonemes:
+                    self.synthesize_speech(section.book_id, section.id, track_id, section.phonemes)
+                else:
+                    self.phonemize_text(section.book_id, section.id, track_id, section.content)
+
             session.commit()
 
             return [
@@ -56,16 +61,19 @@ class AudioTrackService(Service):
                                duration=track.duration)
                 for track in inserted_tracks
             ]
+    def phonemize_text(self, book_id: uuid.UUID, section_id: int, track_id: int, content: str):
+        msg = rmq.PhonemizeText(book_id=book_id, section_id=section_id, track_id=track_id, text=content)
+        self.rmq_client.publish("phonemize", msg)
 
     def _get_track(self, track_id: int) -> Optional[db.AudioTrack]:
         with DbSession() as session:
             stmt = select(db.AudioTrack).where(db.AudioTrack.id == track_id)
             return session.scalars(stmt).first()
 
-    def synthesize_speech(self, track_id: int, phonemes: str):
-        track = self._get_track(track_id)
-        file_path = self.files_service.speech_filename(track.book_id, f"{track_id}.mp3")
-        msg = rmq.SynthesizeSpeech(track_id=track_id, phonemes=phonemes, file_path=file_path)
+    def synthesize_speech(self, book_id: uuid.UUID, section_id: int, track_id: int, phonemes: str):
+        file_path = self.files_service.speech_filename(book_id, f"{track_id}.mp3")
+        msg = rmq.SynthesizeSpeech(book_id=book_id, section_id=section_id, track_id=track_id, phonemes=phonemes,
+                                   file_path=file_path)
         self.rmq_client.publish("synthesize", msg)
 
     def delete_for_sections(self, sections: list[db.Section]):
