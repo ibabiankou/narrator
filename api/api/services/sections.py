@@ -8,6 +8,7 @@ from api import get_logger
 from api.models import db, api
 from api.models.db import DbSession
 from api.services.audiotracks import AudioTrackServiceDep
+from api.services.progress import PlaybackProgressServiceDep
 from common_lib.models import rmq
 from common_lib.service import Service
 
@@ -15,8 +16,10 @@ LOG = get_logger(__name__)
 
 
 class SectionService(Service):
-    def __init__(self, audiotracks_service: AudioTrackServiceDep):
+    def __init__(self, audiotracks_service: AudioTrackServiceDep,
+                       progress_service: PlaybackProgressServiceDep):
         self.audiotracks_service = audiotracks_service
+        self.progress_service = progress_service
 
     def delete_sections(self, book_id: uuid.UUID = None, section_ids: list[int] = None):
         if not book_id and not section_ids:
@@ -36,6 +39,7 @@ class SectionService(Service):
 
         # Delete audio tracks corresponding to the sections being deleted.
         self.audiotracks_service.delete_for_sections(sections)
+        self.progress_service.delete_by_section([s.id for s in sections])
 
         # Delete the sections.
         with DbSession() as session:
@@ -56,6 +60,7 @@ class SectionService(Service):
             session.commit()
 
     def handle_phonemes_msg(self, payload: rmq.PhonemesResponse, prop: BasicProperties):
+        LOG.debug("Got phonemes for track %s, requesting speech synthesis...", payload.track_id)
         self.set_phonemes(payload.section_id, payload.phonemes)
         self.audiotracks_service.synthesize_speech(payload.track_id, payload.phonemes)
 

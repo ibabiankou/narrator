@@ -19,3 +19,40 @@ of the shuttle’s recent atmospheric entry. It was currently zipping along at
 
     pb.append((0, lines[-1]))
     assert not pb.need_more_text()
+
+def test_imbalanced_quotes():
+    pb = ParagraphBuilder()
+
+    text = """“This is a prank of some sort, right? That Shalia woman drugs guys
+and leaves them naked in a field then sends her friends to blackmail him or
+something,” he said knowing that blackmail didn’t explain the body. “Is
+this some Island of Dr. Moreau type thing?
+“Adding unintelligible nonsense to your lies won’t make me believe
+them,” Ena said contemptuously while shuffling uncomfortably. “And I
+don’t believe your Shalia nonsense.”"""
+    lines = text.splitlines()
+
+    for line in lines[:-1]:
+        pb.append((0, line))
+        assert pb.need_more_text()
+
+    pb.append((0, lines[-1]))
+    assert not pb.need_more_text()
+
+
+def test_empty_lines():
+    pb = ParagraphBuilder()
+
+    text = """ 
+     
+     """
+    lines = text.splitlines()
+
+    for line in lines:
+        pb.append((0, line))
+        assert pb.need_more_text()
+
+    pb.append((1, "  "))
+
+    assert pb.need_more_text()
+    assert pb.build() == (1, "")

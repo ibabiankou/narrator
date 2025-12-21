@@ -45,6 +45,7 @@ class SpeechGenService(Service):
         return "\n".join(phonemes)
 
     def handle_phonemize_msg(self, payload: rmq.PhonemizeText, prop: BasicProperties):
+        LOG.debug("Converting text into phonemes for track %s.", payload.track_id)
         phonemes = self.phonemize(payload.text)
         payload = rmq.PhonemesResponse(section_id=payload.section_id, track_id=payload.track_id, phonemes=phonemes)
         self.rmq_client.publish(routing_key="phonemes", payload=payload)
@@ -73,6 +74,7 @@ class SpeechGenService(Service):
         return np.zeros(int(duration_s * 24000), dtype=np.int16)  # 24kHz sample rate
 
     def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech, prop: BasicProperties):
+        LOG.debug("Synthesizing speech for track %s.", payload.track_id)
         result = self.synthesize(payload.phonemes)
         self._upload_file(payload.file_path, result.get("content_type"), result.get("content"))
         payload = rmq.SpeechResponse(track_id=payload.track_id, file_path=payload.file_path, duration=result.get("duration"))

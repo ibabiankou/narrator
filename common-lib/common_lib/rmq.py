@@ -91,6 +91,7 @@ class RMQClient(Service):
     def _consume(self):
         def _message_handler(channel: BlockingChannel, method: Basic.Deliver, properties: BasicProperties, body: bytes):
             msg_type = properties.type
+            LOG.debug("Handling message of type %s...", msg_type)
 
             if msg_type in self._consumer_handlers:
                 consumer = self._consumer_handlers[msg_type]

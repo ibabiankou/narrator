@@ -8,6 +8,7 @@ from pika.exchange_type import ExchangeType
 from starlette.middleware.gzip import GZipMiddleware
 
 from api.books import books_router
+from api.debug import debug_router
 from api.files import files_router
 from api.playlist import playlists_router
 from api.sections import sections_router
@@ -28,13 +29,13 @@ async def lifespan(app: FastAPI):
     # Initialize services.
     files_svc = FilesService()
     books_svc = BookService(files_svc)
-    playback_svc = PlaybackProgressService()
+    progress_svc = PlaybackProgressService()
 
     exchange = "narrator"
     queue = "api"
     rmq_client = RMQClient(exchange, queue)
     audiotrack_svc = AudioTrackService(files_svc, rmq_client)
-    section_svc = SectionService(audiotrack_svc)
+    section_svc = SectionService(audiotrack_svc, progress_svc)
 
     def configure(channel: BlockingChannel):
         channel.exchange_declare(exchange, ExchangeType.topic, durable=True)
@@ -75,4 +76,5 @@ base_url_router.include_router(files_router, prefix="/files")
 base_url_router.include_router(books_router, prefix="/books")
 base_url_router.include_router(playlists_router, prefix="/playlists")
 base_url_router.include_router(sections_router, prefix="/sections")
+base_url_router.include_router(debug_router, prefix="/debug")
 app.include_router(base_url_router)

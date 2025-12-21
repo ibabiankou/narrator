@@ -17,12 +17,7 @@ handlers:
     class: logging.StreamHandler
     stream: ext://sys.stdout
 loggers:
-  api.services.audiotracks:
-    level: DEBUG
-    handlers:
-      - default
-    propagate: no
-  api.services.sections:
+  api.speechgen:
     level: DEBUG
     handlers:
       - default

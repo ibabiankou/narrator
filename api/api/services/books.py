@@ -28,6 +28,24 @@ class BookService(Service):
         # Upload page files to the object store
         self.files_service.upload_book_pages(book, pdf_pages)
 
+    def get_raw_text(self, book: Book, first_page: int = None, last_page: int = None):
+        pdf_file = self.files_service.get_book_file(book)
+        pdf_reader = PdfReader(pdf_file)
+
+        line_reader = LineReader(pdf_reader)
+        lines = []
+        while line_reader.has_next():
+            page_index, line = line_reader.next()
+
+            if first_page is not None and page_index < first_page:
+                continue
+            if last_page is not None and page_index > last_page:
+                break
+
+            lines.append(line)
+
+        return "\n".join(lines)
+
     def extract_text(self, book: Book):
         LOG.info(f"Extracting text of the book {book.id}")
 
@@ -85,7 +103,10 @@ def split_into_sections(pdf_reader: PdfReader):
             while paragraph_builder.need_more_text() and line_reader.has_next():
                 paragraph_builder.append(line_reader.next())
 
-            if section_builder.page_index is not None and paragraph_builder.page_index != section_builder.page_index:
+            if (section_builder.page_index is not None
+                    and paragraph_builder.page_index != section_builder.page_index
+                    and not section_builder.is_empty()
+            ):
                 sections.append(section_builder.build())
                 section_builder = SectionBuilder()
 

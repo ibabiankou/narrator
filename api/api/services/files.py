@@ -13,9 +13,6 @@ from api.models.db import TempFile, Book
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
-boto3.set_stream_logger('botocore.endpoint', logging.DEBUG)
-boto3.set_stream_logger('botocore.parsers', logging.DEBUG)
-boto3.set_stream_logger('botocore.retryhandler', logging.DEBUG)
 
 
 class FilesService(Service):

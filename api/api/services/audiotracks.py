@@ -79,6 +79,7 @@ class AudioTrackService(Service):
             session.commit()
 
     def handle_speech_msg(self, payload: rmq.SpeechResponse, properties: BasicProperties):
+        LOG.debug("Speech is ready for track %s.", payload.track_id)
         track = self._get_track(payload.track_id)
         track.status = db.AudioStatus.ready
         track.file_name = payload.file_path.split("/")[-1]

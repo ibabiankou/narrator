@@ -14,7 +14,7 @@ FROM python:3.12-slim AS final
 WORKDIR /app
 
 COPY --from=builder /app/requirements.txt .
-COPY api/log_conf.yaml .
+COPY speech-generator/log_conf.yaml .
 COPY common-lib ./common-lib
 
 RUN pip install --no-cache-dir -r requirements.txt
@@ -23,4 +23,4 @@ COPY speech-generator/api ./api
 
 EXPOSE 8001
 
-CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8001", "--log-config", "log_conf.yaml"]

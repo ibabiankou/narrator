@@ -24,15 +24,18 @@ class ParagraphBuilder:
 
         self._sentence_finishers = '.!?'
 
+    def _is_empty(self):
+        return len(self.text.strip()) == 0
+
     def need_more_text(self) -> bool:
         """Returns True if the text is most likely an incomplete paragraph."""
-        return len(self.text) == 0 or (not self._ignore_quotes and len(self.stack) != 0) or self._is_incomplete_sentence
+        return self._is_empty() or (not self._ignore_quotes and len(self.stack) != 0) or self._is_incomplete_sentence
 
     def append(self, line: tuple[int, str]):
         """Append a line of text."""
         LOG.debug("Appending line: \n%s", line)
 
-        if self.page_index is None:
+        if self.page_index is None or (self.page_index != line[0] and self._is_empty()):
             self.page_index = line[0]
 
         if len(self.text) > 0:
@@ -47,6 +50,10 @@ class ParagraphBuilder:
             if not self._ignore_quotes:
                 if character in self._opening_quotes:
                     LOG.debug("%03d Got opening quote: %s", line_index, character)
+                    if character in self.stack:
+                        self._ignore_quotes = True
+                        LOG.warning("The same opening quote is already in stack. Ignoring quotes going forward...")
+                        continue
                     self.stack.append(character)
                 if character in self._closing_quotes:
                     if len(self.stack) == 0:
@@ -85,12 +92,12 @@ class ParagraphBuilder:
 
         LOG.debug("Need more text: %s", self.need_more_text())
 
-    def build(self) -> (int, str):
-        return self.page_index, self.text
+    def build(self) -> tuple[int, str]:
+        return self.page_index, self.text.strip()
 
 
 class SectionBuilder:
-    def __init__(self, target_length: int = 300):
+    def __init__(self, target_length: int = 500):
         # It takes around 25s to generate speech for 300 char snippet of text.
         self.text = ""
         self.page_index = None
@@ -99,14 +106,20 @@ class SectionBuilder:
     def need_more_text(self) -> bool:
         return len(self.text) < self.target_length
 
-    def append(self, line: (int, str)):
-        if self.page_index is None:
+    def is_empty(self):
+        return len(self.text.strip()) > 0
+
+    def append(self, line: tuple[int, str]):
+        if self.page_index is None or (self.page_index != line[0] and self.is_empty()):
             self.page_index = line[0]
 
         if len(line[1].strip()) > 0:
             self.text += line[1] + "\n"
 
     def build(self):
+        if len(self.text) > self.target_length * 2:
+            LOG.warning("Length of the section is significantly longer than the target.")
+            LOG.warning("Section text: \n%s", self.text)
         return {"page_index": self.page_index, "content": self.text}
 
 
@@ -128,13 +141,14 @@ class LineReader:
         for page_index in range(len(pages)):
             page_lines = self._remove_key_words(pages[page_index].extract_text()).splitlines()
             for line in page_lines:
-                lines.append((page_index, line))
+                if len(line.strip()) > 0:
+                    lines.append((page_index, line.strip()))
         return lines
 
     def has_next(self) -> bool:
         return self.line_index < len(self.lines)
 
-    def next(self) -> (int, str):
+    def next(self) -> tuple[int, str]:
         if self.has_next():
             line = self.lines[self.line_index]
             self.line_index += 1
