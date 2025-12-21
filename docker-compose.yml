@@ -79,6 +79,9 @@ services:
     ports:
       - "8001:8001"
     environment:
+      S3_ENDPOINT: http://s3:4566
+      S3_ACCESS: test
+      S3_SECRET: test
       RMQ_HOST: rmq
       RMQ_PORT: 5672
       RMQ_USERNAME: narrator

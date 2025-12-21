@@ -1,12 +1,14 @@
 import uuid
 from typing import Annotated
 
+from pika import BasicProperties
 from sqlalchemy import delete, update, select
 
 from api import get_logger
-from api.models import db
+from api.models import db, api
 from api.models.db import DbSession
 from api.services.audiotracks import AudioTrackServiceDep
+from common_lib.models import rmq
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
@@ -53,7 +55,11 @@ class SectionService(Service):
             session.execute(update(db.Section).where(db.Section.id == section_id).values(phonemes=phonemes))
             session.commit()
 
-    def set_content(self, section_id: int, content: str) -> list[db.AudioTrack]:
+    def handle_phonemes_msg(self, payload: rmq.PhonemesResponse, prop: BasicProperties):
+        self.set_phonemes(payload.section_id, payload.phonemes)
+        self.audiotracks_service.synthesize_speech(payload.track_id, payload.phonemes)
+
+    def set_content(self, section_id: int, content: str) -> list[api.AudioTrack]:
         with DbSession() as session:
             stmt = update(db.Section).returning(db.Section).where(db.Section.id == section_id).values(content=content)
             updated_section = session.execute(stmt).scalars().first()

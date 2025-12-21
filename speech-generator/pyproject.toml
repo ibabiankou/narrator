@@ -8,13 +8,14 @@ authors = [
 
 requires-python = ">=3.10, <3.13"
 dependencies = [
-    "fastapi (>=0.121.3,<0.122.0)",
+    "fastapi (>=0.126.0,<0.127.0)",
     "uvicorn (>=0.38.0,<0.39.0)",
     "kokoro (>=0.9.4,<0.10.0)",
     "soundfile (>=0.13.1,<0.14.0)",
     "pika (>=1.3.2,<2.0.0)",
     "python-dotenv (>=1.2.1,<2.0.0)",
-    "narrator-commons"
+    "narrator-commons",
+    "boto3 (>=1.42.14,<2.0.0)"
 ]
 
 [tool.poetry]
@@ -22,6 +23,9 @@ packages = [{include = "api"}]
 
 [tool.poetry.dependencies]
 narrator-commons = { path = "../common-lib", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+boto3-stubs = "^1.42.14"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

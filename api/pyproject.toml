@@ -7,7 +7,7 @@ packages = [{include = "api"}]
 
 [tool.poetry.dependencies]
 python = "^3.13"
-fastapi = "^0.125.0"
+fastapi = "^0.126.0"
 uvicorn = "^0.38.0"
 python-multipart = "^0.0.21"
 sqlalchemy = "^2.0.45"

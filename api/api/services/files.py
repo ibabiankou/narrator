@@ -82,21 +82,6 @@ class FilesService(Service):
             else:
                 raise e
 
-    def store_speech_file(self, book_id: uuid.UUID, file_name: str, speech_data: bytes):
-        """Store speech data to the object store."""
-        remote_file_path = self.speech_filename(book_id, file_name)
-
-        try:
-            mime_type, encoding = mimetypes.guess_type(remote_file_path)
-            self.s3_client.put_object(
-                Body=speech_data,
-                Bucket=self.bucket_name,
-                Key=remote_file_path,
-                ContentType=mime_type)
-        except ClientError as e:
-            logging.error(e)
-            raise e
-
     def speech_filename(self, book_id: uuid.UUID, file_name: str):
         return f"{book_id}/speech/{file_name}"
 

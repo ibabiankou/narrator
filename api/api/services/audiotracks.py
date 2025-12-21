@@ -1,10 +1,11 @@
 import uuid
-from typing import List, Annotated
+from typing import List, Annotated, Optional
 
+from pika import BasicProperties
 from sqlalchemy import update, insert, delete, select
 
 from api import get_logger
-from api.models import db
+from api.models import db, api
 from api.models.db import DbSession
 from api.services.files import FilesServiceDep
 from common_lib import RMQClientDep
@@ -22,7 +23,7 @@ class AudioTrackService(Service):
         self.rmq_client = rmq_client
         # TODO: configure RMQ message handler
 
-    def generate_speech(self, sections: list[db.Section]) -> List[db.AudioTrack]:
+    def generate_speech(self, sections: list[db.Section]) -> List[api.AudioTrack]:
         LOG.info("Enqueueing speech generation for %s sections: \n%s", len(sections), sections)
         self.delete_for_sections(sections)
 
@@ -40,14 +41,32 @@ class AudioTrackService(Service):
                     for section in sections
                 ]
             ).all()
-            session.commit()
             for track in inserted_tracks:
                 track_map[track.section_id] = track
+            for section in sections:
+                msg = rmq.PhonemizeText(section_id=section.id, track_id=track_map[section.id].id, text=section.content)
+                self.rmq_client.publish("phonemize", msg)
+            session.commit()
 
-        for section in sections:
-            self.rmq_client.publish("phonemize", rmq.PhonemizeText(section_id=section.id, text=section.content))
+            return [
+                api.AudioTrack(book_id=track.book_id,
+                               section_id=track.section_id,
+                               status=track.status,
+                               file_name=track.file_name,
+                               duration=track.duration)
+                for track in inserted_tracks
+            ]
 
-        return inserted_tracks
+    def _get_track(self, track_id: int) -> Optional[db.AudioTrack]:
+        with DbSession() as session:
+            stmt = select(db.AudioTrack).where(db.AudioTrack.id == track_id)
+            return session.scalars(stmt).first()
+
+    def synthesize_speech(self, track_id: int, phonemes: str):
+        track = self._get_track(track_id)
+        file_path = self.files_service.speech_filename(track.book_id, f"{track_id}.mp3")
+        msg = rmq.SynthesizeSpeech(track_id=track_id, phonemes=phonemes, file_path=file_path)
+        self.rmq_client.publish("synthesize", msg)
 
     def delete_for_sections(self, sections: list[db.Section]):
         with DbSession() as session:
@@ -59,15 +78,17 @@ class AudioTrackService(Service):
                 self.files_service.delete_speech_file(track.book_id, track.file_name)
             session.commit()
 
+    def handle_speech_msg(self, payload: rmq.SpeechResponse, properties: BasicProperties):
+        track = self._get_track(payload.track_id)
+        track.status = db.AudioStatus.ready
+        track.file_name = payload.file_path.split("/")[-1]
+        track.duration = payload.duration
+        self.save_track(track)
+
     def save_track(self, track: db.AudioTrack):
         with DbSession() as session:
             session.execute(update(db.AudioTrack).where(db.AudioTrack.id == track.id).values(track.as_dict()))
             session.commit()
-
-    def store_speech_file(self, section: db.Section, speech_data: bytes) -> str:
-        file_name = f"{section.id}.mp3"
-        self.files_service.store_speech_file(section.book_id, file_name, speech_data)
-        return file_name
 
     def get_tracks(self, book_id: uuid.UUID, sections: List[int] = None) -> List[db.AudioTrack]:
         with DbSession() as session:
@@ -76,49 +97,5 @@ class AudioTrackService(Service):
                 stmt = stmt.where(db.AudioTrack.section_id.in_(sections))
             stmt = stmt.order_by(db.AudioTrack.playlist_order)
             return list(session.execute(stmt).scalars().all())
-
-
-# class SpeechGenerationQueue:
-#     singleton = None
-#
-#     def __init__(self):
-#         self.queue = Queue()
-#         self.thread = threading.Thread(target=self._thread_target, daemon=True)
-#         self.thread.start()
-#
-#     def put(self, audiotrack_service: AudioTrackService, section: db.Section, track: db.AudioTrack):
-#         self.queue.put((audiotrack_service, section, track))
-#
-#     def _thread_target(self):
-#         LOG.info("Starting speech generation thread...")
-#         while True:
-#             service, section, track = self.queue.get()
-#             try:
-#                 self._generate_speech(service, section, track)
-#             except Exception:
-#                 LOG.exception("Error generating speech for section: \n%s", section)
-#                 track.status = db.AudioStatus.failed
-#                 service.save_track(track)
-#             finally:
-#                 self.queue.task_done()
-#
-#     def _generate_speech(self, audiotrack_service: AudioTrackService, section: db.Section, track: db.AudioTrack):
-#         LOG.info("Generating speech for section: \n%s", section)
-#
-#         track.status = db.AudioStatus.generating
-#         audiotrack_service.save_track(track)
-#
-#         phonemes = audiotrack_service.kokoro_client.phonemize(section.content)
-#         # TODO: this thing is causing circular dependency. Drop it for now.
-#         # audiotrack_service.section_service.set_phonemes(section.id, phonemes)
-#
-#         audio = audiotrack_service.kokoro_client.generate_from_phonemes(phonemes)
-#         file_name = audiotrack_service.store_speech_file(section, audio.content)
-#
-#         track.status = db.AudioStatus.ready
-#         track.file_name = file_name
-#         track.duration = audio.duration
-#
-#         audiotrack_service.save_track(track)
 
 AudioTrackServiceDep = Annotated[AudioTrackService, AudioTrackService.dep()]

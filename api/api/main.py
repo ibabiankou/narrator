@@ -17,6 +17,7 @@ from api.services.files import FilesService
 from api.services.progress import PlaybackProgressService
 from api.services.sections import SectionService
 from common_lib import RMQClient
+from common_lib.models import rmq
 
 load_dotenv()
 
@@ -32,6 +33,9 @@ async def lifespan(app: FastAPI):
     exchange = "narrator"
     queue = "api"
     rmq_client = RMQClient(exchange, queue)
+    audiotrack_svc = AudioTrackService(files_svc, rmq_client)
+    section_svc = SectionService(audiotrack_svc)
+
     def configure(channel: BlockingChannel):
         channel.exchange_declare(exchange, ExchangeType.topic, durable=True)
         channel.queue_declare(queue, durable=True, arguments={"x-queue-type": "quorum"})
@@ -39,9 +43,9 @@ async def lifespan(app: FastAPI):
         channel.queue_bind(queue, exchange, "speech")
     rmq_client.configure(configure)
 
-    audiotrack_svc = AudioTrackService(files_svc, rmq_client)
-    section_svc = SectionService(audiotrack_svc)
-
+    rmq_client.set_consumer(rmq.PhonemesResponse, section_svc.handle_phonemes_msg)
+    rmq_client.set_consumer(rmq.SpeechResponse, audiotrack_svc.handle_speech_msg)
+    rmq_client.start_consuming()
     yield
     RMQClient.instance.close()
 

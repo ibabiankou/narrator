@@ -31,7 +31,8 @@ class RMQClient(Service):
             host=os.getenv("RMQ_HOST"),
             port=int(os.getenv("RMQ_PORT")),
             credentials=PlainCredentials(os.getenv("RMQ_USERNAME"), os.getenv("RMQ_PASSWORD")),
-            client_properties={"connection_name": os.getenv("HOSTNAME", "narrator-api")}
+            client_properties={"connection_name": os.getenv("HOSTNAME", "narrator-api")},
+            heartbeat=20
         )
 
         self.publisher_connection: Optional[BlockingConnection] = None
@@ -56,7 +57,9 @@ class RMQClient(Service):
         while self._reconnect:
             try:
                 self.publisher_connection = self.reconnect_if_closed(self.publisher_connection)
+                self.publisher_connection.process_data_events()
                 self.consumer_connection = self.reconnect_if_closed(self.consumer_connection)
+                self.consumer_connection.process_data_events()
             except RuntimeError:
                 LOG.exception("Failed to connect to RMQ.")
             time.sleep(1 + random.random())
@@ -125,7 +128,7 @@ class RMQClient(Service):
 
     def _get_publisher_channel(self):
         if self.publisher_channel is None or not self.publisher_channel.is_open:
-            self.publisher_channel = self.publisher_connection.channel()
+            self.publisher_channel = self.reconnect_if_closed(self.publisher_connection).channel()
             self.publisher_channel.confirm_delivery()
         return self.publisher_channel
 
