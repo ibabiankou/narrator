@@ -14,8 +14,8 @@ of the shuttle’s recent atmospheric entry. It was currently zipping along at
     lines = text.splitlines()
 
     for line in lines[:-1]:
-        pb.append(line)
+        pb.append((0, line))
         assert pb.need_more_text()
 
-    pb.append(lines[-1])
+    pb.append((0, lines[-1]))
     assert not pb.need_more_text()

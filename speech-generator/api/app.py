@@ -29,12 +29,13 @@ async def lifespan(app: FastAPI):
         channel.queue_bind(queue, exchange, "synthesize")
     rmq_client.configure(configure)
 
+    # Configure message handlers
     def phonemize(payload: rmq.PhonemizeText, prop: BasicProperties):
         phonemes = kokoro_service.phonemize(payload.text)
         payload = rmq.PhonemesResponse(section_id=payload.section_id, phonemes=phonemes)
         rmq_client.publish(routing_key="phonemes", payload=payload)
 
-    rmq_client.set_consumer("phonemize", rmq.PhonemizeText, phonemize)
+    rmq_client.set_consumer(rmq.PhonemizeText, phonemize)
     rmq_client.start_consuming()
     yield
 

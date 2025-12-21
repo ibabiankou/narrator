@@ -3,7 +3,7 @@ import os
 import random
 import time
 from threading import Thread, RLock
-from typing import Optional
+from typing import Optional, ClassVar
 
 from pika import BlockingConnection, ConnectionParameters, BasicProperties, PlainCredentials
 from pika.spec import Basic
@@ -15,6 +15,12 @@ from common_lib.service import Service
 
 LOG = logging.getLogger(__name__)
 
+
+class RMQMessage(BaseModel):
+    """A base class for all RMQ messages. Subclasses MUST set the type attribute, and it should be globally unique."""
+
+    # Type of the message. Used by consumers to match the message to an appropriate handler.
+    type: ClassVar[str]
 
 class RMQClient(Service):
     def __init__(self, exchange:str, queue: str):
@@ -64,14 +70,14 @@ class RMQClient(Service):
         configure_callback(channel)
         channel.close()
 
-    def set_consumer(self, message_type: str, cls: type[BaseModel], message_handler):
+    def set_consumer(self, cls: type[RMQMessage], message_handler):
         """
         message_handler(payload, properties)
-            - payload: BaseModel
+            - payload: RMQMessage
             - properties: spec.BasicProperties
         """
-        self._consumer_handlers[message_type] = {
-            "type": message_type,
+        self._consumer_handlers[cls.type] = {
+            "type": cls.type,
             "type_class": cls,
             "handler": message_handler
         }
@@ -123,10 +129,12 @@ class RMQClient(Service):
             self.publisher_channel.confirm_delivery()
         return self.publisher_channel
 
-    def publish(self, routing_key: str, payload: BaseModel, properties: BasicProperties = None):
+    def publish(self, routing_key: str, payload: RMQMessage, properties: BasicProperties = None):
         channel = self._get_publisher_channel()
         body = payload.model_dump_json().encode("utf-8")
-        channel.basic_publish(self.exchange, routing_key, body, properties, mandatory=True)
+        props = properties or BasicProperties()
+        props.type = payload.type
+        channel.basic_publish(self.exchange, routing_key, body, props, mandatory=True)
 
     def close(self):
         LOG.info("Disconnecting from RMQ...")

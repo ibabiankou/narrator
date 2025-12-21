@@ -28,7 +28,7 @@ class ParagraphBuilder:
         """Returns True if the text is most likely an incomplete paragraph."""
         return len(self.text) == 0 or (not self._ignore_quotes and len(self.stack) != 0) or self._is_incomplete_sentence
 
-    def append(self, line: (int, str)):
+    def append(self, line: tuple[int, str]):
         """Append a line of text."""
         LOG.debug("Appending line: \n%s", line)
 
