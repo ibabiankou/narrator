@@ -12,7 +12,7 @@ from pika.exceptions import ConnectionWrongStateError
 from pika.spec import Basic
 from pika.adapters.blocking_connection import BlockingChannel
 from pydantic import BaseModel
-from tenacity import retry, wait_exponential, wait_random, stop_after_attempt, RetryError
+from tenacity import retry, wait_exponential, wait_random, stop_after_attempt
 
 from common_lib.service import Service
 
@@ -90,10 +90,6 @@ class RMQClient(Service):
                 t = Thread(name=f"msg-{method.delivery_tag}", target=_invoke_handler, args=[handler_invocation],
                            daemon=True)
                 t.start()
-
-                while t.is_alive():
-                    t.join(1)
-                    channel.connection.process_data_events()
             else:
                 LOG.info(f"Received message of type {msg_type}, but no handler is registered. Rejecting it...")
                 channel.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
@@ -113,7 +109,9 @@ class RMQClient(Service):
         body = payload.model_dump_json().encode("utf-8")
         props = properties or BasicProperties()
         props.type = payload.type
-        channel.basic_publish(self.exchange, routing_key, body, props, mandatory=True)
+        channel.connection.add_callback_threadsafe(
+            lambda: channel.basic_publish(self.exchange, routing_key, body, props, mandatory=True)
+        )
 
     def close(self):
         LOG.info("Closing RMQ client...")
@@ -171,8 +169,8 @@ class WatchedConnectionProvider:
                     # Consumer connection is processing data events internally as part of start_consuming
                     # Publisher connection, however, should manually trigger this processing.
                     conn.process_data_events()
-            except RetryError:
-                LOG.exception("Failed to get connection. Will keep trying.")
+            except Exception:
+                LOG.exception("Error getting connection in watchdog thread. Will keep trying.")
 
     @retry(
         wait=wait_exponential(multiplier=1, min=1, max=10) + wait_random(0, 1),
