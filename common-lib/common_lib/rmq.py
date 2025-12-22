@@ -195,6 +195,8 @@ class WatchedConnectionProvider:
         with self._lock:
             if not self._default_channel or not self._default_channel.is_open:
                 self._default_channel = self.get().channel()
+                if self.connection_purpose == ConnectionPurpose.PUBLISHER:
+                    self._default_channel.confirm_delivery()
 
         return self._default_channel
 
