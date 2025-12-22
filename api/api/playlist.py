@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from api import get_logger, SessionDep
 from api.models import db, api
+from api.models.api import EMPTY_PLAYLIST
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.progress import PlaybackProgressServiceDep
 
@@ -32,7 +33,7 @@ def get_playlist(book_id: uuid.UUID,
     ]
 
     progress = _progress(*progress_service.get_progress(book_id))
-    return api.Playlist(progress=progress, tracks=ready_tracks)
+    return EMPTY_PLAYLIST if progress is None else api.Playlist(progress=progress, tracks=ready_tracks)
 
 
 def _progress(playback_progress: db.PlaybackProgress, stats):
@@ -111,7 +112,7 @@ def generate_speech(book_id: uuid.UUID,
     else:
         new_tracks = audio_track_service.generate_speech(db_sections)
     progress = _progress(*progress_service.get_progress(book_id))
-    return api.Playlist(progress=progress, tracks=new_tracks)
+    return EMPTY_PLAYLIST if progress is None else api.Playlist(progress=progress, tracks=new_tracks)
 
 
 @playlists_router.get("/{book_id}/tracks")
@@ -129,4 +130,4 @@ def get_tracks(book_id: uuid.UUID,
         for track in audio_track_service.get_tracks(book_id, sections)
     ]
     progress = _progress(*progress_service.get_progress(book_id))
-    return api.Playlist(progress=progress, tracks=tracks)
+    return EMPTY_PLAYLIST if progress is None else api.Playlist(progress=progress, tracks=tracks)

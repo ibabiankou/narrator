@@ -1,18 +1,18 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, Optional
 
 from sqlalchemy import text, update, select, delete
 
 from api import get_logger
 from api.models import db
-from api.models.db import DbSession
+from api.models.db import DbSession, BookStatus
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
 
 class PlaybackProgressService(Service):
 
-    def get_progress(self, book_id: uuid.UUID) -> tuple[db.PlaybackProgress, dict[str, int]]:
+    def get_progress(self, book_id: uuid.UUID) -> Optional[tuple[db.PlaybackProgress, dict[str, int]]]:
         query = """
                 select coalesce(sum(length(s.content)), 0) as length, 'total' as type
                 from sections s 
@@ -42,8 +42,9 @@ class PlaybackProgressService(Service):
 
         narration_stats = {}
         with DbSession() as session:
-            # TODO: For some reason the result of the query is cached between requests. Find a way to disable the cache
-            #  in this particular case.
+            book = session.get_one(db.Book, book_id)
+            if book.status != BookStatus.ready:
+                return None
             rs = session.execute(text(query), {"book_id": book_id})
             for length, stat_type in rs:
                 narration_stats[stat_type] = length

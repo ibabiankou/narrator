@@ -80,6 +80,19 @@ class PlaybackProgress(BaseModel):
     playback_rate: float
 
 
+EMPTY_PLAYBACK_PROGRESS = PlaybackProgress(
+    section_id=None,
+    section_progress_seconds=None,
+    global_progress_seconds=0,
+    total_narrated_seconds=0,
+    available_percent=0,
+    queued_percent=0,
+    unavailable_percent=0,
+    sync_current_section=False,
+    playback_rate=1
+)
+
+
 class PlaybackStateUpdate(BaseModel):
     book_id: uuid.UUID
     section_id: int
@@ -92,3 +105,5 @@ class PlaybackStateUpdate(BaseModel):
 class Playlist(BaseModel):
     progress: PlaybackProgress
     tracks: list[AudioTrack]
+
+EMPTY_PLAYLIST = Playlist(progress=EMPTY_PLAYBACK_PROGRESS, tracks=[])

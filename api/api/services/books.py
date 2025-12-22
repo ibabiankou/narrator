@@ -1,3 +1,4 @@
+import uuid
 from io import BytesIO
 from typing import Annotated
 
@@ -91,6 +92,10 @@ class BookService(Service):
             pages.append(current_page)
 
         return pages
+
+    def get_book(self, book_id: uuid.UUID):
+        with DbSession() as session:
+            return session.get_one(Book, book_id)
 
 def split_into_sections(pdf_reader: PdfReader):
     sections = []
