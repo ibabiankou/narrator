@@ -2,19 +2,18 @@ import logging
 import os
 import random
 import time
+from dataclasses import dataclass
 from threading import Thread, RLock
-from typing import Optional, ClassVar
+from typing import Optional, ClassVar, Callable, TypeVar, Any, Type
 
 from pika import BlockingConnection, ConnectionParameters, BasicProperties, PlainCredentials
 from pika.spec import Basic
 from pika.adapters.blocking_connection import BlockingChannel
-from pika.exceptions import ConnectionWrongStateError, ChannelError, AMQPChannelError
 from pydantic import BaseModel
 
 from common_lib.service import Service
 
 LOG = logging.getLogger(__name__)
-
 
 class RMQMessage(BaseModel):
     """A base class for all RMQ messages. Subclasses MUST set the type attribute, and it should be globally unique."""
@@ -22,8 +21,10 @@ class RMQMessage(BaseModel):
     # Type of the message. Used by consumers to match the message to an appropriate handler.
     type: ClassVar[str]
 
+SubclassOfRMQMessage: TypeVar = TypeVar("SubclassOfRMQMessage", bound=RMQMessage)
+
 class RMQClient(Service):
-    def __init__(self, exchange:str, queue: str):
+    def __init__(self, exchange: str, queue: str):
         self.exchange = exchange
         self.queue = queue
 
@@ -46,7 +47,7 @@ class RMQClient(Service):
         self.consumer_watchdog_thread = Thread(target=self._consume, daemon=True)
 
         self.consumer_connection_lock = RLock()
-        self._consumer_handlers = {}
+        self._message_handlers: dict[str, MsgHandlerContext] = {}
 
     def reconnect_if_closed(self, conn: BlockingConnection):
         return conn if conn and conn.is_open else BlockingConnection(self.connection_params)
@@ -57,11 +58,13 @@ class RMQClient(Service):
         while self._reconnect:
             try:
                 self.publisher_connection = self.reconnect_if_closed(self.publisher_connection)
-                self.publisher_connection.process_data_events()
+                self.publisher_connection.add_callback_threadsafe(
+                    lambda : self.publisher_connection.process_data_events()
+                )
                 self.consumer_connection = self.reconnect_if_closed(self.consumer_connection)
             except RuntimeError:
                 LOG.exception("Failed to connect to RMQ.")
-            time.sleep(1 + random.random())
+            time.sleep(4 + random.random())
 
     def configure(self, configure_callback):
         LOG.info("Configuring topology...")
@@ -72,35 +75,44 @@ class RMQClient(Service):
         configure_callback(channel)
         channel.close()
 
-    def set_consumer(self, cls: type[RMQMessage], message_handler):
-        """
-        message_handler(payload, properties)
-            - payload: RMQMessage
-            - properties: spec.BasicProperties
-        """
-        self._consumer_handlers[cls.type] = {
-            "type": cls.type,
-            "type_class": cls,
-            "handler": message_handler
-        }
+    def set_consumer(self, cls: type[SubclassOfRMQMessage], message_handler: Callable[[SubclassOfRMQMessage], Any]):
+        self._message_handlers[cls.type] = MsgHandlerContext(msg_type=cls, handler=message_handler)
 
     def start_consuming(self):
         self.consumer_watchdog_thread.start()
 
     def _consume(self):
+        def _invoke_handler(invocation: MsgHandlerInvocation):
+            conn: BlockingConnection = invocation.channel.connection
+            try:
+                invocation.context.handler(invocation.payload)
+                conn.add_callback_threadsafe(
+                    lambda: invocation.channel.basic_ack(delivery_tag=invocation.delivery_tag)
+                )
+            except Exception:
+                LOG.exception(f"Error while handling message of type {invocation.payload.type}. Ignoring it...")
+                conn.add_callback_threadsafe(
+                    lambda: invocation.channel.basic_reject(delivery_tag=invocation.delivery_tag)
+                )
+
         def _message_handler(channel: BlockingChannel, method: Basic.Deliver, properties: BasicProperties, body: bytes):
             msg_type = properties.type
             LOG.debug("Handling message of type %s...", msg_type)
 
-            if msg_type in self._consumer_handlers:
-                consumer = self._consumer_handlers[msg_type]
-                payload = consumer["type_class"].model_validate_json(body)
-                try:
-                    consumer["handler"](payload, properties)
-                    channel.basic_ack(delivery_tag=method.delivery_tag)
-                except Exception:
-                    LOG.exception(f"Error while handling message of type {msg_type}. Ignoring it...")
-                    channel.basic_reject(delivery_tag=method.delivery_tag)
+            if msg_type in self._message_handlers:
+                ctx = self._message_handlers[msg_type]
+                payload = ctx.msg_type.model_validate_json(body)
+                handler_invocation = MsgHandlerInvocation(context=ctx, payload=payload, channel=channel,
+                                                          delivery_tag=method.delivery_tag)
+
+                # TODO: replace with long lived thread and a queue of handler_invocations.
+                t = Thread(name=f"msg-{method.delivery_tag}", target=_invoke_handler, args=[handler_invocation],
+                           daemon=True)
+                t.start()
+
+                while t.is_alive():
+                    time.sleep(1)
+                    channel.connection.process_data_events()
             else:
                 LOG.info(f"Received message of type {msg_type}, but no handler is registered. Rejecting it...")
                 channel.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
@@ -121,7 +133,6 @@ class RMQClient(Service):
             conn = self.reconnect_if_closed(self.consumer_connection)
             return conn.channel()
 
-
     def _get_publisher_channel(self):
         if self.publisher_channel is None or not self.publisher_channel.is_open:
             self.publisher_channel = self.reconnect_if_closed(self.publisher_connection).channel()
@@ -136,14 +147,27 @@ class RMQClient(Service):
         channel.basic_publish(self.exchange, routing_key, body, props, mandatory=True)
 
     def close(self):
-        LOG.info("Disconnecting from RMQ...")
+        LOG.info("Closing RMQ client...")
         self._reconnect = False
 
         def _close_connection(connection: BlockingConnection):
             try:
                 connection.close()
-            except ConnectionWrongStateError:
-                LOG.exception("Error while closing connection.")
+            except Exception:
+                LOG.debug("Error while closing connection. Ignoring it.", exc_info=True)
 
         _close_connection(self.publisher_connection)
         _close_connection(self.consumer_connection)
+
+
+@dataclass
+class MsgHandlerContext[SubclassOfRMQMessage]:
+    msg_type: Type[SubclassOfRMQMessage]
+    handler: Callable[[SubclassOfRMQMessage], Any]
+
+@dataclass
+class MsgHandlerInvocation:
+    context: MsgHandlerContext[Any]
+    payload: RMQMessage
+    channel: BlockingChannel
+    delivery_tag: int

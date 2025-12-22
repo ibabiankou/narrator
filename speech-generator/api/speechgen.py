@@ -6,7 +6,6 @@ import boto3
 import numpy as np
 from botocore.exceptions import ClientError
 from kokoro import KModel, KPipeline
-from pika import BasicProperties
 from soundfile import SoundFile
 
 from api import get_logger
@@ -44,7 +43,7 @@ class SpeechGenService(Service):
 
         return "\n".join(phonemes)
 
-    def handle_phonemize_msg(self, payload: rmq.PhonemizeText, prop: BasicProperties):
+    def handle_phonemize_msg(self, payload: rmq.PhonemizeText):
         LOG.debug("Converting text into phonemes for track %s.", payload.track_id)
         phonemes = self.phonemize(payload.text)
         payload = rmq.PhonemesResponse(book_id=payload.book_id, section_id=payload.section_id,
@@ -74,7 +73,7 @@ class SpeechGenService(Service):
     def _silence(self, duration_s: float):
         return np.zeros(int(duration_s * 24000), dtype=np.int16)  # 24kHz sample rate
 
-    def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech, prop: BasicProperties):
+    def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
         result = self.synthesize(payload.phonemes)
         self._upload_file(payload.file_path, result.get("content_type"), result.get("content"))

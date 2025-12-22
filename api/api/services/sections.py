@@ -59,7 +59,7 @@ class SectionService(Service):
             session.execute(update(db.Section).where(db.Section.id == section_id).values(phonemes=phonemes))
             session.commit()
 
-    def handle_phonemes_msg(self, payload: rmq.PhonemesResponse, prop: BasicProperties):
+    def handle_phonemes_msg(self, payload: rmq.PhonemesResponse):
         LOG.debug("Got phonemes for track %s, requesting speech synthesis...", payload.track_id)
         self.set_phonemes(payload.section_id, payload.phonemes)
         self.audiotracks_service.synthesize_speech(payload.book_id, payload.section_id, payload.track_id,

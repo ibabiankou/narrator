@@ -1,7 +1,6 @@
 import uuid
 from typing import List, Annotated, Optional
 
-from pika import BasicProperties
 from sqlalchemy import update, insert, delete, select
 
 from api import get_logger
@@ -21,7 +20,6 @@ class AudioTrackService(Service):
                  rmq_client: RMQClientDep):
         self.files_service = files_service
         self.rmq_client = rmq_client
-        # TODO: configure RMQ message handler
 
     def generate_speech(self, sections: list[db.Section]) -> List[api.AudioTrack]:
         LOG.info("Enqueueing speech generation for %s sections: \n%s", len(sections), sections)
@@ -86,7 +84,7 @@ class AudioTrackService(Service):
                 self.files_service.delete_speech_file(track.book_id, track.file_name)
             session.commit()
 
-    def handle_speech_msg(self, payload: rmq.SpeechResponse, properties: BasicProperties):
+    def handle_speech_msg(self, payload: rmq.SpeechResponse):
         LOG.debug("Speech is ready for track %s.", payload.track_id)
         track = self._get_track(payload.track_id)
         track.status = db.AudioStatus.ready
