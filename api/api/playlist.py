@@ -9,7 +9,7 @@ from api import get_logger, SessionDep
 from api.models import db, api
 from api.models.api import EMPTY_PLAYLIST
 from api.services.audiotracks import AudioTrackServiceDep
-from api.services.progress import PlaybackProgressServiceDep
+from api.services.progress import PlaybackProgressServiceDep, ProgressData
 
 LOG = get_logger(__name__)
 
@@ -32,11 +32,16 @@ def get_playlist(book_id: uuid.UUID,
         if track.status == db.AudioStatus.ready
     ]
 
-    progress = _progress(*progress_service.get_progress(book_id))
-    return EMPTY_PLAYLIST if progress is None else api.Playlist(progress=progress, tracks=ready_tracks)
+    data = progress_service.get_progress(book_id)
+    if data is None:
+        return EMPTY_PLAYLIST
+    else:
+        return api.Playlist(progress=_progress(data), tracks=ready_tracks)
 
 
-def _progress(playback_progress: db.PlaybackProgress, stats):
+def _progress(data: ProgressData):
+    playback_progress = data.playback_progress
+    stats = data.stats
     section_id = playback_progress.section_id if playback_progress else None
     section_progress = playback_progress.section_progress if playback_progress else 0
     sync_current_section = playback_progress.sync_current_section if playback_progress else True
@@ -111,8 +116,12 @@ def generate_speech(book_id: uuid.UUID,
         new_tracks = []
     else:
         new_tracks = audio_track_service.generate_speech(db_sections)
-    progress = _progress(*progress_service.get_progress(book_id))
-    return EMPTY_PLAYLIST if progress is None else api.Playlist(progress=progress, tracks=new_tracks)
+
+    data = progress_service.get_progress(book_id)
+    if data is None:
+        return EMPTY_PLAYLIST
+    else:
+        return api.Playlist(progress=_progress(data), tracks=new_tracks)
 
 
 @playlists_router.get("/{book_id}/tracks")
@@ -129,5 +138,9 @@ def get_tracks(book_id: uuid.UUID,
                        duration=track.duration)
         for track in audio_track_service.get_tracks(book_id, sections)
     ]
-    progress = _progress(*progress_service.get_progress(book_id))
-    return EMPTY_PLAYLIST if progress is None else api.Playlist(progress=progress, tracks=tracks)
+
+    data = progress_service.get_progress(book_id)
+    if data is None:
+        return EMPTY_PLAYLIST
+    else:
+        return api.Playlist(progress=_progress(data), tracks=tracks)
