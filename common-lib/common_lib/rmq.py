@@ -5,6 +5,7 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import partial
 from queue import Queue, Empty
 from threading import Thread, RLock, Event
 from typing import Optional, ClassVar, Callable, TypeVar, Any, Type
@@ -46,7 +47,7 @@ class RMQClient(Service):
         self._publisher_connection = WatchedConnectionProvider(default_connection_params, ConnectionPurpose.PUBLISHER)
         self._consumer_connection = WatchedConnectionProvider(default_connection_params, ConnectionPurpose.CONSUMER)
 
-        self._consumer_threads = []
+        self._consumer_thread = Thread(name="rmq-consumer", target=self._consume, daemon=True)
         self._message_handler_registry: QueueMessageHandlerRegistry = defaultdict(dict)
         self._message_processor = MessageProcessor()
 
@@ -63,25 +64,26 @@ class RMQClient(Service):
         self._message_handler_registry[queue][cls.type] = MsgHandlerContext(msg_type=cls, handler=message_handler)
 
     def start_consuming(self):
-        for queue in self._message_handler_registry.keys():
-            name = f"consumer-{queue}"
-            LOG.info("Starting queue consumer thread '%s'", name)
-            t = Thread(name=name, target=self._consume, args=[queue], daemon=True)
-            self._consumer_threads.append(t)
-            t.start()
+        LOG.info("Starting RMQ consumer thread")
+        LOG.debug("Message handler registry: \n%s", self._message_handler_registry)
+        self._consumer_thread.start()
 
-    def _consume(self, queue: str):
+    def _consume(self):
         while not self._close.is_set():
+            channel_name = "unknown"
             try:
                 ch = self._consumer_connection.channel()
                 ch.basic_qos(prefetch_count=1)
-                ch.basic_consume(queue=queue,
-                                 on_message_callback=lambda channel, method, properties, body: self._message_handler(
-                                     queue, channel, method, properties, body)
-                                 )
+                connection_name = ch.connection._impl.params.client_properties.get('connection_name')
+                channel_name = f"{connection_name} ({ch.channel_number})"
+
+                for queue in self._message_handler_registry.keys():
+                    LOG.info("Consuming queue '%s' on '%s'...", queue, channel_name)
+                    wrapped_callback = partial(self._message_handler, queue)
+                    ch.basic_consume(queue=queue, on_message_callback=wrapped_callback)
                 ch.start_consuming()
             except Exception:
-                LOG.exception("Error while consuming from queue %s.", queue)
+                LOG.exception("Error while consuming '%s'.", channel_name)
                 self._close.wait(1 + random.random())
 
     def _message_handler(self, queue: str, channel: BlockingChannel, method: Basic.Deliver, properties: BasicProperties,
@@ -137,13 +139,13 @@ QueueMessageHandlerRegistry = defaultdict[str, MessageHandlers]
 
 class MessageProcessor:
     """A single threaded message processor. All enqueued messages are handled in FIFO order."""
+
     def __init__(self):
         self._close = Event()
 
         self.invocation_queue: Queue[MsgHandlerInvocation] = Queue()
         self.thread = Thread(name="message-processor", target=self._process_queue, daemon=True)
         self.thread.start()
-
 
     def put(self, invocation: MsgHandlerInvocation):
         # Limit timeout to fail fast. Should never happen because the queue is unbounded.
