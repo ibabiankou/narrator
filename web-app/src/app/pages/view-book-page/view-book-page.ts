@@ -49,8 +49,8 @@ export class ViewBookPage implements OnInit {
   sections = computed<Section[]>(() => this.pages().flatMap(page => page.sections))
 
   isLoading = signal(true);
-
   isEditingSection = model(false);
+  isShowingPages = model(false);
 
   $scrollToSectionId = new BehaviorSubject<number>(0);
 
@@ -157,5 +157,9 @@ export class ViewBookPage implements OnInit {
 
   protected setEditingSection(isEditing: boolean) {
     this.isEditingSection.set(isEditing);
+  }
+
+  protected showOrHidePages(showPages: boolean) {
+    this.isShowingPages.set(showPages);
   }
 }

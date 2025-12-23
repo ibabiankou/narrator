@@ -1,25 +1,9 @@
-:host {
-  display: flex;
-  flex-direction: column;
-  height: 100vh; /* Fill the full viewport height */
-}
-
-.toolbar {
-  flex-shrink: 0; /* Prevents header from squishing */
-  margin-bottom: 0;
-  z-index: 100;
-}
-
 .main-container {
   max-width: 1280px;
   margin: 0 auto;
-  padding-top: 20px;
-
-  flex-grow: 1; /* Takes up all remaining space */
-  overflow-y: auto; /* Enables scrolling only for this section */
 }
 
-.page-container {
+.page-with-sections {
   display: flex;
   flex-direction: row;
 
@@ -36,6 +20,16 @@
   .sections {
     width: 55%;
     padding: 0 10px;
+    app-section {
+      margin-bottom: 5px;
+    }
+  }
+}
+
+.sections-only {
+  .sections {
+    width: 55%;
+    margin: 0 auto;
     app-section {
       margin-bottom: 5px;
     }

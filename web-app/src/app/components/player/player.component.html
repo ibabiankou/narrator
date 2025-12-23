@@ -1,4 +1,18 @@
 <div id="controls">
+  <div class="settings left">
+    <button matIconButton
+            (click)="toggleShowPages()"
+            matTooltip="{{showPagesTooltip()}}"
+            [matTooltipPosition]="'above'"
+            [matTooltipShowDelay]="750"
+            [matTooltipHideDelay]="100">
+      @if (showPages()) {
+        <mat-icon>subject</mat-icon>
+      } @else {
+        <mat-icon class="flip-horizontal">vertical_split</mat-icon>
+      }
+    </button>
+  </div>
   <div class="main-controls">
     <button matIconButton (click)="previous($event)">
       <mat-icon>skip_previous</mat-icon>
@@ -20,12 +34,12 @@
       <mat-icon>skip_next</mat-icon>
     </button>
   </div>
-  <div class="settings">
+  <div class="settings right">
     <button matIconButton (click)="toggleSync()" [class]="{'active': syncCurrentSection()}">
       <mat-icon>sync_arrow_down</mat-icon>
     </button>
     <button class="playbackSpeed" matIconButton>
-      <span>x{{ (audioPlayer.$playbackRate | async | number : '1.1-2')  }}</span>
+      <span>x{{ (audioPlayer.$playbackRate | async | number : '1.1-2') }}</span>
     </button>
   </div>
 

@@ -19,6 +19,7 @@ import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { PlaylistsService } from '../../core/services/playlists.service';
 import { ActivatedRoute } from '@angular/router';
 import { AudioPlayer } from './audioplayer';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-player',
@@ -26,7 +27,8 @@ import { AudioPlayer } from './audioplayer';
     MatIcon,
     MatIconButton,
     AsyncPipe,
-    DecimalPipe
+    DecimalPipe,
+    MatTooltip
   ],
   templateUrl: './player.component.html',
   styleUrl: './player.component.scss',
@@ -36,6 +38,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   playlist = input.required<Playlist>();
   sectionPlayed = output<number>();
+  showPages = model(false);
+  showPagesChanged = output<boolean>();
   syncCurrentSection = model(true);
 
   handleKeyBindings = input(true);
@@ -247,6 +251,14 @@ export class PlayerComponent implements OnInit, OnDestroy {
       this.audioPlayer.$audioTrack.pipe(take(1))
         .subscribe(track => this.sectionPlayed.emit(track.section_id));
     }
+  }
+
+  toggleShowPages() {
+    this.showPages.set(!this.showPages());
+    this.showPagesChanged.emit(this.showPages());
+  }
+  showPagesTooltip() {
+    return this.showPages() ? "Hide PDF pages" : "Show PDF pages";
   }
 }
 
