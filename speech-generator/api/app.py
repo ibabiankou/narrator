@@ -16,21 +16,23 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     exchange = "narrator"
-    queue = "speech-generator"
-    rmq_client: RMQClient = RMQClient(exchange, queue)
+    phonemization_queue = "phonemization"
+    speech_gen_queue = "speech-generation"
+    rmq_client: RMQClient = RMQClient(exchange)
     speech_gen_svc = SpeechGenService(rmq_client)
 
     # Configure topology.
     def configure(channel: BlockingChannel):
         channel.exchange_declare(exchange, ExchangeType.topic, durable=True)
-        channel.queue_declare(queue, durable=True, arguments={"x-queue-type": "quorum"})
-        channel.queue_bind(queue, exchange, "phonemize")
-        channel.queue_bind(queue, exchange, "synthesize")
+        channel.queue_declare(phonemization_queue, durable=True, arguments={"x-queue-type": "quorum"})
+        channel.queue_bind(phonemization_queue, exchange, "phonemize")
+        channel.queue_declare(speech_gen_queue, durable=True, arguments={"x-queue-type": "quorum"})
+        channel.queue_bind(speech_gen_queue, exchange, "synthesize")
     rmq_client.configure(configure)
 
     # Configure message handlers and start consuming.
-    rmq_client.set_consumer(rmq.PhonemizeText, speech_gen_svc.handle_phonemize_msg)
-    rmq_client.set_consumer(rmq.SynthesizeSpeech, speech_gen_svc.handle_synthesize_msg)
+    rmq_client.set_queue_message_handler(phonemization_queue, rmq.PhonemizeText, speech_gen_svc.handle_phonemize_msg)
+    rmq_client.set_queue_message_handler(speech_gen_queue, rmq.SynthesizeSpeech, speech_gen_svc.handle_synthesize_msg)
     rmq_client.start_consuming()
     yield
 

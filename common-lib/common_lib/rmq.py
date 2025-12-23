@@ -2,8 +2,10 @@ import copy
 import logging
 import os
 import random
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import StrEnum
+from queue import Queue, Empty
 from threading import Thread, RLock, Event
 from typing import Optional, ClassVar, Callable, TypeVar, Any, Type
 
@@ -29,8 +31,8 @@ class RMQMessage(BaseModel):
 SubclassOfRMQMessage: TypeVar = TypeVar("SubclassOfRMQMessage", bound=RMQMessage)
 
 default_connection_params = ConnectionParameters(
-    host=os.getenv("RMQ_HOST"),
-    port=int(os.getenv("RMQ_PORT")),
+    host=os.getenv("RMQ_HOST", "undefined"),
+    port=int(os.getenv("RMQ_PORT", 5672)),
     credentials=PlainCredentials(os.getenv("RMQ_USERNAME"), os.getenv("RMQ_PASSWORD")),
     client_properties={"connection_name": os.getenv("HOSTNAME", "narrator-api")},
     heartbeat=20
@@ -38,71 +40,65 @@ default_connection_params = ConnectionParameters(
 
 
 class RMQClient(Service):
-    def __init__(self, exchange: str, queue: str):
+    def __init__(self, exchange: str):
         self.exchange = exchange
-        self.queue = queue
 
         self._publisher_connection = WatchedConnectionProvider(default_connection_params, ConnectionPurpose.PUBLISHER)
         self._consumer_connection = WatchedConnectionProvider(default_connection_params, ConnectionPurpose.CONSUMER)
 
-        self._consumer_watchdog_thread = Thread(target=self._consume, daemon=True)
-        self._message_handlers: dict[str, MsgHandlerContext] = {}
+        self._consumer_threads = []
+        self._message_handler_registry: QueueMessageHandlerRegistry = defaultdict(dict)
+        self._message_processor = MessageProcessor()
 
         self._close = Event()
 
     def configure(self, configure_callback: Callable[[BlockingChannel], Any]):
         LOG.info("Configuring topology...")
-        channel = self._publisher_connection.get().channel()
+        channel = self._publisher_connection.channel()
         configure_callback(channel)
         channel.close()
 
-    def set_consumer(self, cls: type[SubclassOfRMQMessage], message_handler: Callable[[SubclassOfRMQMessage], Any]):
-        self._message_handlers[cls.type] = MsgHandlerContext(msg_type=cls, handler=message_handler)
+    def set_queue_message_handler(self, queue: str, cls: type[SubclassOfRMQMessage],
+                                  message_handler: Callable[[SubclassOfRMQMessage], Any]):
+        self._message_handler_registry[queue][cls.type] = MsgHandlerContext(msg_type=cls, handler=message_handler)
 
     def start_consuming(self):
-        self._consumer_watchdog_thread.start()
+        for queue in self._message_handler_registry.keys():
+            name = f"consumer-{queue}"
+            LOG.info("Starting queue consumer thread '%s'", name)
+            t = Thread(name=name, target=self._consume, args=[queue], daemon=True)
+            self._consumer_threads.append(t)
+            t.start()
 
-    def _consume(self):
-        def _invoke_handler(invocation: MsgHandlerInvocation):
-            conn: BlockingConnection = invocation.channel.connection
-            try:
-                invocation.context.handler(invocation.payload)
-                conn.add_callback_threadsafe(
-                    lambda: invocation.channel.basic_ack(delivery_tag=invocation.delivery_tag)
-                )
-            except Exception:
-                LOG.exception(f"Error while handling message of type {invocation.payload.type}. Ignoring it...")
-                conn.add_callback_threadsafe(
-                    lambda: invocation.channel.basic_reject(delivery_tag=invocation.delivery_tag)
-                )
-
-        def _message_handler(channel: BlockingChannel, method: Basic.Deliver, properties: BasicProperties, body: bytes):
-            msg_type = properties.type
-            LOG.debug("Handling message of type %s...", msg_type)
-
-            if msg_type in self._message_handlers:
-                ctx = self._message_handlers[msg_type]
-                payload = ctx.msg_type.model_validate_json(body)
-                handler_invocation = MsgHandlerInvocation(context=ctx, payload=payload, channel=channel,
-                                                          delivery_tag=method.delivery_tag)
-
-                # TODO: replace with long lived thread and a queue of handler_invocations.
-                t = Thread(name=f"msg-{method.delivery_tag}", target=_invoke_handler, args=[handler_invocation],
-                           daemon=True)
-                t.start()
-            else:
-                LOG.info(f"Received message of type {msg_type}, but no handler is registered. Rejecting it...")
-                channel.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
-
+    def _consume(self, queue: str):
         while not self._close.is_set():
             try:
-                ch = self._consumer_connection.get().channel()
+                ch = self._consumer_connection.channel()
                 ch.basic_qos(prefetch_count=1)
-                ch.basic_consume(queue=self.queue, on_message_callback=_message_handler)
+                ch.basic_consume(queue=queue,
+                                 on_message_callback=lambda channel, method, properties, body: self._message_handler(
+                                     queue, channel, method, properties, body)
+                                 )
                 ch.start_consuming()
             except Exception:
-                LOG.exception("Error while consuming from RMQ.")
+                LOG.exception("Error while consuming from queue %s.", queue)
                 self._close.wait(1 + random.random())
+
+    def _message_handler(self, queue: str, channel: BlockingChannel, method: Basic.Deliver, properties: BasicProperties,
+                         body: bytes):
+        msg_type = properties.type
+        LOG.debug("Handling message of type '%s' from queue '%s'...", msg_type, queue)
+
+        message_handlers = self._message_handler_registry[queue]
+        if msg_type in message_handlers:
+            ctx = message_handlers[msg_type]
+            payload = ctx.msg_type.model_validate_json(body)
+            self._message_processor.put(MsgHandlerInvocation(context=ctx, payload=payload, channel=channel,
+                                                             delivery_tag=method.delivery_tag))
+        else:
+            LOG.warning("Received message of type '%s' from queue '%s', but no handler is registered. Dropping it...",
+                        msg_type, queue)
+            channel.basic_reject(delivery_tag=method.delivery_tag, requeue=False)
 
     def publish(self, routing_key: str, payload: RMQMessage, properties: BasicProperties = None):
         channel = self._publisher_connection.default_channel()
@@ -118,6 +114,7 @@ class RMQClient(Service):
         self._close.set()
         self._publisher_connection.close()
         self._consumer_connection.close()
+        self._message_processor.close()
 
 
 @dataclass
@@ -132,6 +129,53 @@ class MsgHandlerInvocation:
     payload: RMQMessage
     channel: BlockingChannel
     delivery_tag: int
+
+
+MessageHandlers = dict[str, MsgHandlerContext]
+QueueMessageHandlerRegistry = defaultdict[str, MessageHandlers]
+
+
+class MessageProcessor:
+    """A single threaded message processor. All enqueued messages are handled in FIFO order."""
+    def __init__(self):
+        self._close = Event()
+
+        self.invocation_queue: Queue[MsgHandlerInvocation] = Queue()
+        self.thread = Thread(name="message-processor", target=self._process_queue, daemon=True)
+        self.thread.start()
+
+
+    def put(self, invocation: MsgHandlerInvocation):
+        # Limit timeout to fail fast. Should never happen because the queue is unbounded.
+        self.invocation_queue.put(invocation, timeout=1)
+
+    def _process_queue(self):
+        while not self._close.is_set():
+            try:
+                self._handle_invocation(self.invocation_queue.get(timeout=0.1))
+            except Empty:
+                # Do nothing and continue to the next iteration
+                pass
+
+    @staticmethod
+    def _handle_invocation(invocation: MsgHandlerInvocation):
+        conn: BlockingConnection = invocation.channel.connection
+        try:
+            if invocation.channel.is_open:
+                invocation.context.handler(invocation.payload)
+                conn.add_callback_threadsafe(
+                    lambda: invocation.channel.basic_ack(delivery_tag=invocation.delivery_tag)
+                )
+            else:
+                LOG.warning(f"Channel is closed before handling message of type {invocation.payload.type}.")
+        except Exception:
+            LOG.exception(f"Error while handling message of type {invocation.payload.type}. Ignoring it...")
+            conn.add_callback_threadsafe(
+                lambda: invocation.channel.basic_reject(delivery_tag=invocation.delivery_tag)
+            )
+
+    def close(self):
+        self._close.set()
 
 
 class ConnectionPurpose(StrEnum):
@@ -197,6 +241,10 @@ class WatchedConnectionProvider:
                     self._default_channel.confirm_delivery()
 
         return self._default_channel
+
+    def channel(self):
+        with self._lock:
+            return self.get().channel()
 
     def close(self):
         self._close.set()

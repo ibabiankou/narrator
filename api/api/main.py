@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
 
     exchange = "narrator"
     queue = "api"
-    rmq_client = RMQClient(exchange, queue)
+    rmq_client = RMQClient(exchange)
     audiotrack_svc = AudioTrackService(files_svc, rmq_client)
     section_svc = SectionService(audiotrack_svc, progress_svc)
 
@@ -44,8 +44,8 @@ async def lifespan(app: FastAPI):
         channel.queue_bind(queue, exchange, "speech")
     rmq_client.configure(configure)
 
-    rmq_client.set_consumer(rmq.PhonemesResponse, section_svc.handle_phonemes_msg)
-    rmq_client.set_consumer(rmq.SpeechResponse, audiotrack_svc.handle_speech_msg)
+    rmq_client.set_queue_message_handler(queue, rmq.PhonemesResponse, section_svc.handle_phonemes_msg)
+    rmq_client.set_queue_message_handler(queue, rmq.SpeechResponse, audiotrack_svc.handle_speech_msg)
     rmq_client.start_consuming()
     yield
     RMQClient.instance.close()
