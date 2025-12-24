@@ -1,11 +1,13 @@
+$maxWidth: 1280px;
 .main-container {
-  max-width: 1280px;
+  max-width: $maxWidth;
   margin: 0 auto;
 }
 
 .page-with-sections {
   display: flex;
   flex-direction: row;
+  padding: 0 5px;
 
   .raw-page {
     width: 45%;
@@ -27,8 +29,10 @@
 }
 
 .sections-only {
+  padding: 0 15px;
+
   .sections {
-    width: 55%;
+    max-width: calc($maxWidth * 0.55);
     margin: 0 auto;
     app-section {
       margin-bottom: 5px;

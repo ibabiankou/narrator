@@ -13,7 +13,6 @@
          [immediateCheck]="true"
          [infiniteScrollThrottle]="250"
          (scrolled)="loadMorePages()"
-         style="height: 100vh"
     >
       @for (page of pages(); track page.file_name) {
         <div class="sections-only" [class]="{'sections-only': !isShowingPages(), 'page-with-sections': isShowingPages()}">
@@ -25,7 +24,7 @@
           <div class="sections">
             @for (section of page.sections; track section.section_index) {
               <app-section id="section-{{section.id}}" #section
-                           [class]="{'current': section.id == ($scrollToSectionId | async), 'hover': section.id == ($scrollToSectionId | async)}"
+                           [class]="{'current': section.id == ($currentSectionId | async), 'hover': section.id == ($currentSectionId | async)}"
                            [section]="section"
                            (sectionDeleted)="deleteSection(section)"
                            (editingModeChanged)="setEditingSection($event)"></app-section>
@@ -40,6 +39,6 @@
 </div>
 <app-player [playlist]="playlist()"
             (showPagesChanged)="showOrHidePages($event)"
-            (sectionPlayed)="loadSectionIfMissing($event)"
+            (sectionPlayed)="setCurrentSectionId($event)"
             [handleKeyBindings]="!isEditingSection()"
 ></app-player>

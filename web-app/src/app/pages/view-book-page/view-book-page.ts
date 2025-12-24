@@ -15,7 +15,6 @@ import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
 import { BooksService } from '../../core/services/books.service';
 import {
   BehaviorSubject,
-  defer,
   filter,
   of,
   repeat,
@@ -60,15 +59,48 @@ export class ViewBookPage implements OnInit, AfterViewInit {
   isEditingSection = model(false);
   isShowingPages = model(false);
 
-  $scrollToSectionId = new BehaviorSubject<number>(0);
+  $currentSectionId = new BehaviorSubject<number>(0);
 
   @ViewChildren("section", {"read": ElementRef}) sectionElements!: QueryList<ElementRef>;
 
   ngAfterViewInit() {
-    this.scrollToSection(this.$scrollToSectionId.value);
+    this.scrollToSection(this.$currentSectionId.value);
     this.sectionElements.changes.subscribe(() => {
-      this.scrollToSection(this.$scrollToSectionId.value);
+      this.scrollToSection(this.$currentSectionId.value);
     })
+  }
+
+  scrollToSection(sectionId: number) {
+    const selector = `section-${sectionId}`;
+    const element = this.sectionElements.find(e => e.nativeElement.id == selector);
+    if (element) {
+      element.nativeElement.scrollIntoView({behavior: "smooth", block: "center"});
+    } else {
+      this.loadSectionIfMissing(sectionId);
+    }
+  }
+
+  loadSectionIfMissing(sectionId: number) {
+    if (sectionId == 0) {
+      return;
+    }
+    const bookId = this.book().id;
+    const pages = this.pages();
+    const section = pages.flatMap(page => page.sections).find(s => s.id == sectionId);
+    if (!section) {
+      this.booksService.getBookContent(bookId, pages[pages.length - 1].index, sectionId)
+        .pipe(
+          switchMap(content => {
+            this.pages.set([...pages, ...content.pages]);
+            const section = content.pages.flatMap(page => page.sections).find(s => s.id == sectionId);
+            if (section) {
+              return of(section);
+            } else {
+              return throwError(() => new Error("Section is not loaded"));
+            }
+          }))
+        .subscribe({error: err => console.log(err)});
+    }
   }
 
   ngOnInit() {
@@ -98,49 +130,8 @@ export class ViewBookPage implements OnInit, AfterViewInit {
     }
     const sectionId = this.playlist().progress.section_id;
     if (sectionId != null) {
-      this.$scrollToSectionId.next(sectionId);
+      this.$currentSectionId.next(sectionId);
     }
-  }
-
-  scrollToSection(sectionId: number) {
-    const selector = `section-${sectionId}`;
-    const element = this.sectionElements.find(e => e.nativeElement.id == selector);
-    if (element) {
-      element.nativeElement.scrollIntoView({ behavior: "smooth", block: "center" });
-    } else {
-      this.loadSectionIfMissing(sectionId);
-    }
-  }
-
-  loadSectionIfMissing(sectionId: number) {
-    if (sectionId == 0) {
-      this.$scrollToSectionId.next(0);
-      return;
-    }
-    const bookId = this.book().id;
-    const pages = this.pages();
-    const section = pages.flatMap(page => page.sections).find(s => s.id == sectionId);
-    const $loadSection =
-      this.booksService.getBookContent(bookId, pages[pages.length - 1].index, sectionId)
-        .pipe(
-          tap(content => {
-            this.pages.set([...pages, ...content.pages])
-          }),
-          switchMap(content => {
-            const section = content.pages.flatMap(page => page.sections).find(s => s.id == sectionId);
-            if (section) {
-              return of(section);
-            } else {
-              return throwError(() => new Error("Section is not loaded"));
-            }
-          })
-        );
-    defer(() => section ? of(section) : $loadSection)
-      .subscribe({
-        error: err => {
-          console.log(err)
-        }
-      });
   }
 
   loadMorePages() {
@@ -166,5 +157,10 @@ export class ViewBookPage implements OnInit, AfterViewInit {
 
   protected showOrHidePages(showPages: boolean) {
     this.isShowingPages.set(showPages);
+  }
+
+  protected setCurrentSectionId(sectionId: number) {
+    this.$currentSectionId.next(sectionId);
+    this.scrollToSection(sectionId);
   }
 }
