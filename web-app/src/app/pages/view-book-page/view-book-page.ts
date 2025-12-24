@@ -1,4 +1,15 @@
-import { Component, computed, inject, input, model, OnInit, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  input,
+  model,
+  OnInit, QueryList,
+  signal,
+  ViewChildren
+} from '@angular/core';
 import { BookDetails, BookPage, BookStatus, Playlist, Section } from '../../core/models/books.dto';
 import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
 import { BooksService } from '../../core/services/books.service';
@@ -6,11 +17,8 @@ import {
   BehaviorSubject,
   defer,
   filter,
-  first,
-  map,
   of,
   repeat,
-  retry,
   switchMap,
   take,
   tap,
@@ -23,7 +31,7 @@ import { MatToolbar } from '@angular/material/toolbar';
 import { RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
 import { PlayerComponent } from '../../components/player/player.component';
-import { AsyncPipe, ViewportScroller } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 
 @Component({
   selector: 'app-view-book-page',
@@ -40,7 +48,7 @@ import { AsyncPipe, ViewportScroller } from '@angular/common';
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
 })
-export class ViewBookPage implements OnInit {
+export class ViewBookPage implements OnInit, AfterViewInit {
   private booksService = inject(BooksService);
 
   book = model.required<BookDetails>();
@@ -54,7 +62,13 @@ export class ViewBookPage implements OnInit {
 
   $scrollToSectionId = new BehaviorSubject<number>(0);
 
-  constructor(private viewportScroller: ViewportScroller) {
+  @ViewChildren("section", {"read": ElementRef}) sectionElements!: QueryList<ElementRef>;
+
+  ngAfterViewInit() {
+    this.scrollToSection(this.$scrollToSectionId.value);
+    this.sectionElements.changes.subscribe(() => {
+      this.scrollToSection(this.$scrollToSectionId.value);
+    })
   }
 
   ngOnInit() {
@@ -82,29 +96,23 @@ export class ViewBookPage implements OnInit {
         }
       );
     }
-    this.$scrollToSectionId
-      .pipe(
-        filter(id => id > 0),
-        map(id => `section-${id}`),
-        switchMap(selector => {
-          const element = document.getElementById(selector);
-          if (element) {
-            return of(element);
-          } else {
-            return throwError(() => new Error("Element not found"));
-          }
-        }),
-        retry({
-          count: 5,
-          delay: (_, count) => timer(2 ^ count * 300 * (0.75 + 0.5 * Math.random()))
-        })
-      )
-      .subscribe(element => {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
+    const sectionId = this.playlist().progress.section_id;
+    if (sectionId != null) {
+      this.$scrollToSectionId.next(sectionId);
+    }
   }
 
-  loadAndScrollToSection(sectionId: number) {
+  scrollToSection(sectionId: number) {
+    const selector = `section-${sectionId}`;
+    const element = this.sectionElements.find(e => e.nativeElement.id == selector);
+    if (element) {
+      element.nativeElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    } else {
+      this.loadSectionIfMissing(sectionId);
+    }
+  }
+
+  loadSectionIfMissing(sectionId: number) {
     if (sectionId == 0) {
       this.$scrollToSectionId.next(0);
       return;
@@ -112,7 +120,6 @@ export class ViewBookPage implements OnInit {
     const bookId = this.book().id;
     const pages = this.pages();
     const section = pages.flatMap(page => page.sections).find(s => s.id == sectionId);
-    const $section = of(section);
     const $loadSection =
       this.booksService.getBookContent(bookId, pages[pages.length - 1].index, sectionId)
         .pipe(
@@ -128,13 +135,11 @@ export class ViewBookPage implements OnInit {
             }
           })
         );
-    defer(() => section ? $section : $loadSection)
-      .pipe(filter(section => section != null))
+    defer(() => section ? of(section) : $loadSection)
       .subscribe({
-        next: section => {
-          this.$scrollToSectionId.next(section.id);
-        },
-        error: err => {console.log(err)}
+        error: err => {
+          console.log(err)
+        }
       });
   }
 

@@ -24,7 +24,7 @@
           }
           <div class="sections">
             @for (section of page.sections; track section.section_index) {
-              <app-section id="section-{{section.id}}"
+              <app-section id="section-{{section.id}}" #section
                            [class]="{'current': section.id == ($scrollToSectionId | async), 'hover': section.id == ($scrollToSectionId | async)}"
                            [section]="section"
                            (sectionDeleted)="deleteSection(section)"
@@ -40,6 +40,6 @@
 </div>
 <app-player [playlist]="playlist()"
             (showPagesChanged)="showOrHidePages($event)"
-            (sectionPlayed)="loadAndScrollToSection($event)"
+            (sectionPlayed)="loadSectionIfMissing($event)"
             [handleKeyBindings]="!isEditingSection()"
 ></app-player>
