@@ -1,9 +1,10 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, OnInit } from '@angular/core';
 import { MatFabButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { BookDetails } from '../../core/models/books.dto';
 import { MatToolbar } from '@angular/material/toolbar';
+import { Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-books-page',
@@ -16,10 +17,16 @@ import { MatToolbar } from '@angular/material/toolbar';
   templateUrl: './books-page.html',
   styleUrl: './books-page.scss',
 })
-export class BooksPage {
+export class BooksPage implements OnInit {
 
   router: Router = inject(Router)
   books = input.required<BookDetails[]>();
+
+  constructor(private titleService: Title) {}
+
+  ngOnInit() {
+    this.titleService.setTitle('Books - NNarrator');
+  }
 
   navigateToAdd() {
     this.router.navigate(['/add-book']);

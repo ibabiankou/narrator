@@ -31,6 +31,7 @@ import { RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
 import { PlayerComponent } from '../../components/player/player.component';
 import { AsyncPipe } from '@angular/common';
+import { Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-view-book-page',
@@ -62,6 +63,8 @@ export class ViewBookPage implements OnInit, AfterViewInit {
   $currentSectionId = new BehaviorSubject<number>(0);
 
   @ViewChildren("section", {"read": ElementRef}) sectionElements!: QueryList<ElementRef>;
+
+  constructor(private titleService: Title) {}
 
   ngAfterViewInit() {
     this.scrollToSection(this.$currentSectionId.value);
@@ -105,6 +108,8 @@ export class ViewBookPage implements OnInit, AfterViewInit {
 
   ngOnInit() {
     const book = this.book();
+    this.titleService.setTitle(`${book.title} - NNarrator`);
+
     const bookIsNotReady = book.status != BookStatus.ready;
     this.isLoading.set(bookIsNotReady);
     if (bookIsNotReady) {

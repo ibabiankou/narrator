@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { MatFormField } from '@angular/material/form-field';
 import { MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
@@ -12,6 +12,7 @@ import { BooksService } from '../../core/services/books.service';
 import { v4 as uuidv4 } from 'uuid';
 import { MatIcon } from '@angular/material/icon';
 import { MatToolbar } from '@angular/material/toolbar';
+import { Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-add-book-page',
@@ -33,14 +34,19 @@ import { MatToolbar } from '@angular/material/toolbar';
   templateUrl: './add-book-page.html',
   styleUrl: './add-book-page.scss',
 })
-export class AddBookPage {
+export class AddBookPage implements OnInit {
   title: string = '';
   file: File | null = null;
   fileName = '';
 
   constructor(private router: Router,
               private filesService: FilesService,
-              private booksService: BooksService) {
+              private booksService: BooksService,
+              private titleService: Title) {
+  }
+
+  ngOnInit() {
+    this.titleService.setTitle('Add Book - NNarrator');
   }
 
   onFileSelected(event: any) {
