@@ -2,13 +2,20 @@
   <a [routerLink]="['/books']">AI Narrator Books</a>
 </mat-toolbar>
 
-<ul>
-  @for (book of books(); track book.id) {
-    <li><a [routerLink]="['/books', book.id]">{{ book.title }}</a></li>
-  } @empty {
-    <li>There are no books yet. Add a new book using the button below.</li>
-  }
-</ul>
+<div class="main-container">
+  <div class="book-grid">
+    @for (book of books(); track book.id) {
+      <a [routerLink]="['/books', book.id]" class="book-card">
+        <div class="cover-wrapper">
+          <img src="covers/{{$index % 2 === 0 ? 'blue' : 'red'}}.png" alt="{{ book.title }}">
+        </div>
+        <h3 class="book-title">{{ book.title }}</h3>
+      </a>
+    } @empty {
+      <li>There are no books yet. Add a new book using the button below.</li>
+    }
+  </div>
+</div>
 
 <button mat-fab color="primary" aria-label="Add new book" (click)="navigateToAdd()">
   <mat-icon>add</mat-icon>
