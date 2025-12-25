@@ -49,7 +49,7 @@ class RMQClient(Service):
 
         self._consumer_thread = Thread(name="rmq-consumer", target=self._consume, daemon=True)
         self._message_handler_registry: QueueMessageHandlerRegistry = defaultdict(dict)
-        self._message_processor = MessageProcessor()
+        self._message_processor = MessageProcessor(int(os.getenv("RMQ_CONCURRENCY", 1)))
 
         self._close = Event()
 
@@ -140,12 +140,15 @@ QueueMessageHandlerRegistry = defaultdict[str, MessageHandlers]
 class MessageProcessor:
     """A single threaded message processor. All enqueued messages are handled in FIFO order."""
 
-    def __init__(self):
+    def __init__(self, concurrency: int):
         self._close = Event()
 
         self.invocation_queue: Queue[MsgHandlerInvocation] = Queue()
-        self.thread = Thread(name="message-processor", target=self._process_queue, daemon=True)
-        self.thread.start()
+        self.threads = []
+        for i in range(concurrency):
+            self.thread = Thread(name=f"message-processor-{i}", target=self._process_queue, daemon=True)
+            self.threads.append(self.thread)
+            self.thread.start()
 
     def put(self, invocation: MsgHandlerInvocation):
         # Limit timeout to fail fast. Should never happen because the queue is unbounded.
