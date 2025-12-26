@@ -1,6 +1,6 @@
 import logging
 
-from api.utils.text import ParagraphBuilder
+from api.utils.text import ParagraphBuilder, LineReader
 
 logger = logging.getLogger(ParagraphBuilder.__module__)
 logger.setLevel(logging.DEBUG)
@@ -56,3 +56,12 @@ def test_empty_lines():
 
     assert pb.need_more_text()
     assert pb.build() == (1, "")
+
+def test_remove_null_characters():
+    test = "something with \0 character"
+
+    assert "\0" in test
+
+    clered = LineReader._remove_key_words(test)
+
+    assert "\0" not in clered

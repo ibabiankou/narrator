@@ -128,9 +128,10 @@ class LineReader:
         self.lines = self._read_lines(pdf_reader)
         self.line_index = 0
 
-    def _remove_key_words(self, text: str) -> str:
+    @staticmethod
+    def _remove_key_words(text: str) -> str:
         # TODO: extract the list of key words to some kind of config...
-        key_words = ["OceanofPDF.com", "OceanofPDF .com"]
+        key_words = ["OceanofPDF.com", "OceanofPDF .com", "\0"]
         for key_word in key_words:
             text = text.replace(key_word, "")
         return text
