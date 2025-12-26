@@ -4,12 +4,10 @@ import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import {
   BehaviorSubject,
-  combineLatest, combineLatestWith, defer,
+  combineLatest, defer,
   filter,
-  interval,
   map, of, repeat,
   Subject,
-  Subscription,
   switchMap,
   take,
   takeUntil, takeWhile,
@@ -20,6 +18,7 @@ import { PlaylistsService } from '../../core/services/playlists.service';
 import { ActivatedRoute } from '@angular/router';
 import { AudioPlayerService } from './audio-player.service';
 import { MatTooltip } from '@angular/material/tooltip';
+import { OSBindingsService } from './os-binding.service';
 
 @Component({
   selector: 'app-player',
@@ -57,12 +56,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
   $queuedPercent = new BehaviorSubject<number>(0);
   $unavailablePercent = new BehaviorSubject<number>(0);
 
-
-  private writerSubscription: Subscription;
-
   constructor(private playlistService: PlaylistsService,
               private activeRoute: ActivatedRoute,
-              private audioPlayer: AudioPlayerService) {
+              private audioPlayer: AudioPlayerService,
+              // Unused, but ensures OSBindingsService is instantiated.
+              private osBindings: OSBindingsService) {
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;
     this.$nowTime = this.audioPlayer.$globalProgressSeconds.pipe(
@@ -80,13 +78,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.audioPlayer.$audioTrack
       .pipe(filter(() => this.syncCurrentSection()))
       .subscribe(track => this.sectionPlayed.emit(track.section_id));
-
-    this.writerSubscription = interval(5000)
-      .pipe(
-        combineLatestWith(this.audioPlayer.$isPlaying),
-        filter(([_, isPlaying]) => isPlaying),
-        takeUntil(this.$destroy),
-      ).subscribe(() => this.updateProgress());
 
     const bookId = this.activeRoute.snapshot.paramMap.get("id")!;
     let isGenerating = false;
@@ -127,22 +118,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
         }
       });
     });
-  }
-
-  private updateProgress() {
-    combineLatest([this.audioPlayer.$trackProgress, this.audioPlayer.$playbackRate])
-      .pipe(
-        take(1),
-        switchMap(([{track, progressSeconds}, playbackRate]) => {
-          return this.playlistService.updateProgress({
-            "book_id": track.book_id,
-            "section_id": track.section_id,
-            "section_progress_seconds": progressSeconds,
-            "sync_current_section": this.syncCurrentSection(),
-            "playback_rate": playbackRate
-          });
-        })
-    ).subscribe();
   }
 
   ngOnInit(): void {
@@ -247,7 +222,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.audioPlayer.destroy();
     this.$destroy.next(true);
     this.$destroy.complete();
-    this.writerSubscription.unsubscribe();
   }
 
   toggleSync() {

@@ -7,12 +7,13 @@ import {
   interval,
   map,
   Subject,
-  Subscription,
+  Subscription, switchMap,
   take,
   takeUntil,
   zip,
 } from 'rxjs';
 import { Injectable } from '@angular/core';
+import { PlaylistsService } from '../../core/services/playlists.service';
 
 interface PlayerTrack {
   audioTrack: AudioTrack
@@ -42,6 +43,7 @@ export class AudioPlayerService {
   private $destroy = new Subject<boolean>();
 
   private readerSubscription: Subscription;
+  private writerSubscription: Subscription;
 
   $trackIndex = new BehaviorSubject<number>(0);
   private $trackOffset = new BehaviorSubject<number>(0);
@@ -71,7 +73,7 @@ export class AudioPlayerService {
 
   $playbackRate = new BehaviorSubject<number>(1);
 
-  constructor() {
+  constructor(private playlistService: PlaylistsService) {
     this.$playbackRate.subscribe(() => {
       if (this.audio) {
         this.audio.playbackRate = this.$playbackRate.value;
@@ -119,6 +121,13 @@ export class AudioPlayerService {
         filter(([_, isPlaying]) => isPlaying),
         takeUntil(this.$destroy),
       ).subscribe(() => this.readProgress());
+
+    this.writerSubscription = interval(5000)
+      .pipe(
+        combineLatestWith(this.$isPlaying),
+        filter(([_, isPlaying]) => isPlaying),
+        takeUntil(this.$destroy),
+      ).subscribe(() => this.updateProgress());
   }
 
   private readProgress() {
@@ -126,6 +135,26 @@ export class AudioPlayerService {
       this.$currentContextTime.next(this.audio.currentTime);
     }
   }
+
+  private updateProgress() {
+    combineLatest([this.$trackProgress, this.$playbackRate])
+      .pipe(
+        take(1),
+        switchMap(([{track, progressSeconds}, playbackRate]) => {
+          return this.playlistService.updateProgress({
+            "book_id": track.book_id,
+            "section_id": track.section_id,
+            "section_progress_seconds": progressSeconds,
+            // TODO: Replace POST with PATCH, so that all fields in request are optional.
+            //  And API updates only provided fields.
+            // "sync_current_section": this.syncCurrentSection(),
+            "sync_current_section": true,
+            "playback_rate": playbackRate
+          });
+        })
+      ).subscribe();
+  }
+
 
   getNumberOfTracks() {
     return this.tracks.length;
@@ -202,6 +231,7 @@ export class AudioPlayerService {
   destroy() {
     this.$destroy.next(true);
     this.readerSubscription.unsubscribe();
+    this.writerSubscription.unsubscribe();
   }
 
   seek(adjustment: number) {
