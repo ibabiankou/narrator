@@ -264,6 +264,13 @@ export class PlayerComponent implements OnInit, OnDestroy {
   showPagesTooltip() {
     return this.showPages() ? "Hide PDF pages" : "Show PDF pages";
   }
+
+  private fontSizeIndex = 1;
+  private fontSizeOptions = ["90%", "100%", "110%"];
+  protected toggleFontSize(e: PointerEvent) {
+    this.fontSizeIndex = (this.fontSizeIndex + 1) % this.fontSizeOptions.length;
+    document.documentElement.style.setProperty('--font-scale', this.fontSizeOptions[this.fontSizeIndex]);
+  }
 }
 
 /**
