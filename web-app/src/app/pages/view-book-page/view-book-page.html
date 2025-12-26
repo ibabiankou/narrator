@@ -31,6 +31,9 @@
             }
           </div>
         </div>
+        @if (page.sections.length > 0 || isShowingPages()) {
+          <div class="page-number">{{ $index + 1 }}</div>
+        }
       } @empty {
         <p>Strange... This book seem to be empty.</p>
       }

@@ -2,6 +2,12 @@ $maxWidth: 1280px;
 .main-container {
   max-width: $maxWidth;
   margin: 0 auto;
+
+  .page-number {
+    text-align: center;
+    font-style: italic;
+    color: gray;
+  }
 }
 
 .page-with-sections {
