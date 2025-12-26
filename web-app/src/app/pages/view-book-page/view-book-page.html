@@ -24,7 +24,7 @@
           <div class="sections">
             @for (section of page.sections; track section.section_index) {
               <app-section id="section-{{section.id}}" #section
-                           [class]="{'current': section.id == ($currentSectionId | async), 'hover': section.id == ($currentSectionId | async)}"
+                           [class]="{'current': section.id == ($currentSectionId | async)}"
                            [section]="section"
                            (sectionDeleted)="deleteSection(section)"
                            (editingModeChanged)="setEditingSection($event)"></app-section>
