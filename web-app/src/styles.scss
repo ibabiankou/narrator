@@ -15,6 +15,9 @@ html {
     typography: Roboto,
     density: 0,
   ));
+
+  // Disable automatic font size adjustment
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
