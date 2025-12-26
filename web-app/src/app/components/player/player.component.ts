@@ -18,7 +18,7 @@ import {
 import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { PlaylistsService } from '../../core/services/playlists.service';
 import { ActivatedRoute } from '@angular/router';
-import { AudioPlayer } from './audioplayer';
+import { AudioPlayerService } from './audio-player.service';
 import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
@@ -44,32 +44,39 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   handleKeyBindings = input(true);
 
-  audioPlayer: AudioPlayer = new AudioPlayer();
-
   // Total duration of the narrated part.
   private readonly $totalNarratedSeconds = new BehaviorSubject<number>(0)
 
-  $nowTime = this.audioPlayer.$globalProgressSeconds.pipe(
-    map(progressSeconds => secondsToTimeFormat(progressSeconds))
-  );
-  $remainingTime = combineLatest([this.audioPlayer.$globalProgressSeconds, this.$totalNarratedSeconds])
-    .pipe(map(([nowTime, totalTime]) => secondsToTimeFormat(nowTime - totalTime)));
+  $isPlaying;
+  $nowTime;
+  $remainingTime;
+  $nowPercent;
+  $playbackRate;
 
   $availablePercent = new BehaviorSubject<number>(0);
   $queuedPercent = new BehaviorSubject<number>(0);
   $unavailablePercent = new BehaviorSubject<number>(0);
 
-  $nowPercent = combineLatest([this.audioPlayer.$globalProgressSeconds, this.$totalNarratedSeconds, this.$availablePercent])
-    .pipe(
-      map(([nowTime, totalTime, availablePercent]) =>
-        totalTime > 0 ? (nowTime / totalTime * availablePercent) : 0
-      )
-    );
 
   private writerSubscription: Subscription;
 
   constructor(private playlistService: PlaylistsService,
-              private activeRoute: ActivatedRoute) {
+              private activeRoute: ActivatedRoute,
+              private audioPlayer: AudioPlayerService) {
+    this.$isPlaying = this.audioPlayer.$isPlaying;
+    this.$playbackRate = this.audioPlayer.$playbackRate;
+    this.$nowTime = this.audioPlayer.$globalProgressSeconds.pipe(
+      map(progressSeconds => secondsToTimeFormat(progressSeconds))
+    );
+    this.$remainingTime = combineLatest([this.audioPlayer.$globalProgressSeconds, this.$totalNarratedSeconds])
+      .pipe(map(([nowTime, totalTime]) => secondsToTimeFormat(nowTime - totalTime)));
+    this.$nowPercent = combineLatest([this.audioPlayer.$globalProgressSeconds, this.$totalNarratedSeconds, this.$availablePercent])
+      .pipe(
+        map(([nowTime, totalTime, availablePercent]) =>
+          totalTime > 0 ? (nowTime / totalTime * availablePercent) : 0
+        )
+      );
+
     this.audioPlayer.$audioTrack
       .pipe(filter(() => this.syncCurrentSection()))
       .subscribe(track => this.sectionPlayed.emit(track.section_id));

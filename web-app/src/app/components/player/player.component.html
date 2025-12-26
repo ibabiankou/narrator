@@ -21,7 +21,7 @@
       <mat-icon>replay_5</mat-icon>
     </button>
     <button matIconButton class="play-pause" (click)="playPause($event)">
-      @if (audioPlayer.$isPlaying | async) {
+      @if ($isPlaying | async) {
         <mat-icon>pause</mat-icon>
       } @else {
         <mat-icon>play_arrow</mat-icon>
@@ -39,7 +39,7 @@
       <mat-icon>sync_arrow_down</mat-icon>
     </button>
     <button class="playbackSpeed" matIconButton>
-      <span>x{{ (audioPlayer.$playbackRate | async | number : '1.1-2') }}</span>
+      <span>x{{ ($playbackRate | async | number : '1.1-2') }}</span>
     </button>
   </div>
 

@@ -12,6 +12,7 @@ import {
   takeUntil,
   zip,
 } from 'rxjs';
+import { Injectable } from '@angular/core';
 
 interface PlayerTrack {
   audioTrack: AudioTrack
@@ -29,7 +30,8 @@ enum PlayerStatus {
 /**
  * Responsible for playback logic: Playing each track, navigating back and forth, changing tracks.
  */
-export class AudioPlayer {
+@Injectable({providedIn: 'root'})
+export class AudioPlayerService {
   private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.stopped);
   private audio: HTMLAudioElement | null = null;
 
@@ -81,35 +83,35 @@ export class AudioPlayer {
         filter(([trackIndex, _]) => trackIndex >= 0 && trackIndex < this.tracks.length),
         filter(() => this.$status.value == PlayerStatus.playing)
       ).subscribe(([trackIndex, trackOffset]) => {
-          this.audio?.pause();
+        this.audio?.pause();
 
-          const track = this.tracks[trackIndex];
-          if (track == null) {
-            console.log("Invalid track index");
-            return;
-          }
-
-          const audio = new Audio(track.url);
-          this.audio = audio;
-
-          audio.addEventListener('timeupdate', () => this.readProgress());
-          audio.addEventListener('ended', () => {
-            if (this.tracks.length > trackIndex + 1) {
-              this.playTrack(trackIndex + 1, 0);
-            }
-          });
-
-          audio.addEventListener('error', (err) => {
-            console.log('Unable to load audio.', err);
-          });
-
-          audio.currentTime = trackOffset;
-          audio.preservesPitch = true;
-          audio.playbackRate = this.$playbackRate.value;
-
-          audio.play();
+        const track = this.tracks[trackIndex];
+        if (track == null) {
+          console.log("Invalid track index");
+          return;
         }
-      );
+
+        const audio = new Audio(track.url);
+        this.audio = audio;
+
+        audio.addEventListener('timeupdate', () => this.readProgress());
+        audio.addEventListener('ended', () => {
+          if (this.tracks.length > trackIndex + 1) {
+            this.playTrack(trackIndex + 1, 0);
+          }
+        });
+
+        audio.addEventListener('error', (err) => {
+          console.log('Unable to load audio.', err);
+        });
+
+        audio.currentTime = trackOffset;
+        audio.preservesPitch = true;
+        audio.playbackRate = this.$playbackRate.value;
+
+        audio.play();
+      }
+    );
 
     this.readerSubscription = interval(1000)
       .pipe(
