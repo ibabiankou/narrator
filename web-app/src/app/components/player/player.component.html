@@ -38,7 +38,7 @@
     <button matIconButton (click)="toggleSync()" [class]="{'active': syncCurrentSection()}">
       <mat-icon>sync_arrow_down</mat-icon>
     </button>
-    <button class="playbackSpeed" matIconButton>
+    <button class="playbackSpeed" matIconButton (click)="clickPlaybackRate($event)" (dblclick)="dblclickPlaybackRate($event)">
       <span>x{{ ($playbackRate | async | number : '1.1-2') }}</span>
     </button>
   </div>

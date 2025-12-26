@@ -201,21 +201,44 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   @HostListener("document:keydown.shift.arrowup", ["$event"])
-  increasePlaybackRate(e: Event) {
+  increasePlaybackRate(e: Event, adjustment: number = 0.1) {
     if (!this.handleKeyBindings()) {
       return;
     }
     e.preventDefault();
-    this.audioPlayer.adjustPlaybackRate(0.05);
+    this.audioPlayer.adjustPlaybackRate(adjustment);
   }
 
   @HostListener("document:keydown.shift.arrowdown", ["$event"])
-  lowerPlaybackRate(e: Event) {
+  lowerPlaybackRate(e: Event, adjustment: number = -0.1) {
     if (!this.handleKeyBindings()) {
       return;
     }
     e.preventDefault();
-    this.audioPlayer.adjustPlaybackRate(-0.05);
+    this.audioPlayer.adjustPlaybackRate(adjustment);
+  }
+
+  private clickTimer: number = -1;
+  protected clickPlaybackRate(e: PointerEvent) {
+    if (this.clickTimer > 0) {
+      // This is a consequent click, so do nothing.
+      return;
+    }
+
+    this.clickTimer = setTimeout(() => {
+      if (e.shiftKey) {
+        this.lowerPlaybackRate(e);
+      } else {
+        this.increasePlaybackRate(e);
+      }
+      this.clickTimer = -1;
+    }, 250);
+  }
+
+  protected dblclickPlaybackRate(e: MouseEvent) {
+    clearTimeout(this.clickTimer);
+    this.clickTimer = -1;
+    this.lowerPlaybackRate(e);
   }
 
   ngOnDestroy(): void {
