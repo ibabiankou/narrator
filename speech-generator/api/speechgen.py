@@ -20,7 +20,8 @@ class SpeechGenService(Service):
     def __init__(self, rmq_client: RMQClientDep, lang_code: str = "a"):
         self.rmq_client = rmq_client
         self.model = KModel()
-        self.pipeline = KPipeline(lang_code, model=self.model, repo_id="hexgrad/Kokoro-82M")
+        self.speech_pipeline = KPipeline(lang_code, model=self.model, repo_id="hexgrad/Kokoro-82M")
+        self.phonemes_pipeline = KPipeline(lang_code, model=False, repo_id="hexgrad/Kokoro-82M")
 
         self.s3_client = boto3.client(
             "s3",
@@ -33,7 +34,7 @@ class SpeechGenService(Service):
 
     def phonemize(self, text: str, voice: str = "am_adam"):
         phonemes = []
-        for result in self.pipeline(
+        for result in self.phonemes_pipeline(
                 text=text,
                 voice=voice,
                 split_pattern=r'\n',
@@ -59,7 +60,7 @@ class SpeechGenService(Service):
             for chunk in chunks:
                 if not chunk.strip():
                     continue
-                for result in self.pipeline.generate_from_tokens(tokens=chunk, voice=voice, speed=speed):
+                for result in self.speech_pipeline.generate_from_tokens(tokens=chunk, voice=voice, speed=speed):
                     sf.write(result.audio)
                 sf.write(self._silence(0.1))
 

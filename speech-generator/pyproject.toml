@@ -26,7 +26,13 @@ narrator-commons = { path = "../common-lib", develop = true }
 
 [tool.poetry.group.dev.dependencies]
 boto3-stubs = "^1.42.14"
+pytest = "^9.0.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
