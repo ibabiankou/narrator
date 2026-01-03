@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from api import SessionDep, get_logger
 from api.models import db, api
+from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
 from api.services.files import FilesServiceDep
 from api.services.sections import SectionServiceDep
@@ -22,7 +23,8 @@ def create_book(book: api.CreateBookRequest,
                 session: SessionDep,
                 background_tasks: BackgroundTasks,
                 files_service: FilesServiceDep,
-                book_service: BookServiceDep) -> api.BookDetails:
+                book_service: BookServiceDep,
+                audio_tracks_service: AudioTrackServiceDep) -> api.BookDetails:
     # Load temp_file metadata from DB
     pdf_temp_file = session.get(db.TempFile, book.pdf_temp_file_id)
     if pdf_temp_file is None:
@@ -50,8 +52,11 @@ def create_book(book: api.CreateBookRequest,
 
     # Process the book in the background
     background_tasks.add_task(book_service.split_pages, book)
-    background_tasks.add_task(book_service.extract_text, book)
-    # TODO: Generate text for the first 10-20 sections.
+
+    def extract_text_and_generate_speech():
+        book_service.extract_text(book)
+        audio_tracks_service.generate_speech_for_book(book.id)
+    background_tasks.add_task(extract_text_and_generate_speech)
 
     return api.BookDetails(id=book.id,
                            title=book.title,

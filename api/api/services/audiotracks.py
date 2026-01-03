@@ -55,6 +55,20 @@ class AudioTrackService(Service):
                                duration=track.duration)
                 for track in inserted_tracks
             ]
+
+    def generate_speech_for_book(self, book_id: uuid.UUID):
+        with DbSession() as session:
+            stmt = (select(db.Section).outerjoin(db.AudioTrack, db.Section.id == db.AudioTrack.section_id)
+                    .where(db.AudioTrack.id.is_(None), db.Section.book_id == book_id)
+                    .order_by(db.Section.section_index))
+
+            db_sections = session.execute(stmt).scalars().all()
+
+            if not db_sections:
+                LOG.info("No sections found to generate speech for. Book ID: %s", book_id)
+            else:
+                self.generate_speech(db_sections)
+
     def phonemize_text(self, book_id: uuid.UUID, section_id: int, track_id: int, content: str):
         msg = rmq.PhonemizeText(book_id=book_id, section_id=section_id, track_id=track_id, text=content)
         self.rmq_client.publish("phonemize", msg)
