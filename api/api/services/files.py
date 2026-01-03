@@ -80,7 +80,7 @@ class FilesService(Service):
         try:
             s3_object = self.s3_client.get_object(Bucket=self.bucket_name,
                                                   Key=key,
-                                                  IfNoneMatch=if_none_match)
+                                                  IfNoneMatch=if_none_match or "fake-value")
             return FileData(body=s3_object["Body"].read(),
                             content_type=s3_object["ContentType"],
                             etag=s3_object["ETag"])
