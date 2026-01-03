@@ -2,8 +2,9 @@ import logging
 import mimetypes
 import os
 import uuid
+from dataclasses import dataclass
 from io import BytesIO
-from typing import Annotated
+from typing import Annotated, Optional
 
 import boto3
 from botocore.exceptions import ClientError
@@ -14,6 +15,12 @@ from common_lib.service import Service
 
 LOG = get_logger(__name__)
 
+
+@dataclass
+class FileData:
+    body: bytes
+    content_type: str
+    etag: str
 
 class FilesService(Service):
     """A service to manage files stored in an object store."""
@@ -61,18 +68,22 @@ class FilesService(Service):
                 Key=remote_path,
                 ContentType=mime_type)
 
-    def get_book_page_file(self, book_id: uuid.UUID, page_file_name: str) -> dict | None:
+    def get_book_page_file(self,
+                           book_id: uuid.UUID,
+                           page_file_name: str,
+                           if_none_match: Optional[str] = None) -> Optional[FileData]:
         """Get the book page file from the object store."""
         return self._get_object(f"{book_id}/pages/{page_file_name}")
 
 
-    def _get_object(self, key: str) -> dict | None:
+    def _get_object(self, key: str, if_none_match: Optional[str] = None) -> Optional[FileData]:
         try:
-            s3_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=key)
-            return {
-                "body": s3_object["Body"].read(),
-                "content_type": s3_object["ContentType"]
-            }
+            s3_object = self.s3_client.get_object(Bucket=self.bucket_name,
+                                                  Key=key,
+                                                  IfNoneMatch=if_none_match)
+            return FileData(body=s3_object["Body"].read(),
+                            content_type=s3_object["ContentType"],
+                            etag=s3_object["ETag"])
         except ClientError as e:
             if e.response["Error"]["Code"] == "NoSuchKey":
                 return None
@@ -82,9 +93,12 @@ class FilesService(Service):
     def speech_filename(self, book_id: uuid.UUID, file_name: str):
         return f"{book_id}/speech/{file_name}"
 
-    def get_speech_file(self, book_id: uuid.UUID, file_name: str) -> dict | None:
+    def get_speech_file(self,
+                        book_id: uuid.UUID,
+                        file_name: str,
+                        if_none_match: Optional[str] = None) -> Optional[FileData]:
         """Get the speech file from the object store."""
-        return self._get_object(self.speech_filename(book_id, file_name))
+        return self._get_object(self.speech_filename(book_id, file_name), if_none_match)
 
     def delete_speech_file(self, book_id: uuid.UUID, file_name: str):
         remote_file_path = self.speech_filename(book_id, file_name)

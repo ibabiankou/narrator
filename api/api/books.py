@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, UTC
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Header
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
@@ -140,20 +141,32 @@ def get_book_content(book_id: uuid.UUID,
 
 
 @books_router.get("/{book_id}/pages/{page_file_name}")
-def get_book_page(book_id: uuid.UUID, page_file_name: str, file_service: FilesServiceDep):
-    response_dict = file_service.get_book_page_file(book_id, page_file_name)
-    if response_dict is None:
+def get_book_page(book_id: uuid.UUID,
+                  page_file_name: str,
+                  file_service: FilesServiceDep,
+                  if_none_match: Annotated[str | None, Header()] = None):
+    file_data = file_service.get_book_page_file(book_id, page_file_name, if_none_match)
+    if file_data is None:
         raise HTTPException(status_code=404, detail="Page not found")
-    return Response(content=response_dict["body"], media_type=response_dict["content_type"])
+    headers = {
+        "Cache-Control": "private, max-age=604800, immutable",
+        "ETag": file_data.etag
+    }
+    return Response(content=file_data.body, media_type=file_data.content_type, headers=headers)
 
 
 @books_router.get("/{book_id}/speech/{file_name}")
-def get_speech_file(book_id: uuid.UUID, file_name: str, file_service: FilesServiceDep):
-    response_dict = file_service.get_speech_file(book_id, file_name)
-    if response_dict is None:
+def get_speech_file(book_id: uuid.UUID,
+                    file_name: str,
+                    file_service: FilesServiceDep,
+                    if_none_match: Annotated[str | None, Header()] = None):
+    file_data = file_service.get_speech_file(book_id, file_name, if_none_match)
+    if file_data is None:
         raise HTTPException(status_code=404, detail="Speech file not found")
     # Have no idea why, but this header enables seeking in the HTMLAudioElement.
     headers = {
-        "Accept-Ranges": "bytes"
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "private, max-age=604800, immutable",
+        "ETag": file_data.etag
     }
-    return Response(content=response_dict["body"], media_type=response_dict["content_type"], headers=headers)
+    return Response(content=file_data.body, media_type=file_data.content_type, headers=headers)
