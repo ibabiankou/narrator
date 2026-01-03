@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass
 from io import BytesIO
 from typing import Annotated
 
@@ -14,6 +15,12 @@ from common_lib.models import rmq
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
+
+@dataclass
+class GeneratedSpeech:
+    content: bytes
+    content_type: str
+    duration: float
 
 
 class SpeechGenService(Service):
@@ -51,7 +58,7 @@ class SpeechGenService(Service):
                                        track_id=payload.track_id, phonemes=phonemes)
         self.rmq_client.publish(routing_key="phonemes", payload=payload)
 
-    def synthesize(self, phonemes: str, voice: str = "am_adam", speed: float = 1.1) -> dict:
+    def synthesize(self, phonemes: str, voice: str = "am_adam", speed: float = 1) -> GeneratedSpeech:
         audio_buf = BytesIO()
         audio_format = "mp3"
         with SoundFile(audio_buf, mode="w", format=audio_format, samplerate=24000, channels=1,
@@ -65,18 +72,14 @@ class SpeechGenService(Service):
                 sf.write(self._silence(0.1))
 
             audio_buf.seek(0)
-            return {
-                "content": audio_buf.read(),
-                "duration": float(sf.frames) / sf.samplerate,
-                "content_type": f"audio/{audio_format}",
-            }
+            return GeneratedSpeech(content=audio_buf.read(), content_type=f"audio/{audio_format}", duration=sf.frames / sf.samplerate)
 
     def _silence(self, duration_s: float):
         return np.zeros(int(duration_s * 24000), dtype=np.int16)  # 24kHz sample rate
 
     def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
-        result = self.synthesize(payload.phonemes)
+        result = self.synthesize(payload.phonemes, payload.voice, payload.speed)
         self._upload_file(payload.file_path, result.get("content_type"), result.get("content"))
         payload = rmq.SpeechResponse(book_id=payload.book_id, section_id=payload.section_id, track_id=payload.track_id,
                                      file_path=payload.file_path, duration=result.get("duration"))

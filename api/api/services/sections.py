@@ -63,7 +63,7 @@ class SectionService(Service):
         LOG.debug("Got phonemes for track %s, requesting speech synthesis...", payload.track_id)
         self.set_phonemes(payload.section_id, payload.phonemes)
         self.audiotracks_service.synthesize_speech(payload.book_id, payload.section_id, payload.track_id,
-                                                   payload.phonemes)
+                                                   payload.phonemes, voice=payload.voice)
 
     def set_content(self, section_id: int, content: str) -> list[api.AudioTrack]:
         with DbSession() as session:

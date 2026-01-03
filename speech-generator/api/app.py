@@ -49,24 +49,27 @@ def health():
 
 class PhonemizeRequest(BaseModel):
     text: str
+    voice: str
 
 
 @base_url_router.post("/phonemize")
 def phonemize(request: PhonemizeRequest, speech_gen_svc: SpeechGenServiceDep):
-    phonemes = speech_gen_svc.phonemize(request.text)
+    phonemes = speech_gen_svc.phonemize(request.text, request.voice)
     return {"phonemes": phonemes}
 
 
 class SynthesizeRequest(BaseModel):
     phonemes: str
+    voice: str
+    speed: float
 
 
 @base_url_router.post("/synthesize")
 def synthesize(request: SynthesizeRequest, speech_gen_svc: SpeechGenServiceDep):
-    result = speech_gen_svc.synthesize(request.phonemes)
-    return Response(content=result.get("content"),
-                    media_type=result.get("content_type"),
-                    headers={"narrator-speech-duration": str(result.get("duration"))})
+    result = speech_gen_svc.synthesize(request.phonemes, request.voice, request.speed)
+    return Response(content=result.content,
+                    media_type=result.content_type,
+                    headers={"narrator-speech-duration": str(result.duration)})
 
 
 app.include_router(base_url_router)

@@ -10,6 +10,7 @@ class PhonemizeText(RMQMessage):
     track_id: int
     text: str
 
+    voice: str = "am_adam"
 
 class PhonemesResponse(RMQMessage):
     type = "phonemes"
@@ -18,6 +19,8 @@ class PhonemesResponse(RMQMessage):
     track_id: int
     phonemes: str
 
+    voice: str
+
 class SynthesizeSpeech(RMQMessage):
     type = "synthesize"
     book_id: uuid.UUID
@@ -25,6 +28,9 @@ class SynthesizeSpeech(RMQMessage):
     track_id: int
     phonemes: str
     file_path: str
+
+    voice: str = "am_adam"
+    speed: float = 1
 
 class SpeechResponse(RMQMessage):
     type = "speech"

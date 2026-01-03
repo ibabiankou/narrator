@@ -70,7 +70,7 @@ class AudioTrackService(Service):
                 self.generate_speech(db_sections)
 
     def phonemize_text(self, book_id: uuid.UUID, section_id: int, track_id: int, content: str):
-        msg = rmq.PhonemizeText(book_id=book_id, section_id=section_id, track_id=track_id, text=content)
+        msg = rmq.PhonemizeText(book_id=book_id, section_id=section_id, track_id=track_id, text=content, voice="am_michael")
         self.rmq_client.publish("phonemize", msg)
 
     def _get_track(self, track_id: int) -> Optional[db.AudioTrack]:
@@ -78,10 +78,10 @@ class AudioTrackService(Service):
             stmt = select(db.AudioTrack).where(db.AudioTrack.id == track_id)
             return session.scalars(stmt).first()
 
-    def synthesize_speech(self, book_id: uuid.UUID, section_id: int, track_id: int, phonemes: str):
+    def synthesize_speech(self, book_id: uuid.UUID, section_id: int, track_id: int, phonemes: str, voice: str):
         file_path = self.files_service.speech_filename(book_id, f"{track_id}.mp3")
         msg = rmq.SynthesizeSpeech(book_id=book_id, section_id=section_id, track_id=track_id, phonemes=phonemes,
-                                   file_path=file_path)
+                                   file_path=file_path, voice=voice)
         self.rmq_client.publish("synthesize", msg)
 
     def delete_for_sections(self, sections: list[db.Section]):
