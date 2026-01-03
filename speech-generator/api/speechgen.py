@@ -80,9 +80,9 @@ class SpeechGenService(Service):
     def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
         result = self.synthesize(payload.phonemes, payload.voice, payload.speed)
-        self._upload_file(payload.file_path, result.get("content_type"), result.get("content"))
+        self._upload_file(payload.file_path, result.content_type, result.content)
         payload = rmq.SpeechResponse(book_id=payload.book_id, section_id=payload.section_id, track_id=payload.track_id,
-                                     file_path=payload.file_path, duration=result.get("duration"))
+                                     file_path=payload.file_path, duration=result.duration)
         self.rmq_client.publish(routing_key="speech", payload=payload)
 
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):
