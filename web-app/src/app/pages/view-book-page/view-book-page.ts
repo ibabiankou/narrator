@@ -11,7 +11,6 @@ import {
   ViewChildren
 } from '@angular/core';
 import { BookDetails, BookPage, BookStatus, Playlist, Section } from '../../core/models/books.dto';
-import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
 import { BooksService } from '../../core/services/books.service';
 import {
   BehaviorSubject,
@@ -36,7 +35,6 @@ import { Title } from '@angular/platform-browser';
 @Component({
   selector: 'app-view-book-page',
   imports: [
-    InfiniteScrollDirective,
     MatProgressSpinner,
     MatIcon,
     MatToolbar,
@@ -137,17 +135,6 @@ export class ViewBookPage implements OnInit, AfterViewInit {
     if (sectionId != null) {
       this.$currentSectionId.next(sectionId);
     }
-  }
-
-  loadMorePages() {
-    const bookId = this.book().id;
-    const pages = this.pages()
-
-    this.booksService.getBookContent(bookId, pages[pages.length - 1].index).subscribe(
-      content => {
-        this.pages.set([...pages, ...content.pages]);
-      }
-    );
   }
 
   deleteSection(section: Section) {
