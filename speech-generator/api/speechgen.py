@@ -53,9 +53,9 @@ class SpeechGenService(Service):
 
     def handle_phonemize_msg(self, payload: rmq.PhonemizeText):
         LOG.debug("Converting text into phonemes for track %s.", payload.track_id)
-        phonemes = self.phonemize(payload.text)
+        phonemes = self.phonemize(payload.text, payload.voice)
         payload = rmq.PhonemesResponse(book_id=payload.book_id, section_id=payload.section_id,
-                                       track_id=payload.track_id, phonemes=phonemes)
+                                       track_id=payload.track_id, phonemes=phonemes, voice=payload.voice)
         self.rmq_client.publish(routing_key="phonemes", payload=payload)
 
     def synthesize(self, phonemes: str, voice: str = "am_adam", speed: float = 1) -> GeneratedSpeech:
