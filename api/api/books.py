@@ -52,11 +52,7 @@ def create_book(book: api.CreateBookRequest,
 
     # Process the book in the background
     background_tasks.add_task(book_service.split_pages, book)
-
-    def extract_text_and_generate_speech():
-        book_service.extract_text(book)
-        audio_tracks_service.generate_speech_for_book(book.id)
-    background_tasks.add_task(extract_text_and_generate_speech)
+    background_tasks.add_task(book_service.extract_text, book)
 
     return api.BookDetails(id=book.id,
                            title=book.title,
