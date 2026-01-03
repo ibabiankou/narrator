@@ -109,9 +109,6 @@ def reprocess_book(book_id: uuid.UUID,
 @books_router.get("/{book_id}/content")
 def get_book_content(book_id: uuid.UUID,
                      session: SessionDep,
-                     last_page_idx: int = None,
-                     section_id: int = None,
-                     limit: int = 10,
                      ) -> api.BookContent:
     book = session.get(db.Book, book_id)
     if book is None:
@@ -121,29 +118,14 @@ def get_book_content(book_id: uuid.UUID,
         # There will be no content, so return immediately.
         return api.BookContent(pages=[])
 
-    section_page_idx = 0
-    if section_id is not None:
-        section = session.get(db.Section, section_id)
-        if section is None:
-            raise HTTPException(status_code=404, detail="Section not found")
-        section_page_idx = section.page_index
-
-    stmt = select(db.Section).where(db.Section.book_id == book_id)
-
-    if last_page_idx is not None:
-        # If the last known page is provided, don't load pages before that index.
-        stmt = stmt.where(db.Section.page_index > last_page_idx)
-
-    # If section ID is provided, we want to load "limit" pages after that section.
-    max_page_index = min(max(last_page_idx or 0, section_page_idx or 0) + limit, book.number_of_pages)
-    stmt = stmt.where(db.Section.page_index < max_page_index).order_by(db.Section.section_index)
-    db_sections = session.execute(stmt).scalars().all()
+    db_sections = session.execute(
+        select(db.Section).where(db.Section.book_id == book_id)).scalars().all()
 
     # Convert into the API model.
     pages = []
     pages_dict = {}
     # For now, I simply generate pages, but I might need to store that data explicitly instead.
-    for i in range(0 if last_page_idx is None else last_page_idx + 1, max_page_index):
+    for i in range(book.number_of_pages or 0):
         pages.append(api.BookPage(index=i, file_name=f"{i}.pdf", sections=[]))
         pages_dict[i] = pages[-1]
 
