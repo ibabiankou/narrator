@@ -43,11 +43,7 @@ class AudioTrackService(Service):
                 track_map[track.section_id] = track
             for section in sections:
                 track_id = track_map[section.id].id
-                # Use existing phonemes, if present.
-                if section.phonemes:
-                    self.synthesize_speech(section.book_id, section.id, track_id, section.phonemes)
-                else:
-                    self.phonemize_text(section.book_id, section.id, track_id, section.content)
+                self.phonemize_text(section.book_id, section.id, track_id, section.content)
 
             session.commit()
 
