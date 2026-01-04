@@ -1,5 +1,5 @@
 import { Component, HostListener, input, model, OnDestroy, OnInit, output } from '@angular/core';
-import { AudioTrack, BookStatus, PlaybackProgress, Playlist } from '../../core/models/books.dto';
+import { AudioTrack, BookDetails, BookStatus, PlaybackProgress, Playlist } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import {
@@ -35,6 +35,7 @@ import { OSBindingsService } from './os-binding.service';
 export class PlayerComponent implements OnInit, OnDestroy {
   private $destroy = new Subject<boolean>();
 
+  book = input.required<BookDetails>();
   playlist = input.required<Playlist>();
   sectionPlayed = output<number>();
   showPages = model(false);
@@ -125,10 +126,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.setPlaylist(this.playlist());
+    this.initPlayerService(this.playlist(), this.book());
   }
 
-  setPlaylist(playlist: Playlist) {
+  initPlayerService(playlist: Playlist, book: BookDetails) {
+    this.audioPlayer.setBookDetails(book);
     this.audioPlayer.addTracks(playlist.tracks);
     this.syncCurrentSection.set(playlist.progress.sync_current_section);
     this.audioPlayer.setPlaybackRate(playlist.progress.playback_rate);
@@ -286,9 +288,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
  * @returns The time string in (hh:)mm:ss format.
  */
 function secondsToTimeFormat(totalSeconds: number): string {
-  if (!totalSeconds) {
-    return "00:00";
-  }
   const sign = totalSeconds >= 0 ? '' : '-';
   const absSeconds = Math.abs(totalSeconds);
 

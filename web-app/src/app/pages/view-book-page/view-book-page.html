@@ -39,7 +39,8 @@
   }
 </div>
 <div class="player-spacer"></div>
-<app-player [playlist]="playlist()"
+<app-player [book]="book()"
+            [playlist]="playlist()"
             (showPagesChanged)="showOrHidePages($event)"
             (sectionPlayed)="setCurrentSectionId($event)"
             [handleKeyBindings]="!isEditingSection()"

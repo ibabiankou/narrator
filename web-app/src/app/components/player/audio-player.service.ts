@@ -1,17 +1,18 @@
-import { AudioTrack } from '../../core/models/books.dto';
+import { AudioTrack, BookDetails } from '../../core/models/books.dto';
 import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
   combineLatest, combineLatestWith, distinct,
   filter,
   interval,
-  map,
+  map, Observable,
   switchMap,
   take,
   zip,
 } from 'rxjs';
 import { Injectable } from '@angular/core';
 import { PlaylistsService } from '../../core/services/playlists.service';
+import { PlaybackPosition } from '../../core/models/player.dto';
 
 interface PlayerTrack {
   audioTrack: AudioTrack
@@ -34,6 +35,7 @@ export class AudioPlayerService {
   private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.stopped);
   private audio: HTMLAudioElement | null = null;
 
+  $bookDetails = new BehaviorSubject<BookDetails | null>(null);
   private tracks: PlayerTrack[] = [];
   // Holds global book time at which each track starts.
   private durationSum: number[] = [0];
@@ -64,6 +66,20 @@ export class AudioPlayerService {
   // Progress from the start of the book.
   $globalProgressSeconds = combineLatest([this.$trackIndex, this.$currentContextTime])
     .pipe(map(([index, progress]) => this.durationSum[index] + progress));
+
+  $playbackPosition: Observable<PlaybackPosition> = combineLatest([this.$playbackRate, this.$globalProgressSeconds])
+    .pipe(map(([playbackRate, globalProgressSeconds]) => {
+      const lastTrackIndex = this.tracks.length-1;
+      const lastTrackDuration = this.tracks[lastTrackIndex].audioTrack.duration;
+      const lastTrackStartAt = this.durationSum[lastTrackIndex];
+      const duration = lastTrackStartAt + lastTrackDuration;
+
+      return {
+        "duration": duration,
+        "playbackRate": playbackRate,
+        "position": globalProgressSeconds
+      };
+    }));
 
   constructor(private playlistService: PlaylistsService) {
     this.$playbackRate.subscribe(() => {
@@ -223,6 +239,7 @@ export class AudioPlayerService {
     this.stopTheMusic();
     this.tracks = [];
     this.durationSum = [0]
+    this.$bookDetails.next(null);
   }
 
   seek(adjustment: number) {
@@ -284,5 +301,9 @@ export class AudioPlayerService {
     this.audio.load();
 
     this.audio = null;
+  }
+
+  setBookDetails(book: BookDetails) {
+    this.$bookDetails.next(book);
   }
 }

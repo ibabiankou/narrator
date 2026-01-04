@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --serve-path /app/ --open",
+    "start": "ng serve --serve-path /app/ --open --host 0.0.0.0",
     "build": "ng build --base-href /app/ --configuration production",
     "build:local": "ng build --base-href /app/",
     "watch": "ng build --watch --configuration development",

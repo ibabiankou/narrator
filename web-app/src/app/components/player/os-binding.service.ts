@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { AudioPlayerService } from './audio-player.service';
+import { filter } from 'rxjs';
 
 const SUPPORTED_ACTIONS: MediaSessionAction[] = ["nexttrack", "pause", "play", "previoustrack", "seekbackward", "seekforward", "seekto", "stop"];
 type HandlerMap = {
@@ -53,5 +54,21 @@ export class OSBindingsService {
         console.error(`The media session action "${action}" is not supported.`);
       }
     });
+
+    this.audioPlayer.$bookDetails
+      .pipe(filter(book => book != null))
+      .subscribe(
+        bookDetails => {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: bookDetails.title
+          });
+        }
+      );
+
+    this.audioPlayer.$playbackPosition.subscribe(
+      position => {
+        navigator.mediaSession.setPositionState(position);
+      }
+    );
   }
 }
