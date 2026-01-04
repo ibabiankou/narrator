@@ -32,6 +32,9 @@ export class OSBindingsService {
     "seekforward": (details: MediaSessionActionDetails) => {
       this.audioPlayer.seek(details.seekOffset || 5);
     },
+    "seekto": (details: MediaSessionActionDetails) => {
+      this.audioPlayer.seekTo(details.seekTime);
+    },
     "stop": (details: MediaSessionActionDetails) => {
       this.audioPlayer.pause();
     },

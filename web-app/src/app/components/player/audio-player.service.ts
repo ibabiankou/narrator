@@ -68,6 +68,7 @@ export class AudioPlayerService {
     .pipe(map(([index, progress]) => this.durationSum[index] + progress));
 
   $playbackPosition: Observable<PlaybackPosition> = combineLatest([this.$playbackRate, this.$globalProgressSeconds])
+    .pipe(filter(() => this.tracks.length > 0))
     .pipe(map(([playbackRate, globalProgressSeconds]) => {
       const lastTrackIndex = this.tracks.length-1;
       const lastTrackDuration = this.tracks[lastTrackIndex].audioTrack.duration;
@@ -278,6 +279,21 @@ export class AudioPlayerService {
           return;
         }
       });
+  }
+
+  seekTo(seekTime: number | undefined) {
+    if (seekTime == undefined) {
+      return;
+    }
+
+    for (let i = 0; i < this.durationSum.length; i++) {
+      if (this.durationSum[i] > seekTime) {
+        const trackIndex = i - 1;
+        const trackOffset = seekTime - this.durationSum[trackIndex];
+        this.playTrack(trackIndex, trackOffset);
+        return;
+      }
+    }
   }
 
   adjustPlaybackRate(adjustment: number) {
