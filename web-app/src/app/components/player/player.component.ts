@@ -61,6 +61,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
               private audioPlayer: AudioPlayerService,
               // Unused, but ensures OSBindingsService is instantiated.
               private osBindings: OSBindingsService) {
+    this.audioPlayer.reset();
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;
     this.$nowTime = this.audioPlayer.$globalProgressSeconds.pipe(
@@ -76,8 +77,10 @@ export class PlayerComponent implements OnInit, OnDestroy {
       );
 
     this.audioPlayer.$audioTrack
-      .pipe(filter(() => this.syncCurrentSection()))
-      .subscribe(track => this.sectionPlayed.emit(track.section_id));
+      .pipe(
+        filter(() => this.syncCurrentSection()),
+        takeUntil(this.$destroy)
+      ).subscribe(track => this.sectionPlayed.emit(track.section_id));
 
     const bookId = this.activeRoute.snapshot.paramMap.get("id")!;
     let isGenerating = false;
@@ -94,6 +97,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
         .pipe(
           repeat({delay: () => timer(5_000 * (0.75 + 0.5 * Math.random()))}),
           takeWhile((sections) => sections.length > 0),
+          takeUntil(this.$destroy),
           switchMap(sectionIds => this.playlistService.getTracks(bookId, sectionIds))
         ).subscribe((tracks) => {
         const readyTracks: AudioTrack[] = [];
@@ -242,7 +246,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.audioPlayer.destroy();
+    this.audioPlayer.reset();
     this.$destroy.next(true);
     this.$destroy.complete();
   }
@@ -282,6 +286,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
  * @returns The time string in (hh:)mm:ss format.
  */
 function secondsToTimeFormat(totalSeconds: number): string {
+  if (!totalSeconds) {
+    return "00:00";
+  }
   const sign = totalSeconds >= 0 ? '' : '-';
   const absSeconds = Math.abs(totalSeconds);
 

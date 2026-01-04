@@ -6,10 +6,8 @@ import {
   filter,
   interval,
   map,
-  Subject,
-  Subscription, switchMap,
+  switchMap,
   take,
-  takeUntil,
   zip,
 } from 'rxjs';
 import { Injectable } from '@angular/core';
@@ -40,14 +38,10 @@ export class AudioPlayerService {
   // Holds global book time at which each track starts.
   private durationSum: number[] = [0];
 
-  private $destroy = new Subject<boolean>();
-
-  private readerSubscription: Subscription;
-  private writerSubscription: Subscription;
-
   $trackIndex = new BehaviorSubject<number>(0);
   private $trackOffset = new BehaviorSubject<number>(0);
   private $currentContextTime = new BehaviorSubject<number>(0);
+  $playbackRate = new BehaviorSubject<number>(1);
 
   $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
 
@@ -71,8 +65,6 @@ export class AudioPlayerService {
   $globalProgressSeconds = combineLatest([this.$trackIndex, this.$currentContextTime])
     .pipe(map(([index, progress]) => this.durationSum[index] + progress));
 
-  $playbackRate = new BehaviorSubject<number>(1);
-
   constructor(private playlistService: PlaylistsService) {
     this.$playbackRate.subscribe(() => {
       if (this.audio) {
@@ -81,11 +73,10 @@ export class AudioPlayerService {
     });
     zip([this.$trackIndex, this.$trackOffset])
       .pipe(
-        takeUntil(this.$destroy),
         filter(([trackIndex, _]) => trackIndex >= 0 && trackIndex < this.tracks.length),
         filter(() => this.$status.value == PlayerStatus.playing)
       ).subscribe(([trackIndex, trackOffset]) => {
-        this.audio?.pause();
+        this.stopTheMusic();
 
         const track = this.tracks[trackIndex];
         if (track == null) {
@@ -103,10 +94,6 @@ export class AudioPlayerService {
           }
         });
 
-        audio.addEventListener('error', (err) => {
-          console.log('Unable to load audio.', err);
-        });
-
         audio.currentTime = trackOffset;
         audio.preservesPitch = true;
         audio.playbackRate = this.$playbackRate.value;
@@ -115,18 +102,16 @@ export class AudioPlayerService {
       }
     );
 
-    this.readerSubscription = interval(1000)
+    interval(1000)
       .pipe(
         combineLatestWith(this.$isPlaying),
         filter(([_, isPlaying]) => isPlaying),
-        takeUntil(this.$destroy),
       ).subscribe(() => this.readProgress());
 
-    this.writerSubscription = interval(5000)
+    interval(5000)
       .pipe(
         combineLatestWith(this.$isPlaying),
         filter(([_, isPlaying]) => isPlaying),
-        takeUntil(this.$destroy),
       ).subscribe(() => this.updateProgress());
   }
 
@@ -155,7 +140,6 @@ export class AudioPlayerService {
       ).subscribe();
   }
 
-
   getNumberOfTracks() {
     return this.tracks.length;
   }
@@ -180,6 +164,7 @@ export class AudioPlayerService {
   playTrack(trackIndex: number, offsetSeconds: number) {
     this.$trackIndex.next(trackIndex);
     this.$trackOffset.next(offsetSeconds);
+    this.$currentContextTime.next(offsetSeconds);
   }
 
   play() {
@@ -228,10 +213,16 @@ export class AudioPlayerService {
     return this.tracks[trackIndex].audioTrack;
   }
 
-  destroy() {
-    this.$destroy.next(true);
-    this.readerSubscription.unsubscribe();
-    this.writerSubscription.unsubscribe();
+  reset() {
+    this.$status.next(PlayerStatus.stopped);
+    this.$trackIndex.next(0);
+    this.$trackOffset.next(0);
+    this.$currentContextTime.next(0);
+    this.$playbackRate.next(1);
+
+    this.stopTheMusic();
+    this.tracks = [];
+    this.durationSum = [0]
   }
 
   seek(adjustment: number) {
@@ -281,5 +272,17 @@ export class AudioPlayerService {
 
   setPlaybackRate(playback_rate: number) {
     this.$playbackRate.next(playback_rate);
+  }
+
+  private stopTheMusic() {
+    if (!this.audio) {
+      return;
+    }
+
+    this.audio.pause();
+    this.audio.src = '';
+    this.audio.load();
+
+    this.audio = null;
   }
 }
