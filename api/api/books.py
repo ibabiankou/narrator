@@ -121,7 +121,7 @@ def get_book_content(book_id: uuid.UUID,
         return api.BookContent(pages=[])
 
     db_sections = session.execute(
-        select(db.Section).where(db.Section.book_id == book_id)).scalars().all()
+        select(db.Section).where(db.Section.book_id == book_id).order_by(db.Section.section_index)).scalars().all()
 
     # Convert into the API model.
     pages = []
