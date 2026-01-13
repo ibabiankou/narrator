@@ -1,6 +1,6 @@
 import logging
 
-from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline
+from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline, SingleWhitespace
 
 logger = logging.getLogger(ParagraphBuilder.__module__)
 logger.setLevel(logging.DEBUG)
@@ -63,9 +63,9 @@ def test_remove_null_characters():
     assert "\0" in test
 
     transformer = RemoveKeywords()
-    clered = transformer(test)
+    cleared = transformer(test)
 
-    assert "\0" not in clered
+    assert "\0" not in cleared
 
 def test_empty_pipeline():
     text = f"""some text
@@ -77,3 +77,11 @@ def test_empty_pipeline():
     cleaned_text = pipeline(text)
 
     assert text == cleaned_text
+
+def test_whitespaces():
+    text = """Book	One DUNE\n\nA	beginning   is"""
+
+    transformer = SingleWhitespace()
+    cleared = transformer(text)
+
+    assert cleared == "Book One DUNE A beginning is"

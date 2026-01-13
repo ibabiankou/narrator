@@ -1,3 +1,4 @@
+import re
 from typing import Protocol
 
 from pypdf import PdfReader
@@ -140,8 +141,14 @@ class RemoveKeywords(LineTransformer):
         return line
 
 
+class SingleWhitespace(LineTransformer):
+    expression = re.compile(r"\s+")
+    def __call__(self, line: str) -> str:
+        return self.expression.sub(" ", line)
+
+
 class CleanupPipeline:
-    ALL_TRANSFORMERS = [RemoveKeywords()]
+    ALL_TRANSFORMERS = [RemoveKeywords(), SingleWhitespace()]
     def __init__(self, transformers: list[LineTransformer] = None):
         self.transformers: list[LineTransformer] = transformers or []
 
