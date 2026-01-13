@@ -29,11 +29,11 @@ class BookService(Service):
         # Upload page files to the object store
         self.files_service.upload_book_pages(book, pdf_pages)
 
-    def get_raw_text(self, book: Book, first_page: int = None, last_page: int = None):
+    def get_text(self, book: Book, first_page: int = None, last_page: int = None, raw: bool = False):
         pdf_file = self.files_service.get_book_file(book)
         pdf_reader = PdfReader(pdf_file)
 
-        line_reader = LineReader(pdf_reader, CleanupPipeline())
+        line_reader = LineReader(pdf_reader, CleanupPipeline([] if raw else CleanupPipeline.ALL_TRANSFORMERS))
         lines = []
         while line_reader.has_next():
             page_index, line = line_reader.next()
