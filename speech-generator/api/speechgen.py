@@ -69,7 +69,6 @@ class SpeechGenService(Service):
                     continue
                 for result in self.speech_pipeline.generate_from_tokens(tokens=chunk, voice=voice, speed=speed):
                     sf.write(result.audio)
-                sf.write(self._silence(0.1))
 
             audio_buf.seek(0)
             return GeneratedSpeech(content=audio_buf.read(), content_type=f"audio/{audio_format}", duration=sf.frames / sf.samplerate)
