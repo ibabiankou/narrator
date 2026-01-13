@@ -1,9 +1,10 @@
 import logging
 
-from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline, SingleWhitespace
+from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline, SingleWhitespace, Quotes
 
 logger = logging.getLogger(ParagraphBuilder.__module__)
 logger.setLevel(logging.DEBUG)
+
 
 def test_example():
     pb = ParagraphBuilder()
@@ -19,6 +20,7 @@ of the shuttle’s recent atmospheric entry. It was currently zipping along at
 
     pb.append((0, lines[-1]))
     assert not pb.need_more_text()
+
 
 def test_imbalanced_quotes():
     pb = ParagraphBuilder()
@@ -57,6 +59,7 @@ def test_empty_lines():
     assert pb.need_more_text()
     assert pb.build() == (1, "")
 
+
 def test_remove_null_characters():
     test = "something with \0 character"
 
@@ -66,6 +69,7 @@ def test_remove_null_characters():
     cleared = transformer(test)
 
     assert "\0" not in cleared
+
 
 def test_empty_pipeline():
     text = f"""some text
@@ -78,6 +82,7 @@ def test_empty_pipeline():
 
     assert text == cleaned_text
 
+
 def test_whitespaces():
     text = """Book	One DUNE\n\nA	beginning   is"""
 
@@ -85,3 +90,12 @@ def test_whitespaces():
     cleared = transformer(text)
 
     assert cleared == "Book One DUNE A beginning is"
+
+
+def test_quotes():
+    text = "from“A Child’s History of Muad’Dib” by «the» ‹Princess› ‘Irulan’"
+
+    transformer = Quotes()
+    cleared = transformer(text)
+
+    assert cleared == "from\"A Child's History of Muad'Dib\" by \"the\" 'Princess' 'Irulan'"

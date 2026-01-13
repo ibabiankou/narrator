@@ -143,12 +143,32 @@ class RemoveKeywords(LineTransformer):
 
 class SingleWhitespace(LineTransformer):
     expression = re.compile(r"\s+")
+
     def __call__(self, line: str) -> str:
         return self.expression.sub(" ", line)
 
 
+class Quotes(LineTransformer):
+    pairs = {
+        "“": "\"",
+        "”": "\"",
+        "«": "\"",
+        "»": "\"",
+        "‹": "'",
+        "›": "'",
+        "‘": "'",
+        "’": "'",
+    }
+
+    def __call__(self, line: str) -> str:
+        for key, value in self.pairs.items():
+            line = line.replace(key, value)
+        return line
+
+
 class CleanupPipeline:
-    ALL_TRANSFORMERS = [RemoveKeywords(), SingleWhitespace()]
+    ALL_TRANSFORMERS = [RemoveKeywords(), SingleWhitespace(), Quotes()]
+
     def __init__(self, transformers: list[LineTransformer] = None):
         self.transformers: list[LineTransformer] = transformers or []
 
