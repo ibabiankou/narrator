@@ -8,7 +8,7 @@ from sqlalchemy import update
 from api import get_logger
 from api.models.db import Book, Section, DbSession, BookStatus
 from api.services.files import FilesServiceDep
-from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader
+from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader, CleanupPipeline
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
@@ -33,7 +33,7 @@ class BookService(Service):
         pdf_file = self.files_service.get_book_file(book)
         pdf_reader = PdfReader(pdf_file)
 
-        line_reader = LineReader(pdf_reader)
+        line_reader = LineReader(pdf_reader, CleanupPipeline())
         lines = []
         while line_reader.has_next():
             page_index, line = line_reader.next()
@@ -100,7 +100,7 @@ class BookService(Service):
 def split_into_sections(pdf_reader: PdfReader):
     sections = []
 
-    line_reader = LineReader(pdf_reader)
+    line_reader = LineReader(pdf_reader, CleanupPipeline(CleanupPipeline.ALL_TRANSFORMERS))
     while line_reader.has_next():
         section_builder = SectionBuilder()
         while section_builder.need_more_text() and line_reader.has_next():

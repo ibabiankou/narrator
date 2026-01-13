@@ -1,6 +1,6 @@
 import logging
 
-from api.utils.text import ParagraphBuilder, LineReader
+from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline
 
 logger = logging.getLogger(ParagraphBuilder.__module__)
 logger.setLevel(logging.DEBUG)
@@ -62,6 +62,18 @@ def test_remove_null_characters():
 
     assert "\0" in test
 
-    clered = LineReader._remove_key_words(test)
+    transformer = RemoveKeywords()
+    clered = transformer(test)
 
     assert "\0" not in clered
+
+def test_empty_pipeline():
+    text = f"""some text
+    
+    {RemoveKeywords.key_words[0]}
+    more text"""
+
+    pipeline = CleanupPipeline()
+    cleaned_text = pipeline(text)
+
+    assert text == cleaned_text

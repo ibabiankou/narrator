@@ -1,3 +1,5 @@
+from typing import Protocol
+
 from pypdf import PdfReader
 
 from api import get_logger
@@ -123,25 +125,45 @@ class SectionBuilder:
         return {"page_index": self.page_index, "content": self.text}
 
 
+class LineTransformer(Protocol):
+    def __call__(self, line: str) -> str:
+        """Modify a line of raw text and return the result."""
+        pass
+
+
+class RemoveKeywords(LineTransformer):
+    key_words = ["OceanofPDF.com", "OceanofPDF .com", "\0"]
+
+    def __call__(self, line: str) -> str:
+        for key_word in self.key_words:
+            line = line.replace(key_word, "")
+        return line
+
+
+class CleanupPipeline:
+    ALL_TRANSFORMERS = [RemoveKeywords()]
+    def __init__(self, transformers: list[LineTransformer] = None):
+        self.transformers: list[LineTransformer] = transformers or []
+
+    def __call__(self, line: str) -> str:
+        for transformer in self.transformers:
+            line = transformer(line)
+        return line
+
+
 class LineReader:
-    def __init__(self, pdf_reader: PdfReader):
+    def __init__(self, pdf_reader: PdfReader, cleanup_pipeline: CleanupPipeline):
+        self.cleanup_pipeline = cleanup_pipeline
         self.lines = self._read_lines(pdf_reader)
         self.line_index = 0
-
-    @staticmethod
-    def _remove_key_words(text: str) -> str:
-        # TODO: extract the list of key words to some kind of config...
-        key_words = ["OceanofPDF.com", "OceanofPDF .com", "\0"]
-        for key_word in key_words:
-            text = text.replace(key_word, "")
-        return text
 
     def _read_lines(self, pdf_reader: PdfReader):
         lines = []
         pages = pdf_reader.pages
         for page_index in range(len(pages)):
-            page_lines = self._remove_key_words(pages[page_index].extract_text()).splitlines()
-            for line in page_lines:
+            page_lines = pages[page_index].extract_text().splitlines()
+            for raw_line in page_lines:
+                line = self.cleanup_pipeline(raw_line)
                 if len(line.strip()) > 0:
                     lines.append((page_index, line.strip()))
         return lines
