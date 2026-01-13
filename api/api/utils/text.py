@@ -101,7 +101,6 @@ class ParagraphBuilder:
 
 class SectionBuilder:
     def __init__(self, target_length: int = 500):
-        # It takes around 25s to generate speech for 300 char snippet of text.
         self.text = ""
         self.page_index = None
         self.target_length = target_length
@@ -110,14 +109,16 @@ class SectionBuilder:
         return len(self.text) < self.target_length
 
     def is_empty(self):
-        return len(self.text.strip()) > 0
+        return len(self.text.strip()) == 0
 
     def append(self, line: tuple[int, str]):
         if self.page_index is None or (self.page_index != line[0] and self.is_empty()):
             self.page_index = line[0]
 
         if len(line[1].strip()) > 0:
-            self.text += line[1] + "\n"
+            if not self.is_empty():
+                self.text += "\n"
+            self.text += line[1]
 
     def build(self):
         if len(self.text) > self.target_length * 2:
@@ -219,7 +220,6 @@ class ParagraphBuilderV2:
     def __init__(self):
         self.page_index = None
         self.text = ""
-        self.quote_count = 0
 
         # Number of lines within which more speech is expected.
         self.expect_more_speech = 0
@@ -244,7 +244,6 @@ class ParagraphBuilderV2:
         starts_with_lower = self._starts_with_lower(line[1])
 
         if (len(self.text) > 0
-                and self.quote_count % 2 == 0
                 and self.expect_more_speech == 0
                 and self.is_complete_sentence
                 and not starts_with_lower):
@@ -273,7 +272,6 @@ class ParagraphBuilderV2:
                 else:
                     self.expect_more_speech = 0
 
-                self.quote_count += 1
                 continue
 
             self.is_complete_sentence = character in self._sentence_finishers
@@ -296,5 +294,19 @@ def pages_to_paragraphs(pages: list[str]) -> list[tuple[int, str]]:
 
     return paragraphs
 
-def paragraphs_to_sections(paragraphs: list[tuple[int, str]]) -> list[tuple[int, str]]:
-    pass
+def paragraphs_to_sections(paragraphs: list[tuple[int, str]]) -> list[dict]:
+    i = 0
+    sections = []
+    sb = SectionBuilder()
+    while i < len(paragraphs):
+        if sb.need_more_text():
+            sb.append(paragraphs[i])
+            i += 1
+        else:
+            sections.append(sb.build())
+            sb = SectionBuilder()
+
+    if not sb.is_empty():
+        sections.append(sb.build())
+
+    return sections

@@ -9,7 +9,8 @@ from sqlalchemy import update
 from api import get_logger
 from api.models.db import Book, Section, DbSession, BookStatus
 from api.services.files import FilesServiceDep
-from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader, CleanupPipeline, pages_to_paragraphs
+from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader, CleanupPipeline, pages_to_paragraphs, \
+    paragraphs_to_sections
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
@@ -73,7 +74,8 @@ class BookService(Service):
         doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
         pages = [p.get_text() for p in doc]
         page_num = len(pages)
-        section_dicts = split_into_sections(pages)
+        paragraphs = pages_to_paragraphs(pages)
+        section_dicts = paragraphs_to_sections(paragraphs)
 
         # Persist Sections in DB.
         sections = []
@@ -112,28 +114,5 @@ class BookService(Service):
     def get_book(self, book_id: uuid.UUID):
         with DbSession() as session:
             return session.get_one(Book, book_id)
-
-def split_into_sections(pages: list[str]):
-    sections = []
-    line_reader = LineReader(pages, CleanupPipeline(CleanupPipeline.ALL_TRANSFORMERS))
-    while line_reader.has_next():
-        section_builder = SectionBuilder()
-        while section_builder.need_more_text() and line_reader.has_next():
-            paragraph_builder = ParagraphBuilder()
-            while paragraph_builder.need_more_text() and line_reader.has_next():
-                paragraph_builder.append(line_reader.next())
-
-            if (section_builder.page_index is not None
-                    and paragraph_builder.page_index != section_builder.page_index
-                    and not section_builder.is_empty()
-            ):
-                sections.append(section_builder.build())
-                section_builder = SectionBuilder()
-
-            section_builder.append(paragraph_builder.build())
-
-        sections.append(section_builder.build())
-
-    return sections
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

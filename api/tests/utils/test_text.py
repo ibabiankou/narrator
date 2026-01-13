@@ -1,7 +1,7 @@
 import logging
 
 from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline, SingleWhitespace, Quotes, LineReader, \
-    ParagraphBuilderV2, pages_to_paragraphs
+    ParagraphBuilderV2, pages_to_paragraphs, paragraphs_to_sections
 from pypdf import PdfReader
 from tests.utils.pdf import create_pdf
 
@@ -117,20 +117,6 @@ def test_line_reader():
         current += 1
 
 
-def test_new_reader():
-    file = "/Users/ibabiankou/Downloads/_OceanofPDF.com_Dune_-_Frank_Herbert.pdf"
-
-    import pymupdf
-    doc = pymupdf.open(file)
-    i = 0
-    for page in doc:
-        text = page.get_text()
-        print("-" * 20, "Page", i, "-" * 20)
-        print(text)
-        print("-" * 46)
-        i += 1
-
-
 def test_paragraph_builder_v2():
     pb = ParagraphBuilderV2()
 
@@ -140,6 +126,7 @@ def test_paragraph_builder_v2():
     assert pb._starts_with_lower("test")
     assert not pb._starts_with_lower("- test")
     assert not pb._starts_with_lower("He")
+
 
 def test_pages_to_paragraphs():
     pages = [
