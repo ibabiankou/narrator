@@ -9,7 +9,7 @@ from sqlalchemy import update
 from api import get_logger
 from api.models.db import Book, Section, DbSession, BookStatus
 from api.services.files import FilesServiceDep
-from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader, CleanupPipeline
+from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader, CleanupPipeline, pages_to_paragraphs
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
@@ -48,6 +48,21 @@ class BookService(Service):
             lines.append(line)
 
         return "\n".join(lines)
+
+    def get_paragraphs(self, book: Book, first_page: int = None, last_page: int = None):
+        pdf_bytes = self.files_service.get_book_file(book)
+        doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
+        pages = [p.get_text() for p in doc]
+
+        result = []
+        for p in pages_to_paragraphs(pages):
+            if first_page is not None and p[0] < first_page:
+                continue
+            if last_page is not None and p[0] > last_page:
+                break
+            result.append(str(p))
+
+        return "\n".join(result)
 
     def extract_text(self, book: Book):
         LOG.info(f"Extracting text of the book {book.id}")

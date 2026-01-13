@@ -198,9 +198,103 @@ class LineReader:
         return self.line_index < len(self.lines)
 
     def next(self) -> tuple[int, str]:
+        line = self.view_next()
+        self.advance()
+        return line
+
+    def view_next(self):
         if self.has_next():
             line = self.lines[self.line_index]
-            self.line_index += 1
             return line
         else:
             raise LookupError()
+
+    def advance(self):
+        self.line_index += 1
+
+
+class ParagraphBuilderV2:
+    """Builder that accepts lines of text until it seems to represent a paragraph."""
+
+    def __init__(self):
+        self.page_index = None
+        self.text = ""
+        self.quote_count = 0
+
+        # Number of lines within which more speech is expected.
+        self.expect_more_speech = 0
+        # Should be true if the last char was one of [.!?] optionally followed by a closing quote.
+        self.is_complete_sentence = True
+
+        self._sentence_finishers = '.!?'
+        self._continuation_characters = '-–'
+
+    def _starts_with_lower(self, line: str):
+        i = -1
+        while i < len(line):
+            i += 1
+            if line[i] in self._continuation_characters:
+                continue
+            else:
+                return line[i].islower()
+        # TODO: Not quite sure what to do here...
+        return False
+
+    def offer(self, line: tuple[int, str]):
+        starts_with_lower = self._starts_with_lower(line[1])
+
+        if (len(self.text) > 0
+                and self.quote_count % 2 == 0
+                and self.expect_more_speech == 0
+                and self.is_complete_sentence
+                and not starts_with_lower):
+            # We are done, so reject the offered line.
+            return False
+
+        # Update page index if needed
+        if self.page_index is None:
+            self.page_index = line[0]
+
+        if len(self.text) > 0:
+            self.text += " "
+        self.text += line[1]
+
+        # We accept the line, so process it
+
+        if self.expect_more_speech > 0:
+            self.expect_more_speech -= 1
+
+        last_character = None
+        for character in line[1]:
+            if character == '"':
+                # TODO: for now only treat comma as an indicator of continuing speech.
+                if last_character == ',':
+                    self.expect_more_speech += 2
+                else:
+                    self.expect_more_speech = 0
+
+                self.quote_count += 1
+                continue
+
+            self.is_complete_sentence = character in self._sentence_finishers
+            last_character = character
+
+        return True
+
+    def build(self) -> tuple[int, str]:
+        return self.page_index, self.text.strip()
+
+
+def pages_to_paragraphs(pages: list[str]) -> list[tuple[int, str]]:
+    line_reader = LineReader(pages, CleanupPipeline(CleanupPipeline.ALL_TRANSFORMERS))
+    paragraphs = []
+    while line_reader.has_next():
+        paragraph_builder = ParagraphBuilderV2()
+        while line_reader.has_next() and paragraph_builder.offer(line_reader.view_next()):
+            line_reader.advance()
+        paragraphs.append(paragraph_builder.build())
+
+    return paragraphs
+
+def paragraphs_to_sections(paragraphs: list[tuple[int, str]]) -> list[tuple[int, str]]:
+    pass

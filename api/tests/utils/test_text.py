@@ -1,8 +1,8 @@
 import logging
 
+from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline, SingleWhitespace, Quotes, LineReader, \
+    ParagraphBuilderV2, pages_to_paragraphs
 from pypdf import PdfReader
-
-from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline, SingleWhitespace, Quotes, LineReader
 from tests.utils.pdf import create_pdf
 
 logger = logging.getLogger(ParagraphBuilder.__module__)
@@ -103,6 +103,7 @@ def test_quotes():
 
     assert cleared == "from\"A Child's History of Muad'Dib\" by \"the\" 'Princess' 'Irulan'"
 
+
 def test_line_reader():
     pdf_reader = PdfReader(create_pdf([["First line", "Another line"], ["Second page"]]))
     pages = [p.extract_text() for p in pdf_reader.pages]
@@ -115,6 +116,7 @@ def test_line_reader():
         assert line_reader.next() == expected[current]
         current += 1
 
+
 def test_new_reader():
     file = "/Users/ibabiankou/Downloads/_OceanofPDF.com_Dune_-_Frank_Herbert.pdf"
 
@@ -123,7 +125,35 @@ def test_new_reader():
     i = 0
     for page in doc:
         text = page.get_text()
-        print("-"*20, "Page", i, "-"*20)
+        print("-" * 20, "Page", i, "-" * 20)
         print(text)
-        print("-"*46)
-        i+=1
+        print("-" * 46)
+        i += 1
+
+
+def test_paragraph_builder_v2():
+    pb = ParagraphBuilderV2()
+
+    assert pb._starts_with_lower("-from")
+    assert pb._starts_with_lower("–from")
+    assert pb._starts_with_lower("she")
+    assert pb._starts_with_lower("test")
+    assert not pb._starts_with_lower("- test")
+    assert not pb._starts_with_lower("He")
+
+def test_pages_to_paragraphs():
+    pages = [
+        """A beginning is the time for taking the most delicate care that
+the balances are correct. This every sister of the Bene Gesserit
+knows. To begin your study of the life of Muad'Dib, then, take""",
+        """care that you first place him in his time: born in the 57th year of
+the Padishah Emperor, Shaddam IV. And take the most special
+care that you locate Muad'Dib in his place: the planet Arrakis.
+Do not be deceived by the fact that he was bom on Caladan and
+lived his first fifteen years there. Arrakis, the planet known as
+Dune, is forever his place."""
+    ]
+
+    paragraphs = pages_to_paragraphs(pages)
+    assert paragraphs[0] == (0, "A beginning is the time for taking the most delicate care that the balances are correct. This every sister of the Bene Gesserit knows. To begin your study of the life of Muad'Dib, then, take care that you first place him in his time: born in the 57th year of the Padishah Emperor, Shaddam IV. And take the most special care that you locate Muad'Dib in his place: the planet Arrakis.")
+    assert paragraphs[1] == (1, "Do not be deceived by the fact that he was bom on Caladan and lived his first fifteen years there. Arrakis, the planet known as Dune, is forever his place.")
