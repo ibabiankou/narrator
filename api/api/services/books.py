@@ -2,6 +2,7 @@ import uuid
 from io import BytesIO
 from typing import Annotated
 
+import pymupdf
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import update
 
@@ -30,10 +31,11 @@ class BookService(Service):
         self.files_service.upload_book_pages(book, pdf_pages)
 
     def get_text(self, book: Book, first_page: int = None, last_page: int = None, raw: bool = False):
-        pdf_file = self.files_service.get_book_file(book)
-        pdf_reader = PdfReader(pdf_file)
+        pdf_bytes = self.files_service.get_book_file(book)
+        doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
+        pages = [p.get_text() for p in doc]
 
-        line_reader = LineReader(pdf_reader, CleanupPipeline([] if raw else CleanupPipeline.ALL_TRANSFORMERS))
+        line_reader = LineReader(pages, CleanupPipeline([] if raw else CleanupPipeline.ALL_TRANSFORMERS))
         lines = []
         while line_reader.has_next():
             page_index, line = line_reader.next()
@@ -51,10 +53,12 @@ class BookService(Service):
         LOG.info(f"Extracting text of the book {book.id}")
 
         # Split each page into sections. A section is one or more paragraphs.
-        pdf_file = self.files_service.get_book_file(book)
-        pdf_reader = PdfReader(pdf_file)
-        page_num = len(pdf_reader.pages)
-        section_dicts = split_into_sections(pdf_reader)
+        pdf_bytes = self.files_service.get_book_file(book)
+
+        doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
+        pages = [p.get_text() for p in doc]
+        page_num = len(pages)
+        section_dicts = split_into_sections(pages)
 
         # Persist Sections in DB.
         sections = []
@@ -94,10 +98,9 @@ class BookService(Service):
         with DbSession() as session:
             return session.get_one(Book, book_id)
 
-def split_into_sections(pdf_reader: PdfReader):
+def split_into_sections(pages: list[str]):
     sections = []
-
-    line_reader = LineReader(pdf_reader, CleanupPipeline(CleanupPipeline.ALL_TRANSFORMERS))
+    line_reader = LineReader(pages, CleanupPipeline(CleanupPipeline.ALL_TRANSFORMERS))
     while line_reader.has_next():
         section_builder = SectionBuilder()
         while section_builder.need_more_text() and line_reader.has_next():

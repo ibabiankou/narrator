@@ -179,16 +179,15 @@ class CleanupPipeline:
 
 
 class LineReader:
-    def __init__(self, pdf_reader: PdfReader, cleanup_pipeline: CleanupPipeline):
+    def __init__(self, pages: list[str], cleanup_pipeline: CleanupPipeline):
         self.cleanup_pipeline = cleanup_pipeline
-        self.lines = self._read_lines(pdf_reader)
+        self.lines = self._read_lines(pages)
         self.line_index = 0
 
-    def _read_lines(self, pdf_reader: PdfReader):
+    def _read_lines(self, pages: list[str]):
         lines = []
-        pages = pdf_reader.pages
         for page_index in range(len(pages)):
-            page_lines = pages[page_index].extract_text().splitlines()
+            page_lines = pages[page_index].splitlines()
             for raw_line in page_lines:
                 line = self.cleanup_pipeline(raw_line)
                 if len(line.strip()) > 0:

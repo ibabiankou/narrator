@@ -1,6 +1,6 @@
 import logging
 
-from pypdf import PdfReader, PdfWriter
+from pypdf import PdfReader
 
 from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline, SingleWhitespace, Quotes, LineReader
 from tests.utils.pdf import create_pdf
@@ -105,7 +105,8 @@ def test_quotes():
 
 def test_line_reader():
     pdf_reader = PdfReader(create_pdf([["First line", "Another line"], ["Second page"]]))
-    line_reader = LineReader(pdf_reader, CleanupPipeline([]))
+    pages = [p.extract_text() for p in pdf_reader.pages]
+    line_reader = LineReader(pages, CleanupPipeline([]))
 
     expected = [(0, "First line"), (0, "Another line"), (1, "Second page")]
     current = 0
@@ -113,3 +114,16 @@ def test_line_reader():
     while line_reader.has_next():
         assert line_reader.next() == expected[current]
         current += 1
+
+def test_new_reader():
+    file = "/Users/ibabiankou/Downloads/_OceanofPDF.com_Dune_-_Frank_Herbert.pdf"
+
+    import pymupdf
+    doc = pymupdf.open(file)
+    i = 0
+    for page in doc:
+        text = page.get_text()
+        print("-"*20, "Page", i, "-"*20)
+        print(text)
+        print("-"*46)
+        i+=1
