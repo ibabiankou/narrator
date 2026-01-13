@@ -80,8 +80,10 @@ class AudioTrackService(Service):
 
     def synthesize_speech(self, book_id: uuid.UUID, section_id: int, track_id: int, phonemes: str, voice: str):
         file_path = self.files_service.speech_filename(book_id, f"{track_id}.mp3")
-        msg = rmq.SynthesizeSpeech(book_id=book_id, section_id=section_id, track_id=track_id, phonemes=phonemes,
-                                   file_path=file_path, voice=voice)
+        # Here I assume that pretending it's a single consecutive text will produce a better speech.
+        single_line_phonemes = phonemes.replace("\n", " ")
+        msg = rmq.SynthesizeSpeech(book_id=book_id, section_id=section_id, track_id=track_id,
+                                   phonemes=single_line_phonemes, file_path=file_path, voice=voice)
         self.rmq_client.publish("synthesize", msg)
 
     def delete_for_sections(self, sections: list[db.Section]):
