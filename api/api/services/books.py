@@ -56,9 +56,6 @@ class BookService(Service):
         page_num = len(pdf_reader.pages)
         section_dicts = split_into_sections(pdf_reader)
 
-        # TODO: clean up text,
-        # TODO: convert into phonemes,
-
         # Persist Sections in DB.
         sections = []
         for section_index in range(len(section_dicts)):

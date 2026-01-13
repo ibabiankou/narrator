@@ -1,6 +1,9 @@
 import logging
 
-from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline, SingleWhitespace, Quotes
+from pypdf import PdfReader, PdfWriter
+
+from api.utils.text import ParagraphBuilder, RemoveKeywords, CleanupPipeline, SingleWhitespace, Quotes, LineReader
+from tests.utils.pdf import create_pdf
 
 logger = logging.getLogger(ParagraphBuilder.__module__)
 logger.setLevel(logging.DEBUG)
@@ -99,3 +102,14 @@ def test_quotes():
     cleared = transformer(text)
 
     assert cleared == "from\"A Child's History of Muad'Dib\" by \"the\" 'Princess' 'Irulan'"
+
+def test_line_reader():
+    pdf_reader = PdfReader(create_pdf([["First line", "Another line"], ["Second page"]]))
+    line_reader = LineReader(pdf_reader, CleanupPipeline([]))
+
+    expected = [(0, "First line"), (0, "Another line"), (1, "Second page")]
+    current = 0
+
+    while line_reader.has_next():
+        assert line_reader.next() == expected[current]
+        current += 1
