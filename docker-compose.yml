@@ -88,6 +88,9 @@ services:
       RMQ_PORT: 5672
       RMQ_USERNAME: narrator
       RMQ_PASSWORD: narrator
+      AUDIO_FORMAT: ogg
+      AUDIO_SUBTYPE: OPUS
+      AUDIO_CONTENT_TYPE: audio/ogg
     depends_on:
       s3:
         condition: service_healthy

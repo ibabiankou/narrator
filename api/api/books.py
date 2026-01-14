@@ -10,7 +10,7 @@ from api import SessionDep, get_logger
 from api.models import db, api
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
-from api.services.files import FilesServiceDep
+from api.services.files import FilesServiceDep, NotModified
 from api.services.sections import SectionServiceDep
 
 LOG = get_logger(__name__)
