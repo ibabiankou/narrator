@@ -1,8 +1,9 @@
+import io
 import uuid
 from datetime import datetime, UTC
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Header
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Header, Request
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
@@ -139,6 +140,100 @@ def get_book_content(book_id: uuid.UUID,
                                        content=section.content)
         pages_dict[section.page_index].sections.append(book_section)
     return api.BookContent(pages=pages)
+
+
+@books_router.get("/{book_id}/stream")
+def stream_book(book_id: uuid.UUID,
+                session: SessionDep,
+                file_service: FilesServiceDep,
+                request: Request
+                ):
+    book = session.get(db.Book, book_id)
+    if book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    stmt = select(db.AudioTrack).where(db.AudioTrack.book_id == book_id).where(
+        db.AudioTrack.status == db.AudioStatus.ready).order_by(db.AudioTrack.playlist_order)
+    ready_tracks = list(session.execute(stmt).scalars().all())
+    LOG.info("Loaded %s tracks", len(ready_tracks))
+
+    # duration_sum = [0]
+    bytes_sum = [0]
+    for track in ready_tracks:
+        # duration_sum.append(duration_sum[-1] + track.duration)
+        bytes_sum.append(bytes_sum[-1] + track.bytes)
+
+    # total_duration = duration_sum[-1]
+    total_bytes = bytes_sum[-1]
+
+    # Handle Range Header: "bytes=0-1023"
+    range_header = request.headers.get("Range")
+    if range_header:
+        range_type, range_val = range_header.split("=")
+        start_str, sep, end_str = range_val.partition("-")
+        if range_type != "bytes":
+            raise HTTPException(status_code=400, detail="Only 'bytes' range type is supported.")
+    else:
+        start_str = "0"
+        end_str = None
+
+    start = int(start_str) if start_str else 0
+    default_length = 1024 * 1024
+    end = min(int(end_str) if end_str else start + default_length - 1, total_bytes - 1)
+    content_length = end - start + 1
+
+    LOG.info("Total bytes available %s", total_bytes)
+    LOG.info("Processing range: %s-%s", start, end)
+    LOG.info("Expected content length: %s", content_length)
+
+    # Find the tracks corresponding to the range request;
+    # Load the tracks, concatenate the data.
+    content = io.BytesIO()
+    content_type = None
+    remaining = content_length
+    i = 0
+    while remaining > 0 and i < len(ready_tracks):
+        # Skip tracks outside the range;
+        if bytes_sum[i + 1] < start:
+            i += 1
+            continue
+
+        track = ready_tracks[i]
+        track_bytes_start = max(start - bytes_sum[i], 0)
+        track_bytes_end = min(track_bytes_start + remaining - 1, track.bytes - 1)
+        track_content_length = track_bytes_end - track_bytes_start + 1
+
+        track_range = f"bytes={track_bytes_start}-{track_bytes_end}"
+        file_data = file_service.get_speech_file(book_id, track.file_name, range=track_range)
+        if file_data is None:
+            raise HTTPException(status_code=404, detail=f"Speech file {track.file_name} not found")
+        content.write(file_data.body)
+        LOG.info("Loaded %s bytes for track %s, requested range %s, out of %s",
+                 len(file_data.body), track.file_name, track_range, track.bytes)
+
+        if content_type is None:
+            content_type = file_data.content_type
+        elif content_type != file_data.content_type:
+            raise HTTPException(status_code=500, detail="Tracks have different content types")
+
+        remaining -= track_content_length
+        i += 1
+        if remaining <= 0:
+            break
+
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Content-Range": f"bytes {start}-{end}/{total_bytes}",
+        "Content-Length": str(content_length),
+    }
+    content.seek(0)
+    content_bytes = content.read()
+    LOG.info("Actual size of bytes loaded: %s", len(content_bytes))
+    return Response(
+        content=content_bytes,
+        status_code=206,
+        media_type="audio/ogg",
+        headers=headers)
 
 
 @books_router.get("/{book_id}/pages/{page_file_name}")

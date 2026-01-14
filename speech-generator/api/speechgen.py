@@ -66,7 +66,7 @@ class SpeechGenService(Service):
         with SoundFile(audio_buf, mode="w",
                        format=audio_format, subtype=audio_subtype,
                        samplerate=24000, channels=1,
-                       compression_level=0.5) as sf:
+                       compression_level=0.85) as sf:
             chunks = phonemes.split("\n")
             for chunk in chunks:
                 if not chunk.strip():
