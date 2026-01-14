@@ -90,8 +90,13 @@ class FilesService(Service):
             else:
                 raise e
 
-    def speech_filename(self, book_id: uuid.UUID, file_name: str):
-        return f"{book_id}/speech/{file_name}"
+    @staticmethod
+    def speech_filename(book_id: uuid.UUID, file_name: str = ""):
+        if file_name:
+            return f"{book_id}/speech/{file_name}"
+        else:
+            return f"{book_id}/speech"
+
 
     def get_speech_file(self,
                         book_id: uuid.UUID,

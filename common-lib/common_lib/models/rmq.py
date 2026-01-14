@@ -27,6 +27,7 @@ class SynthesizeSpeech(RMQMessage):
     section_id: int
     track_id: int
     phonemes: str
+    # Path to a directory where the speech file should be uploaded.
     file_path: str
 
     voice: str = "am_adam"
@@ -37,5 +38,7 @@ class SpeechResponse(RMQMessage):
     book_id: uuid.UUID
     section_id: int
     track_id: int
+    # Path to the speech file generated.
     file_path: str
     duration: float
+    bytes: int

@@ -1,10 +1,11 @@
+import mimetypes
 import os
+import uuid
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Annotated
 
 import boto3
-import numpy as np
 from botocore.exceptions import ClientError
 from kokoro import KModel, KPipeline
 from soundfile import SoundFile
@@ -60,8 +61,12 @@ class SpeechGenService(Service):
 
     def synthesize(self, phonemes: str, voice: str = "am_adam", speed: float = 1) -> GeneratedSpeech:
         audio_buf = BytesIO()
-        audio_format = "mp3"
-        with SoundFile(audio_buf, mode="w", format=audio_format, samplerate=24000, channels=1,
+        audio_format = os.getenv("AUDIO_FORMAT", "mp3")
+        audio_subtype = os.getenv("AUDIO_SUBTYPE", "MPEG_LAYER_III")
+        content_type = os.getenv("AUDIO_CONTENT_TYPE", "audio/mpeg")
+        with SoundFile(audio_buf, mode="w",
+                       format=audio_format, subtype=audio_subtype,
+                       samplerate=24000, channels=1,
                        compression_level=0.5) as sf:
             chunks = phonemes.split("\n")
             for chunk in chunks:
@@ -71,18 +76,44 @@ class SpeechGenService(Service):
                     sf.write(result.audio)
 
             audio_buf.seek(0)
-            return GeneratedSpeech(content=audio_buf.read(), content_type=f"audio/{audio_format}", duration=sf.frames / sf.samplerate)
-
-    def _silence(self, duration_s: float):
-        return np.zeros(int(duration_s * 24000), dtype=np.int16)  # 24kHz sample rate
+            return GeneratedSpeech(content=audio_buf.read(), content_type=content_type, duration=sf.frames / sf.samplerate)
 
     def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
         result = self.synthesize(payload.phonemes, payload.voice, payload.speed)
-        self._upload_file(payload.file_path, result.content_type, result.content)
+
+        file_ext = mimetypes.guess_extension(result.content_type)
+        if file_ext is None:
+            raise ValueError(f"Unable to guess file extension based on content type: {result.content_type}")
+        key = f"{payload.file_path}/{payload.track_id}{file_ext}"
+        self._upload_file(key, result.content_type, result.content)
         payload = rmq.SpeechResponse(book_id=payload.book_id, section_id=payload.section_id, track_id=payload.track_id,
-                                     file_path=payload.file_path, duration=result.duration)
+                                     file_path=key, duration=result.duration, bytes=len(result.content))
         self.rmq_client.publish(routing_key="speech", payload=payload)
+
+    def convert_book(self, book_id: uuid.UUID):
+        speech_prefix = f"{book_id}/speech"
+        keys: list[str] = self._list_files(speech_prefix)
+        for key in keys:
+            if not key.endswith(".mp3"):
+                continue
+            # Load content
+            mp3_bytes = self._load_file(key)
+
+            # Convert into ogg
+            # read the mp3 stuff
+            with SoundFile(mp3_bytes, mode="r", format="mp3", samplerate=24000, channels=1) as mp3f:
+
+                # Write as ogg stuff
+                audio_buf = BytesIO()
+                with SoundFile(audio_buf, mode="w", format="ogg", samplerate=24000, channels=1, compression_level=0.5) as oggf:
+                    oggf.write(mp3f.read())
+                    audio_buf.seek(0)
+
+                    # Upload it back.
+                    ogg_key = key.replace(".mp3", ".oga")
+                    self._upload_file(ogg_key, "audio/ogg", audio_buf.read())
+
 
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):
         try:
@@ -94,5 +125,21 @@ class SpeechGenService(Service):
         except ClientError as e:
             LOG.error(e)
             raise e
+
+    def _list_files(self, path_prefix: str):
+        paginator = self.s3_client.get_paginator('list_objects_v2')
+
+        keys = []
+        for page in paginator.paginate(Bucket=self.bucket_name, Prefix=path_prefix):
+            if "Contents" in page:
+                for obj in page["Contents"]:
+                    keys.append(obj["Key"])
+
+        return keys
+
+    def _load_file(self, key: str) -> bytes:
+        s3_object = self.s3_client.get_object(Bucket=self.bucket_name,
+                                              Key=key)
+        return s3_object["Body"].read()
 
 SpeechGenServiceDep = Annotated[SpeechGenService, SpeechGenService.dep()]

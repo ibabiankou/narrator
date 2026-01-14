@@ -90,6 +90,7 @@ class AudioTrack(Base):
     file_name: Mapped[Optional[str]]
 
     duration: Mapped[Optional[float]]
+    bytes: Mapped[Optional[int]]
 
 
 class PlaybackProgress(Base):
