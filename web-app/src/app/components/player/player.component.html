@@ -17,12 +17,12 @@
     </button>
   </div>
   <div class="main-controls">
-    <button matIconButton (click)="previous($event)">
-      <mat-icon>skip_previous</mat-icon>
-    </button>
-    <button matIconButton (click)="replay($event)">
-      <mat-icon>replay_5</mat-icon>
-    </button>
+<!--    <button matIconButton (click)="previous($event)">-->
+<!--      <mat-icon>skip_previous</mat-icon>-->
+<!--    </button>-->
+<!--    <button matIconButton (click)="replay($event)">-->
+<!--      <mat-icon>replay_5</mat-icon>-->
+<!--    </button>-->
     <button matIconButton class="play-pause" (click)="playPause($event)">
       @if ($isPlaying | async) {
         <mat-icon>pause</mat-icon>
@@ -30,12 +30,12 @@
         <mat-icon>play_arrow</mat-icon>
       }
     </button>
-    <button matIconButton (click)="forward($event)">
-      <mat-icon>forward_5</mat-icon>
-    </button>
-    <button matIconButton (click)="next($event)">
-      <mat-icon>skip_next</mat-icon>
-    </button>
+<!--    <button matIconButton (click)="forward($event)">-->
+<!--      <mat-icon>forward_5</mat-icon>-->
+<!--    </button>-->
+<!--    <button matIconButton (click)="next($event)">-->
+<!--      <mat-icon>skip_next</mat-icon>-->
+<!--    </button>-->
   </div>
   <div class="settings right">
     <button matIconButton (click)="toggleFontSize($event)">

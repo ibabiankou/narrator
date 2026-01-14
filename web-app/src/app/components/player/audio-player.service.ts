@@ -1,14 +1,15 @@
-import { AudioTrack, BookDetails } from '../../core/models/books.dto';
+import { AudioTrack, BookDetails, PlaybackProgress } from '../../core/models/books.dto';
 import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
-  combineLatest, combineLatestWith, distinct,
+  combineLatest,
+  combineLatestWith,
+  distinct,
   filter,
   interval,
-  map, Observable,
-  switchMap,
+  map,
+  Observable,
   take,
-  zip,
 } from 'rxjs';
 import { Injectable } from '@angular/core';
 import { PlaylistsService } from '../../core/services/playlists.service';
@@ -40,6 +41,8 @@ export class AudioPlayerService {
   // Holds global book time at which each track starts.
   private durationSum: number[] = [0];
 
+  private $currentTime = new BehaviorSubject<number>(0);
+
   $trackIndex = new BehaviorSubject<number>(0);
   private $trackOffset = new BehaviorSubject<number>(0);
   private $currentContextTime = new BehaviorSubject<number>(0);
@@ -55,13 +58,13 @@ export class AudioPlayerService {
       distinct()
     );
 
-  $trackProgress = combineLatest([this.$trackIndex, this.$currentContextTime])
-    .pipe(
-      map(([trackIndex, progress]) => ({
-        track: this.tracks[trackIndex]?.audioTrack,
-        progressSeconds: progress,
-      }))
-    );
+  // private $trackProgress = combineLatest([this.$trackIndex, this.$currentContextTime])
+  //   .pipe(
+  //     map(([trackIndex, progress]) => ({
+  //       track: this.tracks[trackIndex]?.audioTrack,
+  //       progressSeconds: progress,
+  //     }))
+  //   );
 
   // Progress from the start of the book.
   $globalProgressSeconds = combineLatest([this.$trackIndex, this.$currentContextTime])
@@ -70,7 +73,7 @@ export class AudioPlayerService {
   $playbackPosition: Observable<PlaybackPosition> = combineLatest([this.$playbackRate, this.$globalProgressSeconds])
     .pipe(filter(() => this.tracks.length > 0))
     .pipe(map(([playbackRate, globalProgressSeconds]) => {
-      const lastTrackIndex = this.tracks.length-1;
+      const lastTrackIndex = this.tracks.length - 1;
       const lastTrackDuration = this.tracks[lastTrackIndex].audioTrack.duration;
       const lastTrackStartAt = this.durationSum[lastTrackIndex];
       const duration = lastTrackStartAt + lastTrackDuration;
@@ -83,41 +86,25 @@ export class AudioPlayerService {
     }));
 
   constructor(private playlistService: PlaylistsService) {
+    this.$bookDetails.pipe(
+      filter(book => book != null),
+    ).subscribe(book => {
+      this.reset();
+
+      this.audio = new Audio(`${environment.api_base_url}/books/${book.id}/stream`);
+      this.audio.preservesPitch = true;
+      this.audio.playbackRate = this.$playbackRate.value;
+
+      this.audio.addEventListener('timeupdate', () => this.readProgress());
+
+      this.audio.currentTime = this.$currentTime.value;
+    });
+
     this.$playbackRate.subscribe(() => {
       if (this.audio) {
         this.audio.playbackRate = this.$playbackRate.value;
       }
     });
-    zip([this.$trackIndex, this.$trackOffset])
-      .pipe(
-        filter(([trackIndex, _]) => trackIndex >= 0 && trackIndex < this.tracks.length),
-        filter(() => this.$status.value == PlayerStatus.playing)
-      ).subscribe(([trackIndex, trackOffset]) => {
-        this.stopTheMusic();
-
-        const track = this.tracks[trackIndex];
-        if (track == null) {
-          console.log("Invalid track index");
-          return;
-        }
-
-        const audio = new Audio(track.url);
-        this.audio = audio;
-
-        audio.addEventListener('timeupdate', () => this.readProgress());
-        audio.addEventListener('ended', () => {
-          if (this.tracks.length > trackIndex + 1) {
-            this.playTrack(trackIndex + 1, 0);
-          }
-        });
-
-        audio.currentTime = trackOffset;
-        audio.preservesPitch = true;
-        audio.playbackRate = this.$playbackRate.value;
-
-        audio.play();
-      }
-    );
 
     interval(1000)
       .pipe(
@@ -125,11 +112,11 @@ export class AudioPlayerService {
         filter(([_, isPlaying]) => isPlaying),
       ).subscribe(() => this.readProgress());
 
-    interval(5000)
-      .pipe(
-        combineLatestWith(this.$isPlaying),
-        filter(([_, isPlaying]) => isPlaying),
-      ).subscribe(() => this.updateProgress());
+    // interval(5000)
+    //   .pipe(
+    //     combineLatestWith(this.$isPlaying),
+    //     filter(([_, isPlaying]) => isPlaying),
+    //   ).subscribe(() => this.updateProgress());
   }
 
   private readProgress() {
@@ -138,28 +125,24 @@ export class AudioPlayerService {
     }
   }
 
-  private updateProgress() {
-    combineLatest([this.$trackProgress, this.$playbackRate])
-      .pipe(
-        take(1),
-        switchMap(([{track, progressSeconds}, playbackRate]) => {
-          return this.playlistService.updateProgress({
-            "book_id": track.book_id,
-            "section_id": track.section_id,
-            "section_progress_seconds": progressSeconds,
-            // TODO: Replace POST with PATCH, so that all fields in request are optional.
-            //  And API updates only provided fields.
-            // "sync_current_section": this.syncCurrentSection(),
-            "sync_current_section": true,
-            "playback_rate": playbackRate
-          });
-        })
-      ).subscribe();
-  }
-
-  getNumberOfTracks() {
-    return this.tracks.length;
-  }
+  // private updateProgress() {
+  //   combineLatest([this.$trackProgress, this.$playbackRate])
+  //     .pipe(
+  //       take(1),
+  //       switchMap(([{track, progressSeconds}, playbackRate]) => {
+  //         return this.playlistService.updateProgress({
+  //           "book_id": track.book_id,
+  //           "section_id": track.section_id,
+  //           "section_progress_seconds": progressSeconds,
+  //           // TODO: Replace POST with PATCH, so that all fields in request are optional.
+  //           //  And API updates only provided fields.
+  //           // "sync_current_section": this.syncCurrentSection(),
+  //           "sync_current_section": true,
+  //           "playback_rate": playbackRate
+  //         });
+  //       })
+  //     ).subscribe();
+  // }
 
   addTracks(tracks: AudioTrack[]) {
     const baseUrl = environment.api_base_url
@@ -179,21 +162,18 @@ export class AudioPlayerService {
   }
 
   playTrack(trackIndex: number, offsetSeconds: number) {
-    this.$trackIndex.next(trackIndex);
-    this.$trackOffset.next(offsetSeconds);
-    this.$currentContextTime.next(offsetSeconds);
+    // TODO: Instead of setting track and offset, I should simply set the global progress,
+    //  which will be translated into track and offset.
+    // this.$trackIndex.next(trackIndex);
+    // this.$trackOffset.next(offsetSeconds);
+    // this.$currentContextTime.next(offsetSeconds);
   }
 
   play() {
-    combineLatest([this.$status, this.$trackIndex, this.$trackOffset]).pipe(take(1)).subscribe(
-      ([status, index, offset]) => {
-        this.$status.next(PlayerStatus.playing);
-        if (status == PlayerStatus.paused) {
-          this.audio?.play();
-        } else if (status == PlayerStatus.stopped) {
-          this.playTrack(index, offset);
-        }
-      });
+    if (this.audio) {
+      this.audio.play();
+      this.$status.next(PlayerStatus.playing);
+    }
   }
 
   pause() {
@@ -303,10 +283,6 @@ export class AudioPlayerService {
     this.$playbackRate.next(Math.max(Math.min(newRate, maxValue), minValue));
   }
 
-  setPlaybackRate(playback_rate: number) {
-    this.$playbackRate.next(playback_rate);
-  }
-
   private stopTheMusic() {
     if (!this.audio) {
       return;
@@ -321,5 +297,11 @@ export class AudioPlayerService {
 
   setBookDetails(book: BookDetails) {
     this.$bookDetails.next(book);
+  }
+
+  setPlaybackProgress(progress: PlaybackProgress) {
+    // TODO: Set global progress, seconds. Set total narrated duration.
+    this.$playbackRate.next(progress.playback_rate);
+    this.$currentTime.next(progress.global_progress_seconds);
   }
 }

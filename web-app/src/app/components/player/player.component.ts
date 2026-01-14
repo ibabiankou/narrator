@@ -1,21 +1,17 @@
 import { Component, HostListener, input, model, OnDestroy, OnInit, output } from '@angular/core';
-import { AudioTrack, BookDetails, BookStatus, PlaybackProgress, Playlist } from '../../core/models/books.dto';
+import { BookDetails, PlaybackProgress, Playlist } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import {
   BehaviorSubject,
-  combineLatest, defer,
+  combineLatest,
   filter,
-  map, of, repeat,
+  map,
   Subject,
-  switchMap,
   take,
-  takeUntil, takeWhile,
-  tap, timer,
+  takeUntil,
 } from 'rxjs';
 import { AsyncPipe, DecimalPipe } from '@angular/common';
-import { PlaylistsService } from '../../core/services/playlists.service';
-import { ActivatedRoute } from '@angular/router';
 import { AudioPlayerService } from './audio-player.service';
 import { MatTooltip } from '@angular/material/tooltip';
 import { OSBindingsService } from './os-binding.service';
@@ -57,12 +53,12 @@ export class PlayerComponent implements OnInit, OnDestroy {
   $queuedPercent = new BehaviorSubject<number>(0);
   $unavailablePercent = new BehaviorSubject<number>(0);
 
-  constructor(private playlistService: PlaylistsService,
-              private activeRoute: ActivatedRoute,
-              private audioPlayer: AudioPlayerService,
+  constructor(private audioPlayer: AudioPlayerService,
               // Unused, but ensures OSBindingsService is instantiated.
+              // TODO: Check what is a better way to do this.
               private osBindings: OSBindingsService) {
     this.audioPlayer.reset();
+
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;
     this.$nowTime = this.audioPlayer.$globalProgressSeconds.pipe(
@@ -82,67 +78,17 @@ export class PlayerComponent implements OnInit, OnDestroy {
         filter(() => this.syncCurrentSection()),
         takeUntil(this.$destroy)
       ).subscribe(track => this.sectionPlayed.emit(track.section_id));
-
-    const bookId = this.activeRoute.snapshot.paramMap.get("id")!;
-    let isGenerating = false;
-    this.audioPlayer.$trackIndex
-      .pipe(
-        takeUntil(this.$destroy),
-        filter(trackIndex => this.audioPlayer.getNumberOfTracks() > 0 && trackIndex >= this.audioPlayer.getNumberOfTracks() - 5),
-        filter(() => !isGenerating),
-        tap(() => isGenerating = true),
-        switchMap(() => this.playlistService.generateTracks(bookId))
-      ).subscribe((playlist) => {
-      let sectionIds = playlist.tracks.map(t => t.section_id);
-      defer(() => of(sectionIds))
-        .pipe(
-          repeat({delay: () => timer(5_000 * (0.75 + 0.5 * Math.random()))}),
-          takeWhile((sections) => sections.length > 0),
-          takeUntil(this.$destroy),
-          switchMap(sectionIds => this.playlistService.getTracks(bookId, sectionIds))
-        ).subscribe((tracks) => {
-        const readyTracks: AudioTrack[] = [];
-        const incompleteSectionIds: number[] = [];
-        let skipReady = false;
-        for (let i = 0; i < tracks.tracks.length; i++) {
-          if (!skipReady && tracks.tracks[i].status != BookStatus.ready) {
-            skipReady = true;
-          }
-          if (skipReady) {
-            incompleteSectionIds.push(tracks.tracks[i].section_id);
-          } else {
-            readyTracks.push(tracks.tracks[i]);
-          }
-        }
-        this.audioPlayer.addTracks(readyTracks);
-        sectionIds = incompleteSectionIds;
-
-        this.setAvailability(tracks.progress);
-        if (sectionIds.length == 0) {
-          isGenerating = false;
-        }
-      });
-    });
   }
 
   ngOnInit(): void {
     this.initPlayerService(this.playlist(), this.book());
+    this.setAvailability(this.playlist().progress);
   }
 
   initPlayerService(playlist: Playlist, book: BookDetails) {
     this.audioPlayer.setBookDetails(book);
     this.audioPlayer.addTracks(playlist.tracks);
-    this.syncCurrentSection.set(playlist.progress.sync_current_section);
-    this.audioPlayer.setPlaybackRate(playlist.progress.playback_rate);
-
-    let trackIndex = 0;
-    if (playlist.progress.section_id) {
-      trackIndex = playlist.tracks.findIndex(t => t.section_id == playlist.progress.section_id);
-    }
-    const trackProgress = playlist.progress.section_progress_seconds || 0;
-    this.audioPlayer.playTrack(trackIndex, trackProgress);
-
-    this.setAvailability(playlist.progress);
+    this.audioPlayer.setPlaybackProgress(playlist.progress);
   }
 
   setAvailability(progress: PlaybackProgress) {
@@ -225,6 +171,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   private clickTimer: number = -1;
+
   protected clickPlaybackRate(e: PointerEvent) {
     if (this.clickTimer > 0) {
       // This is a consequent click, so do nothing.
@@ -267,12 +214,14 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.showPages.set(!this.showPages());
     this.showPagesChanged.emit(this.showPages());
   }
+
   showPagesTooltip() {
     return this.showPages() ? "Hide PDF pages" : "Show PDF pages";
   }
 
   private fontSizeIndex = 1;
   private fontSizeOptions = ["90%", "100%", "110%"];
+
   protected toggleFontSize(e: PointerEvent) {
     this.fontSizeIndex = (this.fontSizeIndex + 1) % this.fontSizeOptions.length;
     document.documentElement.style.setProperty('--font-scale', this.fontSizeOptions[this.fontSizeIndex]);

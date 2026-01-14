@@ -21,15 +21,6 @@ export class PlaylistsService {
     return this.http.post<void>(`${this.apiUrl}/${progress.book_id}/progress`, progress);
   }
 
-  generateTracks(bookId: string, sectionIds: number[] = [], limit: number = 5) {
-    let params = new HttpParams({
-      fromObject: {
-        limit: limit
-      }
-    });
-    return this.http.post<Playlist>(`${this.apiUrl}/${bookId}/generate`, sectionIds, {params: params});
-  }
-
   getTracks(bookId: string, sectionIds: number[]) {
     let params = new HttpParams({
       fromObject: {
