@@ -161,7 +161,11 @@ def get_speech_file(book_id: uuid.UUID,
                     file_name: str,
                     file_service: FilesServiceDep,
                     if_none_match: Annotated[str | None, Header()] = None):
-    file_data = file_service.get_speech_file(book_id, file_name, if_none_match)
+    try:
+        file_data = file_service.get_speech_file(book_id, file_name, if_none_match)
+    except NotModified:
+        return Response(status_code=304)
+
     if file_data is None:
         raise HTTPException(status_code=404, detail="Speech file not found")
     # Have no idea why, but this header enables seeking in the HTMLAudioElement.

@@ -22,6 +22,9 @@ class FileData:
     content_type: str
     etag: str
 
+class NotModified(Exception):
+    pass
+
 class FilesService(Service):
     """A service to manage files stored in an object store."""
 
@@ -85,8 +88,11 @@ class FilesService(Service):
                             content_type=s3_object["ContentType"],
                             etag=s3_object["ETag"])
         except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchKey":
+            code = e.response["Error"]["Code"]
+            if code == "NoSuchKey":
                 return None
+            elif code == "304":
+                raise NotModified()
             else:
                 raise e
 
