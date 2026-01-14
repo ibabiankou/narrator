@@ -1,6 +1,5 @@
 import mimetypes
 import os
-import uuid
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Annotated
@@ -75,8 +74,8 @@ class SpeechGenService(Service):
                 for result in self.speech_pipeline.generate_from_tokens(tokens=chunk, voice=voice, speed=speed):
                     sf.write(result.audio)
 
-            audio_buf.seek(0)
-            return GeneratedSpeech(content=audio_buf.read(), content_type=content_type, duration=sf.frames / sf.samplerate)
+        audio_buf.seek(0)
+        return GeneratedSpeech(content=audio_buf.read(), content_type=content_type, duration=sf.frames / sf.samplerate)
 
     def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
@@ -90,30 +89,6 @@ class SpeechGenService(Service):
         payload = rmq.SpeechResponse(book_id=payload.book_id, section_id=payload.section_id, track_id=payload.track_id,
                                      file_path=key, duration=result.duration, bytes=len(result.content))
         self.rmq_client.publish(routing_key="speech", payload=payload)
-
-    def convert_book(self, book_id: uuid.UUID):
-        speech_prefix = f"{book_id}/speech"
-        keys: list[str] = self._list_files(speech_prefix)
-        for key in keys:
-            if not key.endswith(".mp3"):
-                continue
-            # Load content
-            mp3_bytes = self._load_file(key)
-
-            # Convert into ogg
-            # read the mp3 stuff
-            with SoundFile(mp3_bytes, mode="r", format="mp3", samplerate=24000, channels=1) as mp3f:
-
-                # Write as ogg stuff
-                audio_buf = BytesIO()
-                with SoundFile(audio_buf, mode="w", format="ogg", samplerate=24000, channels=1, compression_level=0.5) as oggf:
-                    oggf.write(mp3f.read())
-                    audio_buf.seek(0)
-
-                    # Upload it back.
-                    ogg_key = key.replace(".mp3", ".oga")
-                    self._upload_file(ogg_key, "audio/ogg", audio_buf.read())
-
 
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):
         try:

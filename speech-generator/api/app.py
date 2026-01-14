@@ -1,4 +1,3 @@
-import uuid
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -71,11 +70,6 @@ def synthesize(request: SynthesizeRequest, speech_gen_svc: SpeechGenServiceDep):
     return Response(content=result.content,
                     media_type=result.content_type,
                     headers={"narrator-speech-duration": str(result.duration)})
-
-
-@base_url_router.post("/convert/{book_id}")
-def convert(book_id: uuid.UUID, speech_gen_svc: SpeechGenServiceDep):
-    speech_gen_svc.convert_book(book_id)
 
 
 app.include_router(base_url_router)
