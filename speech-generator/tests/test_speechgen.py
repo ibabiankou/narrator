@@ -20,7 +20,7 @@ def test_speech_generation():
     result = speechgen.phonemize(test_text)
     speech = speechgen.synthesize(result)
     print("Duration", speech.duration)
-    with open("audio.mp4", "wb") as f:
+    with open("audio.aac", "wb") as f:
         f.write(speech.content)
 
 

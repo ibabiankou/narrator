@@ -270,7 +270,7 @@ def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
             uri=f"http://localhost:8000/api/books/{track.book_id}/speech/{track.file_name}",
             duration=track.duration,
             discontinuity=True,
-            init_section={"uri": f"http://localhost:8000/api/files/{tracks[0].book_id}/map.mp4"}
+            # init_section={"uri": f"http://localhost:8000/api/files/{tracks[0].book_id}/map.mp4"}
         )
         playlist.segments.append(segment)
 

@@ -91,7 +91,7 @@ export class AudioPlayerService {
     ).subscribe(book => {
       this.reset();
 
-      this.audio = new Audio(`${environment.api_base_url}/books/${book.id}/stream`);
+      this.audio = new Audio(`${environment.api_base_url}/books/${book.id}/stream.m3u8`);
       this.audio.preservesPitch = true;
       this.audio.playbackRate = this.$playbackRate.value;
 

@@ -62,7 +62,7 @@ class SpeechGenService(Service):
                                        track_id=payload.track_id, phonemes=phonemes, voice=payload.voice)
         self.rmq_client.publish(routing_key="phonemes", payload=payload)
 
-    def synthesize(self, phonemes: str, voice: str = "am_adam", frag_index: int = 1) -> GeneratedSpeech:
+    def synthesize(self, phonemes: str, voice: str = "am_adam") -> GeneratedSpeech:
         audio_np = None
         sample_rate = 24000
 
@@ -76,38 +76,33 @@ class SpeechGenService(Service):
                 else:
                     audio_np = np.concatenate((audio_np, result.audio.numpy()), axis=0)
 
-        n_samples = audio_np.shape[-1]
-        duration = n_samples / sample_rate
-
-        options = {
-            'movflags': 'frag_keyframe+empty_moov+default_base_moof',
-            'flush_packets': '1',
-            'fragment_index': str(frag_index),
-        }
-
         output = io.BytesIO()
-        with av.open(output, mode='w', format='mp4', options=options) as container:
-            stream = container.add_stream('opus', rate=sample_rate, bit_rate=32000)
+        with av.open(output, mode='w', format='adts') as container:
+            stream = container.add_stream('aac', rate=sample_rate, bit_rate=64000)
 
-            # 2. Prepare Kokoro Audio
-            # Ensure it is float32 and reshaped for mono
             audio_np = audio_np.astype(np.float32).reshape(1, -1)
 
-            # 3. Create AV Frame
             frame = av.AudioFrame.from_ndarray(audio_np, format='fltp', layout='mono')
             frame.sample_rate = sample_rate
 
-            # 4. Encode and Mux
-            container.mux(stream.encode(frame))
-            container.mux(stream.encode())
+            total_duration_pts = 0
+            for packet in stream.encode(frame):
+                container.mux(packet)
+                if packet.duration:
+                    total_duration_pts += packet.duration
+            for packet in stream.encode():
+                container.mux(packet)
+                if packet.duration:
+                    total_duration_pts += packet.duration
 
-        return GeneratedSpeech(content=output.getvalue(), content_type="video/iso.segment", duration=duration)
+        return GeneratedSpeech(content=output.getvalue(), content_type="audio/aac",
+                               duration=float(total_duration_pts * stream.time_base))
 
     def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
-        result = self.synthesize(payload.phonemes, payload.voice, frag_index=payload.track_id)
+        result = self.synthesize(payload.phonemes, payload.voice)
 
-        key = f"{payload.file_path}/{payload.track_id}.m4s"
+        key = f"{payload.file_path}/{payload.track_id}.aac"
         self._upload_file(key, result.content_type, result.content)
         payload = rmq.SpeechResponse(book_id=payload.book_id, section_id=payload.section_id, track_id=payload.track_id,
                                      file_path=key, duration=result.duration, bytes=len(result.content))
