@@ -1,10 +1,13 @@
+import io
 import mimetypes
 import os
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Annotated
 
+import av
 import boto3
+import numpy as np
 from botocore.exceptions import ClientError
 from kokoro import KModel, KPipeline
 from soundfile import SoundFile
@@ -59,23 +62,49 @@ class SpeechGenService(Service):
         self.rmq_client.publish(routing_key="phonemes", payload=payload)
 
     def synthesize(self, phonemes: str, voice: str = "am_adam", speed: float = 1) -> GeneratedSpeech:
-        audio_buf = BytesIO()
-        audio_format = os.getenv("AUDIO_FORMAT", "mp3")
-        audio_subtype = os.getenv("AUDIO_SUBTYPE", "MPEG_LAYER_III")
-        content_type = os.getenv("AUDIO_CONTENT_TYPE", "audio/mpeg")
-        with SoundFile(audio_buf, mode="w",
-                       format=audio_format, subtype=audio_subtype,
-                       samplerate=24000, channels=1,
-                       compression_level=0.85) as sf:
-            chunks = phonemes.split("\n")
-            for chunk in chunks:
-                if not chunk.strip():
-                    continue
-                for result in self.speech_pipeline.generate_from_tokens(tokens=chunk, voice=voice, speed=speed):
-                    sf.write(result.audio)
+        audio_np = None
+        sample_rate = 24000
 
-        audio_buf.seek(0)
-        return GeneratedSpeech(content=audio_buf.read(), content_type=content_type, duration=sf.frames / sf.samplerate)
+        chunks = phonemes.split("\n")
+        for chunk in chunks:
+            if not chunk.strip():
+                continue
+            for result in self.speech_pipeline.generate_from_tokens(tokens=chunk, voice=voice, speed=speed):
+                if audio_np is None:
+                    audio_np = result.audio.numpy()
+                else:
+                    audio_np = np.concatenate((audio_np, result.audio.numpy()), axis=0)
+
+        n_samples = audio_np.shape[-1]
+        duration = n_samples / sample_rate
+
+        # We use 'faststart' to ensure metadata (moov) is at the beginning
+        # We remove 'empty_moov' so that the metadata is included in this file
+        options = {
+            'movflags': 'frag_keyframe+default_base_moof+faststart',
+        }
+
+        output = io.BytesIO()
+        with av.open(output, mode='w', format='mp4', options=options) as container:
+            stream = container.add_stream('opus', rate=sample_rate)
+
+            # 2. Prepare Kokoro Audio
+            # Ensure it is float32 and reshaped for mono
+            audio_np = audio_np.astype(np.float32).reshape(1, -1)
+
+            # 3. Create AV Frame
+            frame = av.AudioFrame.from_ndarray(audio_np, format='fltp', layout='mono')
+            frame.sample_rate = sample_rate
+
+            # 4. Encode and Mux
+            for packet in stream.encode(frame):
+                container.mux(packet)
+
+            # 5. Flush Encoder
+            for packet in stream.encode():
+                container.mux(packet)
+
+        return GeneratedSpeech(content=output.getvalue(), content_type="audio/mp4", duration=duration)
 
     def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
