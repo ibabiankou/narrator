@@ -126,12 +126,11 @@ export class AudioPlayerService {
   }
 
   next() {
-    //
+    this.audio.currentTime = this.durationSum[this.$trackIndex.value + 1];
   }
 
   previous() {
-    // TODO: find starting position of next track and set it to current time.
-
+    this.audio.currentTime = this.durationSum[this.$trackIndex.value - 1];
   }
 
   seek(adjustment: number) {
@@ -162,7 +161,7 @@ export class AudioPlayerService {
   }
 }
 
-function binarySearch<T>(arr: number[], target: number): number {
+function binarySearch(arr: number[], target: number): number {
   let left = 0;
   let right = arr.length; // Use length to allow for "not found" (index out of bounds)
 

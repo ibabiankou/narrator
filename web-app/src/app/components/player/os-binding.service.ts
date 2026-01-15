@@ -67,11 +67,5 @@ export class OSBindingsService {
           });
         }
       );
-
-    // this.audioPlayer.$playbackPosition.subscribe(
-    //   position => {
-    //     navigator.mediaSession.setPositionState(position);
-    //   }
-    // );
   }
 }
