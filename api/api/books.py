@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime, UTC
 from typing import Annotated
 
+import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Header, Request
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
@@ -235,6 +236,43 @@ def stream_book(book_id: uuid.UUID,
         media_type="audio/ogg",
         headers=headers)
 
+
+@books_router.get("/{book_id}/stream.m3u8")
+def book_playlist(book_id: uuid.UUID,
+                session: SessionDep,
+                ):
+    book = session.get(db.Book, book_id)
+    if book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    stmt = select(db.AudioTrack).where(db.AudioTrack.book_id == book_id).where(
+        db.AudioTrack.status == db.AudioStatus.ready).order_by(db.AudioTrack.playlist_order)
+    ready_tracks = list(session.execute(stmt).scalars().all())
+    LOG.info("Loaded %s tracks", len(ready_tracks))
+
+    return Response(
+        content=generate_dynamic_playlist(ready_tracks),
+        media_type="application/vnd.apple.mpegurl"
+    )
+
+def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
+    playlist = m3u8.M3U8()
+
+    playlist.version = 4
+    playlist.target_duration = 90
+    playlist.media_sequence = 0
+    playlist.is_endlist = True  # Set to False for live streams
+    playlist.media
+
+    for track in tracks:
+        # Add a segment with a duration and its URI
+        segment = m3u8.Segment(
+            uri=f"http://localhost:8000/api/books/{track.book_id}/speech/{track.file_name}",
+            duration=track.duration
+        )
+        playlist.segments.append(segment)
+
+    return playlist.dumps()
 
 @books_router.get("/{book_id}/pages/{page_file_name}")
 def get_book_page(book_id: uuid.UUID,

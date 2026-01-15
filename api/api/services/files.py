@@ -84,7 +84,7 @@ class FilesService(Service):
             s3_object = self.s3_client.get_object(Bucket=self.bucket_name,
                                                   Key=key,
                                                   IfNoneMatch=if_none_match or "fake-value",
-                                                  Range=range)
+                                                  Range=range or "bytes=0-")
             return FileData(body=s3_object["Body"].read(),
                             content_type=s3_object["ContentType"],
                             etag=s3_object["ETag"])

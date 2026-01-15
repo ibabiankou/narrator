@@ -414,6 +414,18 @@ files = [
 ]
 
 [[package]]
+name = "m3u8"
+version = "6.0.0"
+description = "Python m3u8 parser"
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "m3u8-6.0.0-py3-none-any.whl", hash = "sha256:566d0748739c552dad10f8c87150078de6a0ec25071fa48e6968e96fc6dcba5d"},
+    {file = "m3u8-6.0.0.tar.gz", hash = "sha256:7ade990a1667d7a653bcaf9413b16c3eb5cd618982ff46aaff57fe6d9fa9c0fd"},
+]
+
+[[package]]
 name = "mako"
 version = "1.3.10"
 description = "A super-fast templating language that borrows the best ideas from the existing templating languages."
@@ -1274,4 +1286,4 @@ standard = ["colorama (>=0.4) ; sys_platform == \"win32\"", "httptools (>=0.6.3)
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13"
-content-hash = "537d04cd8514910f26203de2963eedc7fd1dfe240158685472f45e5cb03b7292"
+content-hash = "21e310719044c99d6cdd07b730a8707fa877d6e9316a4a465df10ad2a0318ee0"
