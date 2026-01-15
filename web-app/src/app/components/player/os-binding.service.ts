@@ -14,11 +14,17 @@ type HandlerMap = {
 export class OSBindingsService {
 
   private actionHandlers: HandlerMap = {
+    "nexttrack": (details: MediaSessionActionDetails) => {
+      this.audioPlayer.next();
+    },
     "pause": (details: MediaSessionActionDetails) => {
       this.audioPlayer.pause();
     },
     "play": (details: MediaSessionActionDetails) => {
       this.audioPlayer.play();
+    },
+    "previoustrack": (details: MediaSessionActionDetails) => {
+      this.audioPlayer.previous();
     },
     "seekbackward": (details: MediaSessionActionDetails) => {
       this.audioPlayer.seek(details.seekOffset || -5);

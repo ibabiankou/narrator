@@ -6,10 +6,11 @@ import {
   distinct,
   filter,
   map,
-  take,
 } from 'rxjs';
 import { Injectable } from '@angular/core';
 import { PlaylistsService } from '../../core/services/playlists.service';
+
+import Hls from 'hls.js';
 
 interface PlayerTrack {
   audioTrack: AudioTrack
@@ -19,7 +20,6 @@ interface PlayerTrack {
 }
 
 enum PlayerStatus {
-  stopped = "stopped",
   playing = "playing",
   paused = "paused",
 }
@@ -29,24 +29,21 @@ enum PlayerStatus {
  */
 @Injectable({providedIn: 'root'})
 export class AudioPlayerService {
-  private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.stopped);
+  private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.paused);
   private readonly audio: HTMLAudioElement;
+  private hls: Hls | null = null;
 
   $bookDetails = new BehaviorSubject<BookDetails | null>(null);
   private tracks: PlayerTrack[] = [];
   // Holds global book time at which each track starts.
   private durationSum: number[] = [0];
 
-  private $currentTime = new BehaviorSubject<number>(0);
-
-  $trackIndex = new BehaviorSubject<number>(0);
-  private $trackOffset = new BehaviorSubject<number>(0);
-  private $currentContextTime = new BehaviorSubject<number>(0);
+  private $trackIndex = new BehaviorSubject<number>(0);
   $playbackRate = new BehaviorSubject<number>(1);
 
   $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
 
-  $audioTrack = combineLatest([this.$trackIndex, this.$isPlaying])
+  $audioTrack = combineLatest([this.$trackIndex.pipe(distinct()), this.$isPlaying])
     .pipe(
       filter(([_, isPlaying]) => isPlaying),
       map(([trackIndex, _]) => this.tracks[trackIndex]?.audioTrack),
@@ -55,12 +52,35 @@ export class AudioPlayerService {
     );
 
   // Progress from the start of the book.
-  $globalProgressSeconds = this.$currentContextTime;
+  $globalProgressSeconds = new BehaviorSubject<number>(0);
 
   constructor(private playlistService: PlaylistsService) {
     this.audio = new Audio();
     this.audio.preservesPitch = true;
     this.audio.addEventListener('timeupdate', () => this.readProgress());
+
+    this.$bookDetails
+      .pipe(filter(book => book != null))
+      .subscribe((book) => {
+
+        if (Hls.isSupported()) {
+          this.hls = new Hls({
+            debug: false,
+          });
+          this.hls.loadSource(`${environment.api_base_url}/books/${book.id}/stream.m3u8`);
+          this.hls.attachMedia(this.audio);
+        } else {
+          console.error("HLS not supported");
+        }
+      });
+
+    this.$globalProgressSeconds
+      .subscribe((currentTime) => {
+        const trackIndex = binarySearch(this.durationSum, currentTime) - 1;
+        if (trackIndex >= 0) {
+          this.$trackIndex.next(trackIndex);
+        }
+      });
 
     this.$playbackRate.subscribe(() => {
       if (this.audio) {
@@ -70,7 +90,7 @@ export class AudioPlayerService {
   }
 
   private readProgress() {
-    this.$currentContextTime.next(this.audio.currentTime);
+    this.$globalProgressSeconds.next(this.audio.currentTime);
   }
 
   addTracks(tracks: AudioTrack[]) {
@@ -90,14 +110,6 @@ export class AudioPlayerService {
     this.tracks.push(...newTracks);
   }
 
-  playTrack(trackIndex: number, offsetSeconds: number) {
-    // TODO: Instead of setting track and offset, I should simply set the global progress,
-    //  which will be translated into track and offset.
-    // this.$trackIndex.next(trackIndex);
-    // this.$trackOffset.next(offsetSeconds);
-    // this.$currentContextTime.next(offsetSeconds);
-  }
-
   play() {
     if (this.audio) {
       this.audio.play();
@@ -114,82 +126,23 @@ export class AudioPlayerService {
   }
 
   next() {
-    this.$trackIndex.pipe(take(1)).subscribe(
-      (current) => {
-        const next = current + 1;
-        if (next >= this.tracks.length) {
-          return;
-        }
-        this.playTrack(next, 0);
-      });
+    //
   }
 
   previous() {
-    this.$trackIndex.pipe(take(1)).subscribe(
-      (current) => {
-        const prev = current - 1;
-        if (prev < 0) {
-          return;
-        }
-        this.playTrack(prev, 0);
-      });
-  }
+    // TODO: find starting position of next track and set it to current time.
 
-  getTrack(trackIndex: number) {
-    return this.tracks[trackIndex].audioTrack;
   }
 
   seek(adjustment: number) {
-    this.readProgress();
-    combineLatest([this.$trackIndex, this.$currentContextTime]).pipe(take(1)).subscribe(
-      ([trackIndex, trackProgressSeconds]) => {
-        let track = this.getTrack(trackIndex);
-        let newProgress = trackProgressSeconds + adjustment;
-
-        if (newProgress < 0) {
-          if (trackIndex == 0) {
-            // Start from the beginning if it's the first track.
-            this.playTrack(0, 0);
-            return;
-          } else {
-            // It's not the first track, so go to the previous track.
-            track = this.getTrack(trackIndex - 1);
-            newProgress += track.duration;
-            this.playTrack(trackIndex - 1, newProgress);
-            return;
-          }
-        } else if (newProgress > track.duration) {
-          if (trackIndex == this.tracks.length - 1) {
-            // It's the last track, so seek the end. It should stop playback.
-            this.playTrack(trackIndex, track.duration);
-            return;
-          } else {
-            // Go to the next track.
-            newProgress -= track.duration;
-            this.playTrack(trackIndex + 1, newProgress);
-            return;
-          }
-        } else {
-          // We are within the current track, so simply change the progress.
-          this.playTrack(trackIndex, newProgress);
-          return;
-        }
-      });
+    this.audio.currentTime += adjustment;
   }
 
   seekTo(seekTime: number | undefined) {
     if (seekTime == undefined) {
       return;
     }
-
-    for (let i = 0; i < this.durationSum.length; i++) {
-      if (this.durationSum[i] > seekTime) {
-        const trackIndex = i - 1;
-        const trackOffset = seekTime - this.durationSum[trackIndex];
-        this.playTrack(trackIndex, trackOffset);
-        return;
-      }
-    }
+    this.audio.currentTime = seekTime;
   }
 
   adjustPlaybackRate(adjustment: number) {
@@ -204,8 +157,29 @@ export class AudioPlayerService {
   }
 
   setPlaybackProgress(progress: PlaybackProgress) {
-    // TODO: Set global progress, seconds. Set total narrated duration.
     this.$playbackRate.next(progress.playback_rate);
-    this.$currentTime.next(progress.global_progress_seconds);
+    this.audio.currentTime = progress.global_progress_seconds
   }
+}
+
+function binarySearch<T>(arr: number[], target: number): number {
+  let left = 0;
+  let right = arr.length; // Use length to allow for "not found" (index out of bounds)
+
+  while (left < right) {
+    const mid = Math.floor(left + (right - left) / 2);
+
+    if (arr[mid] <= target) {
+      // If the middle element is less than or equal to target,
+      // the first "larger" element must be to the right.
+      left = mid + 1;
+    } else {
+      // If the middle element is already larger, it COULD be the first one,
+      // but there might be an even earlier one to the left.
+      right = mid;
+    }
+  }
+
+  // After the loop, left == right, pointing to the first element > target
+  return left < arr.length ? left : -1;
 }
