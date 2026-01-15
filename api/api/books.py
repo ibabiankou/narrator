@@ -262,7 +262,6 @@ def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
     playlist.target_duration = 90
     playlist.media_sequence = 0
     playlist.is_endlist = True  # Set to False for live streams
-    playlist.media
 
     for track in tracks:
         # Add a segment with a duration and its URI
@@ -293,9 +292,29 @@ def get_book_page(book_id: uuid.UUID,
 def get_speech_file(book_id: uuid.UUID,
                     file_name: str,
                     file_service: FilesServiceDep,
-                    if_none_match: Annotated[str | None, Header()] = None):
+                    request: Request,
+                    if_none_match: Annotated[str | None, Header()] = ""):
+
+    # Handle Range Header: "bytes=0-1023"
+    range_header = request.headers.get("Range")
+    if range_header:
+        range_type, range_val = range_header.split("=")
+        start_str, sep, end_str = range_val.partition("-")
+        if range_type != "bytes":
+            raise HTTPException(status_code=400, detail="Only 'bytes' range type is supported.")
+    else:
+        start_str = "0"
+        end_str = None
+
+    start = int(start_str) if start_str else 0
+    end = int(end_str) if end_str else -1
+
+    range_request = f"bytes={start}-{end if end != -1 else ''}"
+
+    LOG.info("Processing range: %s, %s", start, end)
+
     try:
-        file_data = file_service.get_speech_file(book_id, file_name, if_none_match)
+        file_data = file_service.get_speech_file(book_id, file_name, if_none_match, range=range_request)
     except NotModified:
         return Response(status_code=304)
 
@@ -304,7 +323,8 @@ def get_speech_file(book_id: uuid.UUID,
     # Have no idea why, but this header enables seeking in the HTMLAudioElement.
     headers = {
         "Accept-Ranges": "bytes",
+        "Content-Range": file_data.range,
         "Cache-Control": "private, max-age=604800, immutable",
         "ETag": file_data.etag
     }
-    return Response(content=file_data.body, media_type=file_data.content_type, headers=headers)
+    return Response(content=file_data.body, status_code=206, media_type=file_data.content_type, headers=headers)

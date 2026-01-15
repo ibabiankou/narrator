@@ -21,6 +21,7 @@ class FileData:
     body: bytes
     content_type: str
     etag: str
+    range: Optional[str]
 
 class NotModified(Exception):
     pass
@@ -79,15 +80,16 @@ class FilesService(Service):
         return self._get_object(f"{book_id}/pages/{page_file_name}")
 
 
-    def _get_object(self, key: str, if_none_match: Optional[str] = None, range: Optional[str] = None) -> Optional[FileData]:
+    def _get_object(self, key: str, if_none_match: Optional[str] = "", range: Optional[str] = "bytes=0-") -> Optional[FileData]:
         try:
             s3_object = self.s3_client.get_object(Bucket=self.bucket_name,
                                                   Key=key,
-                                                  IfNoneMatch=if_none_match or "fake-value",
-                                                  Range=range or "bytes=0-")
+                                                  IfNoneMatch=if_none_match,
+                                                  Range=range)
             return FileData(body=s3_object["Body"].read(),
                             content_type=s3_object["ContentType"],
-                            etag=s3_object["ETag"])
+                            etag=s3_object["ETag"],
+                            range=s3_object["ContentRange"])
         except ClientError as e:
             code = e.response["Error"]["Code"]
             if code == "NoSuchKey":
@@ -108,8 +110,8 @@ class FilesService(Service):
     def get_speech_file(self,
                         book_id: uuid.UUID,
                         file_name: str,
-                        if_none_match: Optional[str] = None,
-                        range: Optional[str] = None) -> Optional[FileData]:
+                        if_none_match: Optional[str] = "",
+                        range: Optional[str] = "bytes=0-") -> Optional[FileData]:
         """Get the speech file from the object store."""
         return self._get_object(self.speech_filename(book_id, file_name), if_none_match, range)
 
