@@ -89,7 +89,7 @@ class FilesService(Service):
             return FileData(body=s3_object["Body"].read(),
                             content_type=s3_object["ContentType"],
                             etag=s3_object["ETag"],
-                            range=s3_object["ContentRange"])
+                            range=s3_object.get("ContentRange"))
         except ClientError as e:
             code = e.response["Error"]["Code"]
             if code == "NoSuchKey":

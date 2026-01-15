@@ -68,7 +68,7 @@ class SynthesizeRequest(BaseModel):
 
 @base_url_router.post("/synthesize")
 def synthesize(request: SynthesizeRequest, speech_gen_svc: SpeechGenServiceDep):
-    result = speech_gen_svc.synthesize(request.phonemes, request.voice, request.speed)
+    result = speech_gen_svc.synthesize(request.phonemes, request.voice)
     return Response(content=result.content,
                     media_type=result.content_type,
                     headers={"narrator-speech-duration": str(result.duration)})

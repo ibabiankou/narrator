@@ -62,7 +62,7 @@ class SpeechGenService(Service):
                                        track_id=payload.track_id, phonemes=phonemes, voice=payload.voice)
         self.rmq_client.publish(routing_key="phonemes", payload=payload)
 
-    def synthesize(self, phonemes: str, voice: str = "am_adam", speed: float = 1) -> GeneratedSpeech:
+    def synthesize(self, phonemes: str, voice: str = "am_adam", frag_index: int = 1) -> GeneratedSpeech:
         audio_np = None
         sample_rate = 24000
 
@@ -70,7 +70,7 @@ class SpeechGenService(Service):
         for chunk in chunks:
             if not chunk.strip():
                 continue
-            for result in self.speech_pipeline.generate_from_tokens(tokens=chunk, voice=voice, speed=speed):
+            for result in self.speech_pipeline.generate_from_tokens(tokens=chunk, voice=voice):
                 if audio_np is None:
                     audio_np = result.audio.numpy()
                 else:
@@ -81,7 +81,8 @@ class SpeechGenService(Service):
 
         options = {
             'movflags': 'frag_keyframe+empty_moov+default_base_moof',
-            'flush_packets': '1'
+            'flush_packets': '1',
+            'fragment_index': str(frag_index),
         }
 
         output = io.BytesIO()
@@ -97,18 +98,14 @@ class SpeechGenService(Service):
             frame.sample_rate = sample_rate
 
             # 4. Encode and Mux
-            for packet in stream.encode(frame):
-                container.mux(packet)
-
-            # 5. Flush Encoder
-            for packet in stream.encode():
-                container.mux(packet)
+            container.mux(stream.encode(frame))
+            container.mux(stream.encode())
 
         return GeneratedSpeech(content=output.getvalue(), content_type="video/iso.segment", duration=duration)
 
     def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
-        result = self.synthesize(payload.phonemes, payload.voice, payload.speed)
+        result = self.synthesize(payload.phonemes, payload.voice, frag_index=payload.track_id)
 
         key = f"{payload.file_path}/{payload.track_id}.m4s"
         self._upload_file(key, result.content_type, result.content)
@@ -117,20 +114,26 @@ class SpeechGenService(Service):
         self.rmq_client.publish(routing_key="speech", payload=payload)
 
     def handle_generate_media_header_msg(self, payload: rmq.GenerateMediaHeader):
+        key = f"{payload.book_id}/map.mp4"
+        self._upload_file(key, "audio/mp4", self._generate_media_header())
+
+    def _generate_media_header(self) -> bytes:
         # Pass muxer options directly during container opening
         options = {
             'movflags': 'frag_keyframe+empty_moov+default_base_moof',
         }
         sample_rate = 24000
+        bit_rate=32000
 
         output = io.BytesIO()
         with av.open(output, mode='w', format='mp4', options=options) as container:
-            stream = container.add_stream('opus', rate=sample_rate)
-            # We don't mux any packets. Closing the container now
-            # writes only the metadata (ftyp + moov).
+            stream = container.add_stream('opus', rate=sample_rate, bit_rate=bit_rate, layout = "mono")
+            silence = np.zeros(int(0.1 * 24000), dtype=np.float32).reshape(1, -1)
+            frame = av.AudioFrame.from_ndarray(silence, format='fltp', layout='mono')
+            frame.sample_rate = sample_rate
+            container.mux(stream.encode(frame))
 
-        key = f"{payload.book_id}/map.mp4"
-        self._upload_file(key, "audio/mp4", output.getvalue())
+        return output.getvalue()
 
 
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):
