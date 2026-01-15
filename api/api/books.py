@@ -262,6 +262,7 @@ def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
     playlist.target_duration = 90
     playlist.media_sequence = 0
     playlist.is_endlist = True  # Set to False for live streams
+    playlist.segment_map = f"http://localhost:8000/api/books/{tracks[0].book_id}/map.mp4"
 
     for track in tracks:
         # Add a segment with a duration and its URI

@@ -11,6 +11,7 @@ import numpy as np
 from botocore.exceptions import ClientError
 from kokoro import KModel, KPipeline
 from soundfile import SoundFile
+from sympy.stats import sample_iter
 
 from api import get_logger
 from common_lib import RMQClientDep
@@ -78,15 +79,14 @@ class SpeechGenService(Service):
         n_samples = audio_np.shape[-1]
         duration = n_samples / sample_rate
 
-        # We use 'faststart' to ensure metadata (moov) is at the beginning
-        # We remove 'empty_moov' so that the metadata is included in this file
         options = {
-            'movflags': 'frag_keyframe+default_base_moof+faststart',
+            'movflags': 'frag_keyframe+empty_moov+default_base_moof',
+            'flush_packets': '1'
         }
 
         output = io.BytesIO()
         with av.open(output, mode='w', format='mp4', options=options) as container:
-            stream = container.add_stream('opus', rate=sample_rate)
+            stream = container.add_stream('opus', rate=sample_rate, bit_rate=32000)
 
             # 2. Prepare Kokoro Audio
             # Ensure it is float32 and reshaped for mono
@@ -104,20 +104,34 @@ class SpeechGenService(Service):
             for packet in stream.encode():
                 container.mux(packet)
 
-        return GeneratedSpeech(content=output.getvalue(), content_type="audio/mp4", duration=duration)
+        return GeneratedSpeech(content=output.getvalue(), content_type="video/iso.segment", duration=duration)
 
     def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
         result = self.synthesize(payload.phonemes, payload.voice, payload.speed)
 
-        file_ext = mimetypes.guess_extension(result.content_type)
-        if file_ext is None:
-            raise ValueError(f"Unable to guess file extension based on content type: {result.content_type}")
-        key = f"{payload.file_path}/{payload.track_id}{file_ext}"
+        key = f"{payload.file_path}/{payload.track_id}.m4s"
         self._upload_file(key, result.content_type, result.content)
         payload = rmq.SpeechResponse(book_id=payload.book_id, section_id=payload.section_id, track_id=payload.track_id,
                                      file_path=key, duration=result.duration, bytes=len(result.content))
         self.rmq_client.publish(routing_key="speech", payload=payload)
+
+    def handle_generate_media_header_msg(self, payload: rmq.GenerateMediaHeader):
+        # Pass muxer options directly during container opening
+        options = {
+            'movflags': 'frag_keyframe+empty_moov+default_base_moof',
+        }
+        sample_rate = 24000
+
+        output = io.BytesIO()
+        with av.open(output, mode='w', format='mp4', options=options) as container:
+            stream = container.add_stream('opus', rate=sample_rate)
+            # We don't mux any packets. Closing the container now
+            # writes only the metadata (ftyp + moov).
+
+        key = f"{payload.book_id}/map.mp4"
+        self._upload_file(key, "audio/mp4", output.getvalue())
+
 
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):
         try:
