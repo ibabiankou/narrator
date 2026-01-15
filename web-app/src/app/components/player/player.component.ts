@@ -57,7 +57,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
               // Unused, but ensures OSBindingsService is instantiated.
               // TODO: Check what is a better way to do this.
               private osBindings: OSBindingsService) {
-    this.audioPlayer.reset();
 
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;
@@ -195,7 +194,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.audioPlayer.reset();
     this.$destroy.next(true);
     this.$destroy.complete();
   }

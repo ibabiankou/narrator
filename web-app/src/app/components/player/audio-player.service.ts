@@ -3,17 +3,13 @@ import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
   combineLatest,
-  combineLatestWith,
   distinct,
   filter,
-  interval,
   map,
-  Observable,
   take,
 } from 'rxjs';
 import { Injectable } from '@angular/core';
 import { PlaylistsService } from '../../core/services/playlists.service';
-import { PlaybackPosition } from '../../core/models/player.dto';
 
 interface PlayerTrack {
   audioTrack: AudioTrack
@@ -34,7 +30,7 @@ enum PlayerStatus {
 @Injectable({providedIn: 'root'})
 export class AudioPlayerService {
   private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.stopped);
-  private audio: HTMLAudioElement | null = null;
+  private readonly audio: HTMLAudioElement;
 
   $bookDetails = new BehaviorSubject<BookDetails | null>(null);
   private tracks: PlayerTrack[] = [];
@@ -58,91 +54,24 @@ export class AudioPlayerService {
       distinct()
     );
 
-  // private $trackProgress = combineLatest([this.$trackIndex, this.$currentContextTime])
-  //   .pipe(
-  //     map(([trackIndex, progress]) => ({
-  //       track: this.tracks[trackIndex]?.audioTrack,
-  //       progressSeconds: progress,
-  //     }))
-  //   );
-
   // Progress from the start of the book.
-  $globalProgressSeconds = combineLatest([this.$trackIndex, this.$currentContextTime])
-    .pipe(map(([index, progress]) => this.durationSum[index] + progress));
-
-  $playbackPosition: Observable<PlaybackPosition> = combineLatest([this.$playbackRate, this.$globalProgressSeconds])
-    .pipe(filter(() => this.tracks.length > 0))
-    .pipe(map(([playbackRate, globalProgressSeconds]) => {
-      const lastTrackIndex = this.tracks.length - 1;
-      const lastTrackDuration = this.tracks[lastTrackIndex].audioTrack.duration;
-      const lastTrackStartAt = this.durationSum[lastTrackIndex];
-      const duration = lastTrackStartAt + lastTrackDuration;
-
-      return {
-        "duration": duration,
-        "playbackRate": playbackRate,
-        "position": globalProgressSeconds
-      };
-    }));
+  $globalProgressSeconds = this.$currentContextTime;
 
   constructor(private playlistService: PlaylistsService) {
-    this.$bookDetails.pipe(
-      filter(book => book != null),
-    ).subscribe(book => {
-      this.reset();
-
-      this.audio = new Audio(`${environment.api_base_url}/books/${book.id}/stream.m3u8`);
-      this.audio.preservesPitch = true;
-      this.audio.playbackRate = this.$playbackRate.value;
-
-      this.audio.addEventListener('timeupdate', () => this.readProgress());
-
-      this.audio.currentTime = this.$currentTime.value;
-    });
+    this.audio = new Audio();
+    this.audio.preservesPitch = true;
+    this.audio.addEventListener('timeupdate', () => this.readProgress());
 
     this.$playbackRate.subscribe(() => {
       if (this.audio) {
         this.audio.playbackRate = this.$playbackRate.value;
       }
     });
-
-    interval(1000)
-      .pipe(
-        combineLatestWith(this.$isPlaying),
-        filter(([_, isPlaying]) => isPlaying),
-      ).subscribe(() => this.readProgress());
-
-    // interval(5000)
-    //   .pipe(
-    //     combineLatestWith(this.$isPlaying),
-    //     filter(([_, isPlaying]) => isPlaying),
-    //   ).subscribe(() => this.updateProgress());
   }
 
   private readProgress() {
-    if (this.audio) {
-      this.$currentContextTime.next(this.audio.currentTime);
-    }
+    this.$currentContextTime.next(this.audio.currentTime);
   }
-
-  // private updateProgress() {
-  //   combineLatest([this.$trackProgress, this.$playbackRate])
-  //     .pipe(
-  //       take(1),
-  //       switchMap(([{track, progressSeconds}, playbackRate]) => {
-  //         return this.playlistService.updateProgress({
-  //           "book_id": track.book_id,
-  //           "section_id": track.section_id,
-  //           "section_progress_seconds": progressSeconds,
-  //           // TODO: Replace POST with PATCH, so that all fields in request are optional.
-  //           //  And API updates only provided fields.
-  //           // "sync_current_section": this.syncCurrentSection(),
-  //           "sync_current_section": true,
-  //           "playback_rate": playbackRate
-  //         });
-  //       })
-  //     ).subscribe();
-  // }
 
   addTracks(tracks: AudioTrack[]) {
     const baseUrl = environment.api_base_url
@@ -210,19 +139,6 @@ export class AudioPlayerService {
     return this.tracks[trackIndex].audioTrack;
   }
 
-  reset() {
-    this.$status.next(PlayerStatus.stopped);
-    this.$trackIndex.next(0);
-    this.$trackOffset.next(0);
-    this.$currentContextTime.next(0);
-    this.$playbackRate.next(1);
-
-    this.stopTheMusic();
-    this.tracks = [];
-    this.durationSum = [0]
-    this.$bookDetails.next(null);
-  }
-
   seek(adjustment: number) {
     this.readProgress();
     combineLatest([this.$trackIndex, this.$currentContextTime]).pipe(take(1)).subscribe(
@@ -281,18 +197,6 @@ export class AudioPlayerService {
     const minValue = 0.5;
     const newRate = this.$playbackRate.value + adjustment;
     this.$playbackRate.next(Math.max(Math.min(newRate, maxValue), minValue));
-  }
-
-  private stopTheMusic() {
-    if (!this.audio) {
-      return;
-    }
-
-    this.audio.pause();
-    this.audio.src = '';
-    this.audio.load();
-
-    this.audio = null;
   }
 
   setBookDetails(book: BookDetails) {
