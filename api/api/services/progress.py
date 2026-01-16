@@ -80,11 +80,5 @@ class PlaybackProgressService(Service):
 
             session.commit()
 
-    def delete_by_section(self, section_ids: list[int]):
-        with DbSession() as session:
-            stmt = delete(db.PlaybackProgress).where(db.PlaybackProgress.data["section_id"].in_(section_ids))
-            session.execute(stmt)
-            session.commit()
-
 
 PlaybackProgressServiceDep = Annotated[PlaybackProgressService, PlaybackProgressService.dep()]

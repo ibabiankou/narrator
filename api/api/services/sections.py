@@ -39,7 +39,6 @@ class SectionService(Service):
 
         # Delete audio tracks corresponding to the sections being deleted.
         self.audiotracks_service.delete_for_sections(sections)
-        self.progress_service.delete_by_section([s.id for s in sections])
 
         # Delete the sections.
         with DbSession() as session:
