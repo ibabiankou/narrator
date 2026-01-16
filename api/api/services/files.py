@@ -23,8 +23,10 @@ class FileData:
     etag: str
     range: Optional[str]
 
+
 class NotModified(Exception):
     pass
+
 
 class FilesService(Service):
     """A service to manage files stored in an object store."""
@@ -79,8 +81,8 @@ class FilesService(Service):
         """Get the book page file from the object store."""
         return self._get_object(f"{book_id}/pages/{page_file_name}")
 
-
-    def _get_object(self, key: str, if_none_match: Optional[str] = "", range: Optional[str] = "bytes=0-") -> Optional[FileData]:
+    def _get_object(self, key: str, if_none_match: Optional[str] = "", range: Optional[str] = "bytes=0-") -> Optional[
+        FileData]:
         try:
             s3_object = self.s3_client.get_object(Bucket=self.bucket_name,
                                                   Key=key,
@@ -106,7 +108,6 @@ class FilesService(Service):
         else:
             return f"{book_id}/speech"
 
-
     def get_speech_file(self,
                         book_id: uuid.UUID,
                         file_name: str,
@@ -125,5 +126,34 @@ class FilesService(Service):
         except ClientError as e:
             logging.error(e)
             raise e
+
+    def _list_files(self, path_prefix: str):
+        paginator = self.s3_client.get_paginator('list_objects_v2')
+
+        keys = []
+        for page in paginator.paginate(Bucket=self.bucket_name, Prefix=path_prefix):
+            if "Contents" in page:
+                for obj in page["Contents"]:
+                    keys.append(obj["Key"])
+
+        return keys
+
+    def _delete_objects(self, keys: list[str]):
+        self.s3_client.delete_objects(
+            Bucket=self.bucket_name,
+            Delete={
+                "Objects": [
+                    {"Key": key}
+                    for key in keys
+                ]
+            }
+        )
+
+    def delete_book_files(self, book_id):
+        keys = self._list_files(f"{book_id}/")
+        LOG.info("Deleting %s files \n%s", len(keys), keys)
+        if keys:
+            self._delete_objects(keys)
+
 
 FilesServiceDep = Annotated[FilesService, FilesService.dep()]

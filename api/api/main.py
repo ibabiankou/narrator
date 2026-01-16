@@ -28,7 +28,6 @@ async def lifespan(app: FastAPI):
 
     # Initialize services.
     files_svc = FilesService()
-    books_svc = BookService(files_svc)
     progress_svc = PlaybackProgressService()
 
     exchange = "narrator"
@@ -36,6 +35,7 @@ async def lifespan(app: FastAPI):
     rmq_client = RMQClient(exchange)
     audiotrack_svc = AudioTrackService(files_svc, rmq_client)
     section_svc = SectionService(audiotrack_svc, progress_svc)
+    books_svc = BookService(files_svc, section_svc, progress_svc)
 
     def configure(channel: BlockingChannel):
         channel.exchange_declare(exchange, ExchangeType.topic, durable=True)

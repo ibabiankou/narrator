@@ -4,6 +4,7 @@ from typing import Set, Optional, Annotated
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Query
 from sqlalchemy import select
+from sqlalchemy.exc import NoResultFound
 
 from api import get_logger, SessionDep
 from api.models import db, api
@@ -32,7 +33,10 @@ def get_playlist(book_id: uuid.UUID,
         if track.status == db.AudioStatus.ready
     ]
 
-    data = progress_service.get_progress(book_id)
+    try:
+        data = progress_service.get_progress(book_id)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Book not found")
     if data is None:
         return EMPTY_PLAYLIST
     else:
@@ -50,9 +54,10 @@ def _progress(data: ProgressData):
     total_duration = stats["narrated_duration"]
 
     # Percentage here is calculated based on the length of narrated sections
-    available_percent = stats["available"] / stats["total"] * 100
-    unavailable_percent = stats["missing"] / stats["total"] * 100
-    queued_percent = stats["queued"] / stats["total"] * 100
+    total = stats["total"]
+    available_percent = stats["available"] / total * 100 if total > 0 else 0
+    unavailable_percent = stats["missing"] / total * 100 if total > 0 else 0
+    queued_percent = stats["queued"] / total * 100 if total > 0 else 0
 
     return api.PlaybackProgress(
         global_progress_seconds=global_progress_seconds,
@@ -110,7 +115,10 @@ def generate_speech(book_id: uuid.UUID,
     else:
         new_tracks = audio_track_service.generate_speech(db_sections)
 
-    data = progress_service.get_progress(book_id)
+    try:
+        data = progress_service.get_progress(book_id)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Book not found")
     if data is None:
         return EMPTY_PLAYLIST
     else:
@@ -132,7 +140,10 @@ def get_tracks(book_id: uuid.UUID,
         for track in audio_track_service.get_tracks(book_id, sections)
     ]
 
-    data = progress_service.get_progress(book_id)
+    try:
+        data = progress_service.get_progress(book_id)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Book not found")
     if data is None:
         return EMPTY_PLAYLIST
     else:

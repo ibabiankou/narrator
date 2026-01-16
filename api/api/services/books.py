@@ -9,6 +9,8 @@ from sqlalchemy import update
 from api import get_logger
 from api.models.db import Book, Section, DbSession, BookStatus
 from api.services.files import FilesServiceDep
+from api.services.progress import PlaybackProgressServiceDep
+from api.services.sections import SectionServiceDep
 from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader, CleanupPipeline, pages_to_paragraphs, \
     paragraphs_to_sections
 from common_lib.service import Service
@@ -17,8 +19,13 @@ LOG = get_logger(__name__)
 
 
 class BookService(Service):
-    def __init__(self, files_service: FilesServiceDep):
+    def __init__(self,
+                 files_service: FilesServiceDep,
+                 sections_service: SectionServiceDep,
+                 playback_progress_service: PlaybackProgressServiceDep):
         self.files_service = files_service
+        self.sections_service = sections_service
+        self.playback_progress_service = playback_progress_service
 
     def split_pages(self, book: Book):
         LOG.debug(f"Splitting book {book.id} into pages.")
@@ -114,5 +121,17 @@ class BookService(Service):
     def get_book(self, book_id: uuid.UUID):
         with DbSession() as session:
             return session.get_one(Book, book_id)
+
+    def delete_book(self, book_id: uuid.UUID):
+        book = self.get_book(book_id)
+
+        self.playback_progress_service.delete(book_id=book_id)
+        self.sections_service.delete_sections(book_id=book_id)
+        self.files_service.delete_book_files(book_id=book_id)
+
+        with DbSession() as session:
+            session.delete(book)
+            session.commit()
+
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

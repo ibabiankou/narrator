@@ -80,5 +80,12 @@ class PlaybackProgressService(Service):
 
             session.commit()
 
+    def delete(self, book_id: uuid.UUID):
+        with DbSession() as session:
+            stmt = delete(db.PlaybackProgress).where(db.PlaybackProgress.book_id == book_id).returning(
+                db.PlaybackProgress)
+            deleted_items = session.scalars(stmt).all()
+            LOG.info("Deleted %s records: \n%s", len(deleted_items), deleted_items)
+
 
 PlaybackProgressServiceDep = Annotated[PlaybackProgressService, PlaybackProgressService.dep()]

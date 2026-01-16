@@ -7,7 +7,7 @@ from typing import Annotated
 import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Header, Request
 from sqlalchemy import select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from api import SessionDep, get_logger
 from api.models import db, api
@@ -89,6 +89,15 @@ def get_book(book_id: uuid.UUID, session: SessionDep) -> api.BookDetails:
                            pdf_file_name=book.file_name,
                            number_of_pages=book.number_of_pages,
                            status=book.status)
+
+@books_router.delete("/{book_id}", status_code=204)
+def delete_book(book_id: uuid.UUID, book_service: BookServiceDep):
+    try:
+        book_service.delete_book(book_id)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+
 
 
 @books_router.post("/{book_id}/reprocess")
