@@ -14,13 +14,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.13"]
-        image_repo: ["ibabiankou/home-lab"]
         include:
-          - os: ubuntu-latest
+          - os: "ubuntu-24.04"
             arch: "amd64"
-          - os: macos-latest
+            image_repo: "ibabiankou/home-lab"
+            python-version: "3.13"
+          - os: "ubuntu-24.04-arm"
             arch: "arm64"
+            image_repo: "ibabiankou/home-lab"
+            python-version: "3.13"
     outputs:
       image_tag: ${{ steps.vars.outputs.image_tag }}
     steps:
