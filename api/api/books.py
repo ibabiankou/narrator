@@ -10,7 +10,6 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from api import SessionDep, get_logger
-from api.main import base_url_router
 from api.models import db, api
 from api.services.books import BookServiceDep
 from api.services.files import FilesServiceDep, NotModified
