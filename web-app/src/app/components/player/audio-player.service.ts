@@ -2,10 +2,10 @@ import { AudioTrack, BookDetails, PlaybackProgress } from '../../core/models/boo
 import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
-  combineLatest,
+  combineLatest, combineLatestWith,
   distinct,
-  filter,
-  map,
+  filter, interval,
+  map, switchMap, take,
 } from 'rxjs';
 import { Injectable } from '@angular/core';
 import { PlaylistsService } from '../../core/services/playlists.service';
@@ -87,10 +87,33 @@ export class AudioPlayerService {
         this.audio.playbackRate = this.$playbackRate.value;
       }
     });
+
+    interval(5000)
+      .pipe(
+        combineLatestWith(this.$isPlaying),
+        filter(([_, isPlaying]) => isPlaying),
+      ).subscribe(() => this.updateProgress());
   }
 
   private readProgress() {
     this.$globalProgressSeconds.next(this.audio.currentTime);
+  }
+
+  private updateProgress() {
+    combineLatest([this.$audioTrack, this.$globalProgressSeconds, this.$playbackRate])
+      .pipe(
+        take(1),
+        switchMap(([track, progressSeconds, playbackRate]) => {
+          return this.playlistService.updateProgress({
+            "book_id": track.book_id,
+            "data": {
+              "progress_seconds": progressSeconds,
+              "sync_current_section": true,
+              "playback_rate": playbackRate
+            }
+          });
+        })
+      ).subscribe();
   }
 
   addTracks(tracks: AudioTrack[]) {

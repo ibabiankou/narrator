@@ -82,7 +82,7 @@ class PlaybackProgressService(Service):
 
     def delete_by_section(self, section_ids: list[int]):
         with DbSession() as session:
-            stmt = delete(db.PlaybackProgress).where(db.PlaybackProgress.section_id.in_(section_ids))
+            stmt = delete(db.PlaybackProgress).where(db.PlaybackProgress.data["section_id"].in_(section_ids))
             session.execute(stmt)
             session.commit()
 

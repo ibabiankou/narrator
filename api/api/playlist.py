@@ -42,12 +42,10 @@ def get_playlist(book_id: uuid.UUID,
 def _progress(data: ProgressData):
     playback_progress = data.playback_progress
     stats = data.stats
-    section_id = playback_progress.section_id if playback_progress else None
-    section_progress = playback_progress.section_progress if playback_progress else 0
-    sync_current_section = playback_progress.sync_current_section if playback_progress else True
-    playback_rate = playback_progress.playback_rate if playback_progress else 1.0
+    sync_current_section = playback_progress.data.get("sync_current_section") or True
+    playback_rate = playback_progress.data.get("playback_rate") or 1.0
 
-    global_progress_seconds = stats["played_duration"] + section_progress
+    global_progress_seconds = playback_progress.data.get("progress_seconds") or 0
     total_duration = stats["narrated_duration"]
 
     # Percentage here is calculated based on the length of narrated sections
@@ -56,8 +54,6 @@ def _progress(data: ProgressData):
     queued_percent = stats["queued"] / stats["total"] * 100
 
     return api.PlaybackProgress(
-        section_id=section_id,
-        section_progress_seconds=section_progress,
         global_progress_seconds=global_progress_seconds,
         total_narrated_seconds=total_duration,
         available_percent=available_percent,
@@ -71,11 +67,7 @@ def _progress(data: ProgressData):
 @playlists_router.post("/{book_id}/progress")
 def update_progress(request: api.PlaybackStateUpdate,
                     progress_service: PlaybackProgressServiceDep):
-    upsert = db.PlaybackProgress(book_id=request.book_id,
-                                 section_id=request.section_id,
-                                 section_progress=request.section_progress_seconds,
-                                 sync_current_section=request.sync_current_section,
-                                 playback_rate=request.playback_rate)
+    upsert = db.PlaybackProgress(book_id=request.book_id, data=request.data)
     progress_service.upsert_progress(upsert)
 
 

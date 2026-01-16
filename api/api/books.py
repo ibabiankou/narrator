@@ -5,13 +5,11 @@ from typing import Annotated
 
 import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Header, Request
-from m3u8.model import InitializationSection
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from api import SessionDep, get_logger
 from api.models import db, api
-from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
 from api.services.files import FilesServiceDep, NotModified
 from api.services.sections import SectionServiceDep
@@ -26,8 +24,7 @@ def create_book(book: api.CreateBookRequest,
                 session: SessionDep,
                 background_tasks: BackgroundTasks,
                 files_service: FilesServiceDep,
-                book_service: BookServiceDep,
-                audio_tracks_service: AudioTrackServiceDep) -> api.BookDetails:
+                book_service: BookServiceDep) -> api.BookDetails:
     # Load temp_file metadata from DB
     pdf_temp_file = session.get(db.TempFile, book.pdf_temp_file_id)
     if pdf_temp_file is None:

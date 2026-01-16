@@ -53,12 +53,6 @@ class AudioTrack(BaseModel):
 
 
 class PlaybackProgress(BaseModel):
-    # ID of the section that was playing last time progress was recorded.
-    section_id: Optional[int]
-
-    # Seconds within the section_id where playback was last time recorded.
-    section_progress_seconds: Optional[float]
-
     # Seconds since the start of the book.
     global_progress_seconds: float
 
@@ -95,11 +89,7 @@ EMPTY_PLAYBACK_PROGRESS = PlaybackProgress(
 
 class PlaybackStateUpdate(BaseModel):
     book_id: uuid.UUID
-    section_id: int
-    section_progress_seconds: float
-
-    sync_current_section: bool
-    playback_rate: float
+    data: dict
 
 
 class Playlist(BaseModel):

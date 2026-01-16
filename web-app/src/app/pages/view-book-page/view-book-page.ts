@@ -131,10 +131,6 @@ export class ViewBookPage implements OnInit, AfterViewInit {
         }
       );
     }
-    const sectionId = this.playlist().progress.section_id;
-    if (sectionId != null) {
-      this.$currentSectionId.next(sectionId);
-    }
   }
 
   deleteSection(section: Section) {

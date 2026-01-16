@@ -6,6 +6,7 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, ForeignKey, inspect
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker
 
 load_dotenv()
@@ -99,8 +100,4 @@ class PlaybackProgress(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"), unique=True)
 
-    section_id: Mapped[int] = mapped_column(ForeignKey("sections.id"))
-    section_progress: Mapped[Optional[float]]
-
-    sync_current_section: Mapped[bool]
-    playback_rate: Mapped[float]
+    data: Mapped[dict] = mapped_column(type_=JSONB)
