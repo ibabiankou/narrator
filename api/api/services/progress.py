@@ -14,7 +14,7 @@ LOG = get_logger(__name__)
 
 @dataclass
 class ProgressData:
-    playback_progress: db.PlaybackProgress
+    playback_progress: Optional[db.PlaybackProgress]
     stats: dict
 
 

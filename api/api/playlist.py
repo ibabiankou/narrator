@@ -40,7 +40,8 @@ def get_playlist(book_id: uuid.UUID,
 
 
 def _progress(data: ProgressData):
-    playback_progress = data.playback_progress
+    # TODO: Think how to handle this shit better.
+    playback_progress = data.playback_progress or db.PlaybackProgress(book_id=uuid.uuid4(), data={})
     stats = data.stats
     sync_current_section = playback_progress.data.get("sync_current_section") or True
     playback_rate = playback_progress.data.get("playback_rate") or 1.0
