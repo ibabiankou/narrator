@@ -1,4 +1,5 @@
 import io
+import os
 import uuid
 from datetime import datetime, UTC
 from typing import Annotated
@@ -9,6 +10,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from api import SessionDep, get_logger
+from api.main import base_url_router
 from api.models import db, api
 from api.services.books import BookServiceDep
 from api.services.files import FilesServiceDep, NotModified
@@ -254,6 +256,8 @@ def book_playlist(book_id: uuid.UUID,
     )
 
 def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
+    base_url = os.getenv("BASE_URL", "http://localhost:8000/api")
+
     playlist = m3u8.M3U8()
 
     playlist.version = 4
@@ -264,10 +268,9 @@ def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
     for track in tracks:
         # Add a segment with a duration and its URI
         segment = m3u8.Segment(
-            uri=f"http://localhost:8000/api/books/{track.book_id}/speech/{track.file_name}",
+            uri=f"{base_url}/books/{track.book_id}/speech/{track.file_name}",
             duration=track.duration,
             discontinuity=True,
-            # init_section={"uri": f"http://localhost:8000/api/files/{tracks[0].book_id}/map.mp4"}
         )
         playlist.segments.append(segment)
 
