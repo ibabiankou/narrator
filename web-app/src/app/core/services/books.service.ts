@@ -51,4 +51,8 @@ export class BooksService {
         });
       }));
   }
+
+  delete(id: string) {
+    return this.http.delete(`${this.apiUrl}/${id}`);
+  }
 }

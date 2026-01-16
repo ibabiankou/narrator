@@ -86,6 +86,7 @@ class PlaybackProgressService(Service):
                 db.PlaybackProgress)
             deleted_items = session.scalars(stmt).all()
             LOG.info("Deleted %s records: \n%s", len(deleted_items), deleted_items)
+            session.commit()
 
 
 PlaybackProgressServiceDep = Annotated[PlaybackProgressService, PlaybackProgressService.dep()]

@@ -18,16 +18,34 @@ button[mat-fab] {
 }
 
 .book-card {
-  text-decoration: none;
-  color: #333;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
+
+  a {
+    text-decoration: none;
+    color: #333;
+  }
+
+  .delete-button {
+    position: absolute;
+    right: -35px;
+    transform: translateY(-15px);
+
+    opacity: 0; // Hidden by default, show on hover.
+    transition: all 0.3s ease-in-out; // Ensure smooth transitions
+    color: red;
+  }
 }
 
 .book-card:hover {
   /* Subtle lift effect on hover */
   transform: translateY(-5px);
+
+  .delete-button {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Wrapper to maintain book shape (3:4 aspect ratio) */
@@ -36,7 +54,7 @@ button[mat-fab] {
   aspect-ratio: 3 / 4;
   overflow: hidden;
   border-radius: 4px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 12px;
 }
 

@@ -1,10 +1,11 @@
-import { Component, inject, input, OnInit } from '@angular/core';
-import { MatFabButton } from '@angular/material/button';
+import { Component, inject, input, model, OnInit } from '@angular/core';
+import { MatFabButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { BookDetails } from '../../core/models/books.dto';
 import { MatToolbar } from '@angular/material/toolbar';
 import { Title } from '@angular/platform-browser';
+import { BooksService } from '../../core/services/books.service';
 
 @Component({
   selector: 'app-books-page',
@@ -12,7 +13,8 @@ import { Title } from '@angular/platform-browser';
     MatIcon,
     MatFabButton,
     RouterLink,
-    MatToolbar
+    MatToolbar,
+    MatIconButton
   ],
   templateUrl: './books-page.html',
   styleUrl: './books-page.scss',
@@ -20,9 +22,10 @@ import { Title } from '@angular/platform-browser';
 export class BooksPage implements OnInit {
 
   router: Router = inject(Router)
-  books = input.required<BookDetails[]>();
+  books = model.required<BookDetails[]>();
 
-  constructor(private titleService: Title) {}
+  constructor(private booksService: BooksService,
+              private titleService: Title) {}
 
   ngOnInit() {
     this.titleService.setTitle('Books - NNarrator');
@@ -30,5 +33,13 @@ export class BooksPage implements OnInit {
 
   navigateToAdd() {
     this.router.navigate(['/add-book']);
+  }
+
+  protected deleteBook(id: string) {
+    this.booksService.delete(id).subscribe(
+      () => {
+        this.books.set(this.books().filter(book => book.id !== id));
+      }
+    );
   }
 }

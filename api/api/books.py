@@ -97,9 +97,6 @@ def delete_book(book_id: uuid.UUID, book_service: BookServiceDep):
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
-
-
-
 @books_router.post("/{book_id}/reprocess")
 def reprocess_book(book_id: uuid.UUID,
                    session: SessionDep,

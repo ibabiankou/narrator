@@ -5,12 +5,17 @@
 <div class="main-container">
   <div class="book-grid">
     @for (book of books(); track book.id) {
-      <a [routerLink]="['/books', book.id]" class="book-card">
-        <div class="cover-wrapper">
-          <img src="covers/{{$index % 2 === 0 ? 'blue' : 'red'}}.png" alt="{{ book.title }}">
-        </div>
-        <h3 class="book-title">{{ book.title }}</h3>
-      </a>
+      <div class="book-card">
+        <button class="delete-button" matIconButton aria-label="Delete book" (click)="deleteBook(book.id)" >
+          <mat-icon>delete_forever</mat-icon>
+        </button>
+        <a [routerLink]="['/books', book.id]">
+          <div class="cover-wrapper">
+            <img src="covers/{{$index % 2 === 0 ? 'blue' : 'red'}}.png" alt="{{ book.title }}">
+          </div>
+          <h3 class="book-title">{{ book.title }}</h3>
+        </a>
+      </div>
     } @empty {
       <li>There are no books yet. Add a new book using the button below.</li>
     }
