@@ -11,7 +11,7 @@ from api import SessionDep
 from api.models import db, api
 from api.services.files import FilesServiceDep, NotModified
 
-files_router = APIRouter()
+files_router = APIRouter(tags=["Files API"])
 
 local_dir = os.path.dirname("/tmp/narrator/temp_files")
 if not os.path.exists(local_dir):

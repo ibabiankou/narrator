@@ -9,7 +9,7 @@ from api import SessionDep
 from api.models import db
 from api.services.books import BookServiceDep
 
-debug_router = APIRouter()
+debug_router = APIRouter(tags=["Debug API"])
 
 
 @debug_router.get("/{book_id}/text")

@@ -19,15 +19,6 @@ export interface BookDetails {
   status: string;
 }
 
-// export enum SpeechStatus {
-//   missing = "missing",
-//   queued = "queued",
-//   generating = "generating",
-//   failed = "failed",
-//   ready = "ready"
-// }
-
-
 export interface Section {
   id: number;
   book_id: string;

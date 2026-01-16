@@ -46,7 +46,7 @@ export class BooksService {
     return this.http.get<BookContent>(`${this.apiUrl}/${bookId}/content`, {params: httpParams})
       .pipe(tap(content => {
         content.pages.forEach(page => {
-          const url = `${this.apiUrl}/${bookId}/pages/${page.file_name}#toolbar=0&navpanes=0&scrollbar=0`
+          const url = `${environment.api_base_url}/files/${bookId}/pages/${page.file_name}#toolbar=0&navpanes=0&scrollbar=0`
           page.file_url = this.sanitizer.bypassSecurityTrustResourceUrl(url);
         });
       }));

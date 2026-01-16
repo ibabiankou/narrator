@@ -14,7 +14,6 @@ import {
 import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { AudioPlayerService } from './audio-player.service';
 import { MatTooltip } from '@angular/material/tooltip';
-import { OSBindingsService } from './os-binding.service';
 
 @Component({
   selector: 'app-player',
@@ -53,10 +52,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   $queuedPercent = new BehaviorSubject<number>(0);
   $unavailablePercent = new BehaviorSubject<number>(0);
 
-  constructor(private audioPlayer: AudioPlayerService,
-              // Unused, but ensures OSBindingsService is instantiated.
-              // TODO: Check what is a better way to do this.
-              private osBindings: OSBindingsService) {
+  constructor(private audioPlayer: AudioPlayerService) {
 
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;
@@ -220,7 +216,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   private fontSizeIndex = 1;
   private fontSizeOptions = ["90%", "100%", "110%"];
 
-  protected toggleFontSize(e: PointerEvent) {
+  protected toggleFontSize(_: PointerEvent) {
     this.fontSizeIndex = (this.fontSizeIndex + 1) % this.fontSizeOptions.length;
     document.documentElement.style.setProperty('--font-scale', this.fontSizeOptions[this.fontSizeIndex]);
   }

@@ -1,8 +1,7 @@
 import uuid
-from typing import Set, Optional, Annotated
+from typing import Set, Optional
 
 from fastapi import APIRouter, HTTPException
-from fastapi.params import Query
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 
@@ -14,7 +13,7 @@ from api.services.progress import PlaybackProgressServiceDep, ProgressData
 
 LOG = get_logger(__name__)
 
-playlists_router = APIRouter()
+playlists_router = APIRouter(tags=["Playlists API"])
 
 
 @playlists_router.get("/{book_id}")
@@ -22,7 +21,6 @@ def get_playlist(book_id: uuid.UUID,
                  audiotrack_service: AudioTrackServiceDep,
                  progress_service: PlaybackProgressServiceDep
                  ) -> api.Playlist:
-    # Read all the audio tracks for this book. Gives us ready and queued sections
     ready_tracks = [
         api.AudioTrack(book_id=track.book_id,
                        section_id=track.section_id,
@@ -123,28 +121,3 @@ def generate_speech(book_id: uuid.UUID,
         return EMPTY_PLAYLIST
     else:
         return api.Playlist(progress=_progress(data), tracks=new_tracks)
-
-
-@playlists_router.get("/{book_id}/tracks")
-def get_tracks(book_id: uuid.UUID,
-               audio_track_service: AudioTrackServiceDep,
-               progress_service: PlaybackProgressServiceDep,
-               sections: Annotated[Set[int], Query()] = None
-               ) -> api.Playlist:
-    tracks = [
-        api.AudioTrack(book_id=track.book_id,
-                       section_id=track.section_id,
-                       status=track.status,
-                       file_name=track.file_name,
-                       duration=track.duration)
-        for track in audio_track_service.get_tracks(book_id, sections)
-    ]
-
-    try:
-        data = progress_service.get_progress(book_id)
-    except NoResultFound:
-        raise HTTPException(status_code=404, detail="Book not found")
-    if data is None:
-        return EMPTY_PLAYLIST
-    else:
-        return api.Playlist(progress=_progress(data), tracks=tracks)

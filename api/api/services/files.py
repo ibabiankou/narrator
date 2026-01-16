@@ -74,13 +74,6 @@ class FilesService(Service):
                 Key=remote_path,
                 ContentType=mime_type)
 
-    def get_book_page_file(self,
-                           book_id: uuid.UUID,
-                           page_file_name: str,
-                           if_none_match: Optional[str] = None) -> Optional[FileData]:
-        """Get the book page file from the object store."""
-        return self._get_object(f"{book_id}/pages/{page_file_name}")
-
     def _get_object(self, key: str, if_none_match: Optional[str] = "", range: Optional[str] = "bytes=0-") -> Optional[
         FileData]:
         try:
@@ -107,14 +100,6 @@ class FilesService(Service):
             return f"{book_id}/speech/{file_name}"
         else:
             return f"{book_id}/speech"
-
-    def get_speech_file(self,
-                        book_id: uuid.UUID,
-                        file_name: str,
-                        if_none_match: Optional[str] = "",
-                        range: Optional[str] = "bytes=0-") -> Optional[FileData]:
-        """Get the speech file from the object store."""
-        return self._get_object(self.speech_filename(book_id, file_name), if_none_match, range)
 
     def delete_speech_file(self, book_id: uuid.UUID, file_name: str):
         remote_file_path = self.speech_filename(book_id, file_name)

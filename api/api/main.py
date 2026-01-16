@@ -59,12 +59,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# app.add_middleware(GZipMiddleware)
+app.add_middleware(GZipMiddleware)
 
 base_url_router = APIRouter(prefix="/api")
 
-@base_url_router.get("/")
-def health():
+@base_url_router.get("/", tags=["System API"])
+def health_check():
     return {"status": "ok"}
 
 

@@ -67,7 +67,7 @@ export class AudioPlayerService {
           this.hls = new Hls({
             debug: false,
           });
-          this.hls.loadSource(`${environment.api_base_url}/books/${book.id}/stream.m3u8`);
+          this.hls.loadSource(`${environment.api_base_url}/books/${book.id}/m3u8`);
           this.hls.attachMedia(this.audio);
         } else {
           console.error("HLS not supported");
@@ -186,22 +186,17 @@ export class AudioPlayerService {
 
 function binarySearch(arr: number[], target: number): number {
   let left = 0;
-  let right = arr.length; // Use length to allow for "not found" (index out of bounds)
+  let right = arr.length;
 
   while (left < right) {
     const mid = Math.floor(left + (right - left) / 2);
 
     if (arr[mid] <= target) {
-      // If the middle element is less than or equal to target,
-      // the first "larger" element must be to the right.
       left = mid + 1;
     } else {
-      // If the middle element is already larger, it COULD be the first one,
-      // but there might be an even earlier one to the left.
       right = mid;
     }
   }
 
-  // After the loop, left == right, pointing to the first element > target
   return left < arr.length ? left : -1;
 }

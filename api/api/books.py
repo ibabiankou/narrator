@@ -1,8 +1,6 @@
-import io
 import os
 import uuid
 from datetime import datetime, UTC
-from typing import Annotated
 
 import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Header, Request
@@ -12,12 +10,12 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from api import SessionDep, get_logger
 from api.models import db, api
 from api.services.books import BookServiceDep
-from api.services.files import FilesServiceDep, NotModified
+from api.services.files import FilesServiceDep
 from api.services.sections import SectionServiceDep
 
 LOG = get_logger(__name__)
 
-books_router = APIRouter()
+books_router = APIRouter(tags=["Books API"])
 
 
 @books_router.post("/")
@@ -148,101 +146,7 @@ def get_book_content(book_id: uuid.UUID,
     return api.BookContent(pages=pages)
 
 
-@books_router.get("/{book_id}/stream")
-def stream_book(book_id: uuid.UUID,
-                session: SessionDep,
-                file_service: FilesServiceDep,
-                request: Request
-                ):
-    book = session.get(db.Book, book_id)
-    if book is None:
-        raise HTTPException(status_code=404, detail="Book not found")
-
-    stmt = select(db.AudioTrack).where(db.AudioTrack.book_id == book_id).where(
-        db.AudioTrack.status == db.AudioStatus.ready).order_by(db.AudioTrack.playlist_order)
-    ready_tracks = list(session.execute(stmt).scalars().all())
-    LOG.info("Loaded %s tracks", len(ready_tracks))
-
-    # duration_sum = [0]
-    bytes_sum = [0]
-    for track in ready_tracks:
-        # duration_sum.append(duration_sum[-1] + track.duration)
-        bytes_sum.append(bytes_sum[-1] + track.bytes)
-
-    # total_duration = duration_sum[-1]
-    total_bytes = bytes_sum[-1]
-
-    # Handle Range Header: "bytes=0-1023"
-    range_header = request.headers.get("Range")
-    if range_header:
-        range_type, range_val = range_header.split("=")
-        start_str, sep, end_str = range_val.partition("-")
-        if range_type != "bytes":
-            raise HTTPException(status_code=400, detail="Only 'bytes' range type is supported.")
-    else:
-        start_str = "0"
-        end_str = None
-
-    start = int(start_str) if start_str else 0
-    default_length = 1024 * 1024
-    end = min(int(end_str) if end_str else start + default_length - 1, total_bytes - 1)
-    content_length = end - start + 1
-
-    LOG.info("Total bytes available %s", total_bytes)
-    LOG.info("Processing range: %s-%s", start, end)
-    LOG.info("Expected content length: %s", content_length)
-
-    # Find the tracks corresponding to the range request;
-    # Load the tracks, concatenate the data.
-    content = io.BytesIO()
-    content_type = None
-    remaining = content_length
-    i = 0
-    while remaining > 0 and i < len(ready_tracks):
-        # Skip tracks outside the range;
-        if bytes_sum[i + 1] < start:
-            i += 1
-            continue
-
-        track = ready_tracks[i]
-        track_bytes_start = max(start - bytes_sum[i], 0)
-        track_bytes_end = min(track_bytes_start + remaining - 1, track.bytes - 1)
-        track_content_length = track_bytes_end - track_bytes_start + 1
-
-        track_range = f"bytes={track_bytes_start}-{track_bytes_end}"
-        file_data = file_service.get_speech_file(book_id, track.file_name, range=track_range)
-        if file_data is None:
-            raise HTTPException(status_code=404, detail=f"Speech file {track.file_name} not found")
-        content.write(file_data.body)
-        LOG.info("Loaded %s bytes for track %s, requested range %s, out of %s",
-                 len(file_data.body), track.file_name, track_range, track.bytes)
-
-        if content_type is None:
-            content_type = file_data.content_type
-        elif content_type != file_data.content_type:
-            raise HTTPException(status_code=500, detail="Tracks have different content types")
-
-        remaining -= track_content_length
-        i += 1
-        if remaining <= 0:
-            break
-
-    headers = {
-        "Accept-Ranges": "bytes",
-        "Content-Range": f"bytes {start}-{end}/{total_bytes}",
-        "Content-Length": str(content_length),
-    }
-    content.seek(0)
-    content_bytes = content.read()
-    LOG.info("Actual size of bytes loaded: %s", len(content_bytes))
-    return Response(
-        content=content_bytes,
-        status_code=206,
-        media_type="audio/ogg",
-        headers=headers)
-
-
-@books_router.get("/{book_id}/stream.m3u8")
+@books_router.get("/{book_id}/m3u8")
 def book_playlist(book_id: uuid.UUID,
                 session: SessionDep,
                 ):
@@ -265,74 +169,22 @@ def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
 
     playlist = m3u8.M3U8()
 
-    playlist.version = 4
-    playlist.target_duration = 90
+    playlist.version = "4"
+    playlist.target_duration = max([t.duration for t in tracks]) + 1
     playlist.media_sequence = 0
+    # TODO: What would be behavior if I set it to False? Would it help for books that are being generated?
     playlist.is_endlist = True  # Set to False for live streams
 
     for track in tracks:
         # Add a segment with a duration and its URI
         segment = m3u8.Segment(
-            uri=f"{base_url}/books/{track.book_id}/speech/{track.file_name}",
+            uri=f"{base_url}/files/{track.book_id}/speech/{track.file_name}",
             duration=track.duration,
             discontinuity=True,
+            # TODO: Add daterange tag with X-SID="section-id", X-ORDER="ddd", X-DURATION="ddd" allowing
+            #  to sync what is playing with what is
+            dateranges=[]
         )
         playlist.segments.append(segment)
 
     return playlist.dumps()
-
-@books_router.get("/{book_id}/pages/{page_file_name}")
-def get_book_page(book_id: uuid.UUID,
-                  page_file_name: str,
-                  file_service: FilesServiceDep,
-                  if_none_match: Annotated[str | None, Header()] = None):
-    file_data = file_service.get_book_page_file(book_id, page_file_name, if_none_match)
-    if file_data is None:
-        raise HTTPException(status_code=404, detail="Page not found")
-    headers = {
-        "Cache-Control": "private, max-age=604800, immutable",
-        "ETag": file_data.etag
-    }
-    return Response(content=file_data.body, media_type=file_data.content_type, headers=headers)
-
-
-@books_router.get("/{book_id}/speech/{file_name}")
-def get_speech_file(book_id: uuid.UUID,
-                    file_name: str,
-                    file_service: FilesServiceDep,
-                    request: Request,
-                    if_none_match: Annotated[str | None, Header()] = ""):
-
-    # Handle Range Header: "bytes=0-1023"
-    range_header = request.headers.get("Range")
-    if range_header:
-        range_type, range_val = range_header.split("=")
-        start_str, sep, end_str = range_val.partition("-")
-        if range_type != "bytes":
-            raise HTTPException(status_code=400, detail="Only 'bytes' range type is supported.")
-    else:
-        start_str = "0"
-        end_str = None
-
-    start = int(start_str) if start_str else 0
-    end = int(end_str) if end_str else -1
-
-    range_request = f"bytes={start}-{end if end != -1 else ''}"
-
-    LOG.info("Processing range: %s, %s", start, end)
-
-    try:
-        file_data = file_service.get_speech_file(book_id, file_name, if_none_match, range=range_request)
-    except NotModified:
-        return Response(status_code=304)
-
-    if file_data is None:
-        raise HTTPException(status_code=404, detail="Speech file not found")
-    # Have no idea why, but this header enables seeking in the HTMLAudioElement.
-    headers = {
-        "Accept-Ranges": "bytes",
-        "Content-Range": file_data.range,
-        "Cache-Control": "private, max-age=604800, immutable",
-        "ETag": file_data.etag
-    }
-    return Response(content=file_data.body, status_code=206, media_type=file_data.content_type, headers=headers)

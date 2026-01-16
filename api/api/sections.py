@@ -6,7 +6,7 @@ from api.services.sections import SectionServiceDep
 
 LOG = get_logger(__name__)
 
-sections_router = APIRouter()
+sections_router = APIRouter(tags=["Sections API"])
 
 
 @sections_router.post("/{section_id}")

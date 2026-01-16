@@ -20,13 +20,4 @@ export class PlaylistsService {
   updateProgress(progress: PlaybackStateUpdate) {
     return this.http.post<void>(`${this.apiUrl}/${progress.book_id}/progress`, progress);
   }
-
-  getTracks(bookId: string, sectionIds: number[]) {
-    let params = new HttpParams({
-      fromObject: {
-        sections: sectionIds
-      }
-    });
-    return this.http.get<Playlist>(`${this.apiUrl}/${bookId}/tracks`, {params: params});
-  }
 }
