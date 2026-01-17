@@ -49,7 +49,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
   $playbackRate;
 
   $availablePercent = new BehaviorSubject<number>(0);
-  $queuedPercent = new BehaviorSubject<number>(0);
   $unavailablePercent = new BehaviorSubject<number>(0);
 
   constructor(private audioPlayer: AudioPlayerService) {
@@ -89,7 +88,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
     this.$totalNarratedSeconds.next(progress.total_narrated_seconds);
 
     this.$availablePercent.next(progress.available_percent);
-    this.$queuedPercent.next(progress.queued_percent);
     this.$unavailablePercent.next(progress.unavailable_percent);
   }
 
