@@ -88,12 +88,14 @@ def get_book(book_id: uuid.UUID, session: SessionDep) -> api.BookDetails:
                            number_of_pages=book.number_of_pages,
                            status=book.status)
 
+
 @books_router.delete("/{book_id}", status_code=204)
 def delete_book(book_id: uuid.UUID, book_service: BookServiceDep):
     try:
         book_service.delete_book(book_id)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
+
 
 @books_router.post("/{book_id}/reprocess")
 def reprocess_book(book_id: uuid.UUID,
@@ -147,9 +149,7 @@ def get_book_content(book_id: uuid.UUID,
 
 
 @books_router.get("/{book_id}/m3u8")
-def book_playlist(book_id: uuid.UUID,
-                session: SessionDep,
-                ):
+def book_playlist(book_id: uuid.UUID, session: SessionDep):
     book = session.get(db.Book, book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -164,6 +164,7 @@ def book_playlist(book_id: uuid.UUID,
         media_type="application/vnd.apple.mpegurl"
     )
 
+
 def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
     base_url = os.getenv("BASE_URL", "http://localhost:8000/api")
 
@@ -173,17 +174,19 @@ def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
     playlist.target_duration = max([t.duration for t in tracks]) + 1
     playlist.media_sequence = 0
     # TODO: What would be behavior if I set it to False? Would it help for books that are being generated?
-    playlist.is_endlist = True  # Set to False for live streams
+    playlist.is_endlist = True
 
     for track in tracks:
-        # Add a segment with a duration and its URI
         segment = m3u8.Segment(
             uri=f"{base_url}/files/{track.book_id}/speech/{track.file_name}",
             duration=track.duration,
             discontinuity=True,
-            # TODO: Add daterange tag with X-SID="section-id", X-ORDER="ddd", X-DURATION="ddd" allowing
-            #  to sync what is playing with what is
-            dateranges=[]
+            dateranges=[{
+                "id": str(track.section_id),
+                "start_date": "1111-11-11",
+                "x_order": str(track.playlist_order),
+                "x_duration": str(track.duration)
+            }]
         )
         playlist.segments.append(segment)
 

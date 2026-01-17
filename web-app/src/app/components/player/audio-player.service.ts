@@ -1,27 +1,34 @@
-import { AudioTrack, BookDetails, PlaybackProgress } from '../../core/models/books.dto';
+import { BookDetails, PlaybackProgress } from '../../core/models/books.dto';
 import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
   combineLatest, combineLatestWith,
-  distinct,
+  distinctUntilChanged,
   filter, interval,
-  map, switchMap, take,
+  map, switchMap, take, tap,
 } from 'rxjs';
 import { Injectable } from '@angular/core';
 import { PlaylistsService } from '../../core/services/playlists.service';
 
 import Hls from 'hls.js';
 
-interface PlayerTrack {
-  audioTrack: AudioTrack
-
-  url: string;
-  index: number;
-}
-
 enum PlayerStatus {
   playing = "playing",
   paused = "paused",
+}
+
+interface HlsSection {
+  section_id: number;
+  duration: number;
+  end_time: number;
+  playback_order: number;
+}
+
+const FIRST_SECTION: HlsSection = {
+  section_id: 0,
+  duration: 0,
+  end_time: 0,
+  playback_order: -1
 }
 
 /**
@@ -34,25 +41,26 @@ export class AudioPlayerService {
   private hls: Hls | null = null;
 
   $bookDetails = new BehaviorSubject<BookDetails | null>(null);
-  private tracks: PlayerTrack[] = [];
-  // Holds global book time at which each track starts.
-  private durationSum: number[] = [0];
-
-  private $trackIndex = new BehaviorSubject<number>(0);
-  $playbackRate = new BehaviorSubject<number>(1);
-
-  $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
-
-  $audioTrack = combineLatest([this.$trackIndex.pipe(distinct()), this.$isPlaying])
-    .pipe(
-      filter(([_, isPlaying]) => isPlaying),
-      map(([trackIndex, _]) => this.tracks[trackIndex]?.audioTrack),
-      filter(track => track != null),
-      distinct()
-    );
-
-  // Progress from the start of the book.
+  // A list of sections from the HLS playlist along with their duration and end time.
+  private sectionTimeline: HlsSection[] = [];
+  // Currently playing time in seconds.
   $globalProgressSeconds = new BehaviorSubject<number>(0);
+  // An index within sectionTimeline of the currently playing section.
+  private $sectionIndex = this.$globalProgressSeconds.pipe(
+    map(currentTime => binarySearch(this.sectionTimeline, (section) => section.end_time, currentTime) - 1),
+    filter(index => index >= 0),
+    map(i => i + 1),
+    distinctUntilChanged(),
+    tap(i => console.log(`Current section index:`, i)),
+  );
+  // An ID of the section that is being played right now.
+  $sectionId = this.$sectionIndex.pipe(
+    map(i => this.sectionTimeline[i].section_id),
+    tap(i => console.log(`Current section id:`, i)),
+  );
+
+  $playbackRate = new BehaviorSubject<number>(1);
+  $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
 
   constructor(private playlistService: PlaylistsService) {
     this.audio = new Audio();
@@ -67,18 +75,39 @@ export class AudioPlayerService {
           this.hls = new Hls({
             debug: false,
           });
+
+          // Get section timeline metadata from HLS model.
+          this.hls.on(Hls.Events.LEVEL_UPDATED, (event, data) => {
+            if (data.details.dateRanges) {
+              const hlsSections: HlsSection[] = [FIRST_SECTION];
+
+              Object.values(data.details.dateRanges).forEach(range => {
+                if (!range) return;
+                hlsSections.push({
+                  section_id: parseInt(range.id),
+                  duration: parseFloat(range.attr["X-DURATION"]),
+                  end_time: 0,
+                  playback_order: parseInt(range.attr["X-ORDER"])
+                })
+              });
+
+              // Ensure the sections are sorted according to the playback order and calculate the cumulative end times.
+              hlsSections.sort((a, b) => a.playback_order - b.playback_order);
+              hlsSections.forEach((hlsSection, index) => {
+                if (index == 0) return;
+                hlsSection.end_time = hlsSections[index - 1].end_time + hlsSection.duration;
+              });
+              this.sectionTimeline = hlsSections;
+              console.log(hlsSections);
+            } else {
+              console.warn("No date ranges found, unable to sync section being played.")
+            }
+          });
+
           this.hls.loadSource(`${environment.api_base_url}/books/${book.id}/m3u8`);
           this.hls.attachMedia(this.audio);
         } else {
           console.error("HLS not supported");
-        }
-      });
-
-    this.$globalProgressSeconds
-      .subscribe((currentTime) => {
-        const trackIndex = binarySearch(this.durationSum, currentTime) - 1;
-        if (trackIndex >= 0) {
-          this.$trackIndex.next(trackIndex);
         }
       });
 
@@ -100,12 +129,12 @@ export class AudioPlayerService {
   }
 
   private updateProgress() {
-    combineLatest([this.$audioTrack, this.$globalProgressSeconds, this.$playbackRate])
+    combineLatest([this.$bookDetails.pipe(filter(b => b != null)), this.$globalProgressSeconds, this.$playbackRate])
       .pipe(
         take(1),
-        switchMap(([track, progressSeconds, playbackRate]) => {
+        switchMap(([bookDetails, progressSeconds, playbackRate]) => {
           return this.playlistService.updateProgress({
-            "book_id": track.book_id,
+            "book_id": bookDetails.id,
             "data": {
               "progress_seconds": progressSeconds,
               "sync_current_section": true,
@@ -114,23 +143,6 @@ export class AudioPlayerService {
           });
         })
       ).subscribe();
-  }
-
-  addTracks(tracks: AudioTrack[]) {
-    const baseUrl = environment.api_base_url
-
-    const length = tracks.length;
-    let newTracks: PlayerTrack[] = tracks.map((track, index) => ({
-      audioTrack: track,
-      url: `${baseUrl}/books/${track.book_id}/speech/${track.file_name}`,
-      index: length + index
-    }));
-
-    for (let i = 0; i < tracks.length; i++) {
-      this.durationSum.push(this.durationSum[this.durationSum.length - 1] + tracks[i].duration);
-    }
-
-    this.tracks.push(...newTracks);
   }
 
   play() {
@@ -149,11 +161,21 @@ export class AudioPlayerService {
   }
 
   next() {
-    this.audio.currentTime = this.durationSum[this.$trackIndex.value + 1];
+    this.$sectionIndex.pipe(take(1))
+      .subscribe(i => {
+        // Scrolling to the end time of the current section, effectively starting the next one.
+        this.audio.currentTime = this.sectionTimeline[i].end_time
+      });
   }
 
   previous() {
-    this.audio.currentTime = this.durationSum[this.$trackIndex.value - 1];
+    this.$sectionIndex.pipe(take(1))
+      .subscribe(i => {
+        // The end time of the previous section is the start time of the current section, so
+        // to play the previous section, we need to go two items back.
+        // Add a few extra ms, otherwise it activates the one before previous section for a moment.
+        this.audio.currentTime = this.sectionTimeline[Math.max(i - 2, 0)].end_time + 0.05;
+      });
   }
 
   seek(adjustment: number) {
@@ -184,14 +206,15 @@ export class AudioPlayerService {
   }
 }
 
-function binarySearch(arr: number[], target: number): number {
+// Returns index of the element with the largest value smaller than target.
+function binarySearch<T>(arr: T[], keyExtractor: (item: T) => number, target: number): number {
   let left = 0;
   let right = arr.length;
 
   while (left < right) {
     const mid = Math.floor(left + (right - left) / 2);
 
-    if (arr[mid] <= target) {
+    if (keyExtractor(arr[mid]) <= target) {
       left = mid + 1;
     } else {
       right = mid;

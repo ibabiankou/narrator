@@ -68,11 +68,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
         )
       );
 
-    this.audioPlayer.$audioTrack
+    this.audioPlayer.$sectionId
       .pipe(
         filter(() => this.syncCurrentSection()),
         takeUntil(this.$destroy)
-      ).subscribe(track => this.sectionPlayed.emit(track.section_id));
+      ).subscribe(sectionId => this.sectionPlayed.emit(sectionId));
   }
 
   ngOnInit(): void {
@@ -82,7 +82,6 @@ export class PlayerComponent implements OnInit, OnDestroy {
 
   initPlayerService(playlist: Playlist, book: BookDetails) {
     this.audioPlayer.setBookDetails(book);
-    this.audioPlayer.addTracks(playlist.tracks);
     this.audioPlayer.setPlaybackProgress(playlist.progress);
   }
 
@@ -199,8 +198,8 @@ export class PlayerComponent implements OnInit, OnDestroy {
     if (!this.syncCurrentSection()) {
       this.sectionPlayed.emit(0);
     } else {
-      this.audioPlayer.$audioTrack.pipe(take(1))
-        .subscribe(track => this.sectionPlayed.emit(track.section_id));
+      this.audioPlayer.$sectionId.pipe(take(1))
+        .subscribe(sectionId => this.sectionPlayed.emit(sectionId));
     }
   }
 
