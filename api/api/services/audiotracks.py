@@ -100,11 +100,14 @@ class AudioTrackService(Service):
     def handle_speech_msg(self, payload: rmq.SpeechResponse):
         LOG.debug("Speech is ready for track %s.", payload.track_id)
         track = self._get_track(payload.track_id)
-        track.status = db.AudioStatus.ready
-        track.file_name = payload.file_path.split("/")[-1]
-        track.duration = payload.duration
-        track.bytes = payload.bytes
-        self.save_track(track)
+        if track:
+            track.status = db.AudioStatus.ready
+            track.file_name = payload.file_path.split("/")[-1]
+            track.duration = payload.duration
+            track.bytes = payload.bytes
+            self.save_track(track)
+        else:
+            LOG.warn("Track %s seem to be missing, so ignoring the message...", payload.track_id)
 
     def save_track(self, track: db.AudioTrack):
         with DbSession() as session:

@@ -74,9 +74,14 @@ class SectionService(Service):
 
     def handle_phonemes_msg(self, payload: rmq.PhonemesResponse):
         LOG.debug("Got phonemes for track %s, requesting speech synthesis...", payload.track_id)
-        self.set_phonemes(payload.section_id, payload.phonemes)
-        self.audiotracks_service.synthesize_speech(payload.book_id, payload.section_id, payload.track_id,
-                                                   payload.phonemes, voice=payload.voice)
+        with DbSession() as session:
+            section = session.get(db.Section, payload.section_id)
+            if section:
+                self.set_phonemes(payload.section_id, payload.phonemes)
+                self.audiotracks_service.synthesize_speech(payload.book_id, payload.section_id, payload.track_id,
+                                                           payload.phonemes, voice=payload.voice)
+            else:
+                LOG.warn("Section %s seem to be missing, so ignoring the message...", payload.section_id)
 
     def set_content(self, section_id: int, content: str) -> list[api.AudioTrack]:
         with DbSession() as session:
