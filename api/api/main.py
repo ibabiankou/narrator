@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -18,6 +19,7 @@ from api.services.progress import PlaybackProgressService
 from api.services.sections import SectionService
 from common_lib import RMQClient
 from common_lib.models import rmq
+from common_lib.rmq import Topology
 
 load_dotenv()
 
@@ -29,24 +31,24 @@ async def lifespan(app: FastAPI):
     files_svc = FilesService()
     progress_svc = PlaybackProgressService()
 
-    exchange = "narrator"
-    queue = "api"
-    rmq_client = RMQClient(exchange)
+    rmq_client = RMQClient(Topology.default_exchange)
     audiotrack_svc = AudioTrackService(files_svc, rmq_client)
-    section_svc = SectionService(audiotrack_svc, progress_svc)
+    section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client)
+    speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
     books_svc = BookService(files_svc, section_svc, progress_svc)
 
     def configure(channel: BlockingChannel):
-        channel.exchange_declare(exchange, ExchangeType.topic, durable=True)
-        channel.queue_declare(queue, durable=True, arguments={"x-queue-type": "quorum"})
-        channel.queue_bind(queue, exchange, "phonemes")
-        channel.queue_bind(queue, exchange, "speech")
+        channel.exchange_declare(Topology.default_exchange, ExchangeType.topic, durable=True)
+        channel.queue_declare(Topology.api_queue, durable=True, arguments={"x-queue-type": "quorum"})
+        channel.queue_bind(Topology.api_queue, Topology.default_exchange, "phonemes")
+        channel.queue_bind(Topology.api_queue, Topology.default_exchange, "speech")
     rmq_client.configure(configure)
 
-    rmq_client.set_queue_message_handler(queue, rmq.PhonemesResponse, section_svc.handle_phonemes_msg)
-    rmq_client.set_queue_message_handler(queue, rmq.SpeechResponse, audiotrack_svc.handle_speech_msg)
+    rmq_client.set_queue_message_handler(Topology.api_queue, rmq.PhonemesResponse, section_svc.handle_phonemes_msg)
+    rmq_client.set_queue_message_handler(Topology.api_queue, rmq.SpeechResponse, audiotrack_svc.handle_speech_msg)
     rmq_client.start_consuming()
     yield
+    speech_gen_task.cancel()
     RMQClient.instance.close()
 
 app = FastAPI(lifespan=lifespan)

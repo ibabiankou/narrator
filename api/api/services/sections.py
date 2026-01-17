@@ -1,25 +1,34 @@
+import asyncio
+import os
 import uuid
 from typing import Annotated
 
-from pika import BasicProperties
-from sqlalchemy import delete, update, select
+from sqlalchemy import delete, update, select, text
 
 from api import get_logger
 from api.models import db, api
 from api.models.db import DbSession
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.progress import PlaybackProgressServiceDep
+from common_lib import RMQClientDep
 from common_lib.models import rmq
+from common_lib.rmq import Topology
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
 
 
 class SectionService(Service):
-    def __init__(self, audiotracks_service: AudioTrackServiceDep,
-                 progress_service: PlaybackProgressServiceDep):
+    def __init__(self,
+                 audiotracks_service: AudioTrackServiceDep,
+                 progress_service: PlaybackProgressServiceDep,
+                 rmq_client: RMQClientDep):
         self.audiotracks_service = audiotracks_service
         self.progress_service = progress_service
+        self.rmq_client = rmq_client
+
+        self._speech_generation_interval_sec = os.getenv("SPEECH_GENERATION_INTERVAL_SEC", 30)
+        self._speech_generation_queue_size_threshold = os.getenv("SPEECH_GENERATION_QUEUE_SIZE_THRESHOLD", 10)
 
     def get_sections(self, book_id: uuid.UUID):
         with DbSession() as session:
@@ -76,6 +85,42 @@ class SectionService(Service):
             LOG.info("Updated section: \n%s", updated_section)
             session.commit()
             return self.audiotracks_service.generate_speech([updated_section]) if updated_section else []
+
+    async def generate_speech_maybe(self):
+        while True:
+            LOG.info("Checking if need to generate some speech...")
+            self._do_generate_speech_maybe()
+            await asyncio.sleep(self._speech_generation_interval_sec)
+
+    def _do_generate_speech_maybe(self):
+        message_num = self.rmq_client.get_queue_size(Topology.phonemization_queue)
+        message_num += self.rmq_client.get_queue_size(Topology.speech_gen_queue)
+
+        if message_num > self._speech_generation_queue_size_threshold:
+            return
+
+        # Find a few sections per book and trigger generation for them.
+        # noinspection SqlDialectInspection
+        query_text = """WITH MissingAudio AS (SELECT s.id,
+                                                     s.book_id,
+                                                     s.section_index,
+                                                     -- Generate a rank for each section within its own book group
+                                                     ROW_NUMBER() OVER (
+                                                         PARTITION BY s.book_id
+                                                         ORDER BY s.section_index ASC
+                                                     ) as rank_in_book
+                                              FROM sections s
+                                                       LEFT JOIN audio_tracks a ON s.id = a.section_id
+                                              WHERE a.id IS NULL)
+                        SELECT *
+                        FROM sections
+                        WHERE id in (SELECT id 
+                                     FROM MissingAudio 
+                                     WHERE rank_in_book <= 5 
+                                     ORDER BY book_id, section_index)"""
+        with DbSession() as session:
+            db_sections = session.scalars(select(db.Section).from_statement(text(query_text))).all()
+            self.audiotracks_service.generate_speech(db_sections)
 
 
 SectionServiceDep = Annotated[SectionService, SectionService.dep()]

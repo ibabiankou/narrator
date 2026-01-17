@@ -12,6 +12,7 @@ from typing import Optional, ClassVar, Callable, TypeVar, Any, Type
 
 from pika import BlockingConnection, ConnectionParameters, BasicProperties, PlainCredentials
 from pika.exceptions import ConnectionWrongStateError
+from pika.exchange_type import ExchangeType
 from pika.spec import Basic
 from pika.adapters.blocking_connection import BlockingChannel
 from pydantic import BaseModel
@@ -39,6 +40,12 @@ default_connection_params = ConnectionParameters(
     heartbeat=20
 )
 
+class Topology:
+    default_exchange = "narrator"
+    api_queue = "api"
+    phonemization_queue = "phonemization"
+    speech_gen_queue = "speech-generation"
+
 
 class RMQClient(Service):
     def __init__(self, exchange: str):
@@ -58,6 +65,10 @@ class RMQClient(Service):
         channel = self._publisher_connection.channel()
         configure_callback(channel)
         channel.close()
+
+    def get_queue_size(self, queue_name: str):
+        channel = self._publisher_connection.default_channel()
+        return channel.queue_declare(queue_name, passive=True).method.message_count
 
     def set_queue_message_handler(self, queue: str, cls: type[SubclassOfRMQMessage],
                                   message_handler: Callable[[SubclassOfRMQMessage], Any]):
