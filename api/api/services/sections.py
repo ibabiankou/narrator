@@ -27,8 +27,8 @@ class SectionService(Service):
         self.progress_service = progress_service
         self.rmq_client = rmq_client
 
-        self._speech_generation_interval_sec = os.getenv("SPEECH_GENERATION_INTERVAL_SEC", 30)
-        self._speech_generation_queue_size_threshold = os.getenv("SPEECH_GENERATION_QUEUE_SIZE_THRESHOLD", 10)
+        self._speech_generation_interval_sec = int(os.getenv("SPEECH_GENERATION_INTERVAL_SEC", 30))
+        self._speech_generation_queue_size_threshold = int(os.getenv("SPEECH_GENERATION_QUEUE_SIZE_THRESHOLD", 10))
 
     def get_sections(self, book_id: uuid.UUID):
         with DbSession() as session:
@@ -94,11 +94,15 @@ class SectionService(Service):
     async def generate_speech_maybe(self):
         while True:
             LOG.info("Checking if need to generate some speech...")
-            self._do_generate_speech_maybe()
-            await asyncio.sleep(self._speech_generation_interval_sec)
+            try:
+                self._do_generate_speech_maybe()
+                await asyncio.sleep(self._speech_generation_interval_sec)
+            except:
+                LOG.info("Error while triggering speech generation, will try again later.", exc_info=True)
 
     def _do_generate_speech_maybe(self):
-        message_num = self.rmq_client.get_queue_size(Topology.phonemization_queue)
+        message_num = 0
+        message_num += self.rmq_client.get_queue_size(Topology.phonemization_queue)
         message_num += self.rmq_client.get_queue_size(Topology.speech_gen_queue)
 
         if message_num > self._speech_generation_queue_size_threshold:

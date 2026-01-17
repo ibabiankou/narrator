@@ -15,6 +15,7 @@ services:
       RMQ_PORT: 5672
       RMQ_USERNAME: narrator
       RMQ_PASSWORD: narrator
+      SPEECH_GENERATION_INTERVAL_SEC: 5
     depends_on:
       pg:
         condition: service_healthy

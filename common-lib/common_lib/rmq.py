@@ -78,7 +78,7 @@ class RMQClient(Service):
                 future.set_exception(e)
         channel.connection.add_callback_threadsafe(get_message_count)
 
-        return future.result(timeout=1)
+        return future.result(timeout=5)
 
     def set_queue_message_handler(self, queue: str, cls: type[SubclassOfRMQMessage],
                                   message_handler: Callable[[SubclassOfRMQMessage], Any]):
