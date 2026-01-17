@@ -2,7 +2,7 @@ import { RedirectCommand, ResolveFn, Router } from '@angular/router';
 import { BookDetails, BookPage, Playlist } from './models/books.dto';
 import { inject } from '@angular/core';
 import { BooksService } from './services/books.service';
-import { catchError, map, of, tap } from 'rxjs';
+import { catchError, map, of } from 'rxjs';
 import { PlaylistsService } from './services/playlists.service';
 
 export const bookResolver: ResolveFn<BookDetails | RedirectCommand> = (route) => {

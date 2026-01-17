@@ -5,7 +5,7 @@ import {
   combineLatest, combineLatestWith,
   distinctUntilChanged,
   filter, interval,
-  map, switchMap, take, tap,
+  map, switchMap, take,
 } from 'rxjs';
 import { Injectable } from '@angular/core';
 import { PlaylistsService } from '../../core/services/playlists.service';
@@ -51,12 +51,10 @@ export class AudioPlayerService {
     filter(index => index >= 0),
     map(i => i + 1),
     distinctUntilChanged(),
-    tap(i => console.log(`Current section index:`, i)),
   );
   // An ID of the section that is being played right now.
   $sectionId = this.$sectionIndex.pipe(
     map(i => this.sectionTimeline[i].section_id),
-    tap(i => console.log(`Current section id:`, i)),
   );
 
   $playbackRate = new BehaviorSubject<number>(1);
@@ -98,7 +96,6 @@ export class AudioPlayerService {
                 hlsSection.end_time = hlsSections[index - 1].end_time + hlsSection.duration;
               });
               this.sectionTimeline = hlsSections;
-              console.log(hlsSections);
             } else {
               console.warn("No date ranges found, unable to sync section being played.")
             }
