@@ -2,7 +2,7 @@ import { Component, inject, model, OnInit } from '@angular/core';
 import { MatFabButton, MatIconButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
-import { BookDetails } from '../../core/models/books.dto';
+import { BookOverview } from '../../core/models/books.dto';
 import { MatToolbar } from '@angular/material/toolbar';
 import { Title } from '@angular/platform-browser';
 import { BooksService } from '../../core/services/books.service';
@@ -22,7 +22,7 @@ import { BooksService } from '../../core/services/books.service';
 export class BooksPage implements OnInit {
 
   router: Router = inject(Router)
-  books = model.required<BookDetails[]>();
+  books = model.required<BookOverview[]>();
 
   constructor(private booksService: BooksService,
               private titleService: Title) {}

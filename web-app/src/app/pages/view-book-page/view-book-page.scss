@@ -1,3 +1,9 @@
+.header-skeleton {
+  width: 30%;
+  max-width: 300px;
+  min-width: 100px;
+}
+
 $maxWidth: 1280px;
 .main-container {
   max-width: $maxWidth;
@@ -7,6 +13,13 @@ $maxWidth: 1280px;
     text-align: center;
     font-style: italic;
     color: gray;
+  }
+
+  .content-skeleton {
+    max-width: calc($maxWidth * 0.55);
+    aspect-ratio: 8.5/11;
+    margin: 0 auto;
+    padding: 0 15px;
   }
 }
 

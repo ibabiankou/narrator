@@ -1,5 +1,5 @@
-import { Component, HostListener, input, model, OnDestroy, OnInit, output } from '@angular/core';
-import { BookDetails, PlaybackProgress, Playlist } from '../../core/models/books.dto';
+import { Component, HostListener, inject, input, model, OnDestroy, OnInit, output } from '@angular/core';
+import { BookOverview, PlaybackProgress, Playlist } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import {
@@ -30,8 +30,12 @@ import { MatTooltip } from '@angular/material/tooltip';
 export class PlayerComponent implements OnInit, OnDestroy {
   private $destroy = new Subject<boolean>();
 
-  book = input.required<BookDetails>();
-  playlist = input.required<Playlist>();
+  private audioPlayer: AudioPlayerService = inject(AudioPlayerService);
+
+  book = input.required<BookOverview>();
+
+  // TODO: Load settings; Once loaded, init the audioPlayer;
+
   sectionPlayed = output<number>();
   showPages = model(false);
   showPagesChanged = output<boolean>();
@@ -51,7 +55,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
   $availablePercent = new BehaviorSubject<number>(0);
   $unavailablePercent = new BehaviorSubject<number>(0);
 
-  constructor(private audioPlayer: AudioPlayerService) {
+  constructor() {
 
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;
@@ -75,11 +79,11 @@ export class PlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.initPlayerService(this.playlist(), this.book());
-    this.setAvailability(this.playlist().progress);
+    // this.initPlayerService(this.playlist(), this.book());
+    // this.setAvailability(this.playlist().progress);
   }
 
-  initPlayerService(playlist: Playlist, book: BookDetails) {
+  initPlayerService(playlist: Playlist, book: BookOverview) {
     this.audioPlayer.setBookDetails(book);
     this.audioPlayer.setPlaybackProgress(playlist.progress);
   }

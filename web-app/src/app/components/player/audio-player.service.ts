@@ -1,4 +1,4 @@
-import { BookDetails, PlaybackProgress } from '../../core/models/books.dto';
+import { BookOverview, PlaybackProgress } from '../../core/models/books.dto';
 import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
@@ -40,7 +40,7 @@ export class AudioPlayerService {
   private readonly audio: HTMLAudioElement;
   private hls: Hls | null = null;
 
-  $bookDetails = new BehaviorSubject<BookDetails | null>(null);
+  $bookDetails = new BehaviorSubject<BookOverview | null>(null);
   // A list of sections from the HLS playlist along with their duration and end time.
   private sectionTimeline: HlsSection[] = [];
   // Currently playing time in seconds.
@@ -193,7 +193,7 @@ export class AudioPlayerService {
     this.$playbackRate.next(Math.max(Math.min(newRate, maxValue), minValue));
   }
 
-  setBookDetails(book: BookDetails) {
+  setBookDetails(book: BookOverview) {
     this.$bookDetails.next(book);
   }
 

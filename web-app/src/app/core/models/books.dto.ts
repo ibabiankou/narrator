@@ -11,12 +11,17 @@ export enum BookStatus {
   ready = "ready"
 }
 
-export interface BookDetails {
+export interface BookOverview {
   id: string;
   title: string;
   pdf_file_name: string;
   number_of_pages: number;
   status: string;
+}
+
+export interface BookStats {
+  total_narrated_seconds: number;
+  available_percent: number;
 }
 
 export interface Section {
@@ -42,7 +47,9 @@ export interface BookPage {
   sections: Section[];
 }
 
-export interface BookContent {
+export interface BookWithContent {
+  overview: BookOverview;
+  stats: BookStats;
   pages: BookPage[];
 }
 

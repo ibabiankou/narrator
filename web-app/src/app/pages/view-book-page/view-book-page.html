@@ -1,16 +1,17 @@
 <mat-toolbar>
   <a [routerLink]="['/books']">NNarrator Books</a>
   <mat-icon>chevron_right</mat-icon>
-  <h1>{{ book().title }}</h1>
+  @defer (when bookWithContent()) {
+    <h1>{{ bookWithContent().overview.title }}</h1>
+  } @placeholder (minimum 250ms) {
+    <app-skeleton class="header-skeleton" height="1.5rem" />
+  }
 </mat-toolbar>
 
 <div class="main-container">
-  @if (isLoading()) {
-    <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
-    <p>This book is still being processed. The content will be displayed as soon as it's ready.</p>
-  } @else {
+  @defer (when bookWithContent()) {
     @for (page of pages(); track page.file_name) {
-      <div class="sections-only" [class]="{'sections-only': !isShowingPages(), 'page-with-sections': isShowingPages()}">
+      <div [class]="{'sections-only': !isShowingPages(), 'page-with-sections': isShowingPages()}">
         @if (isShowingPages()) {
           <div class="raw-page">
             @defer (on viewport) {
@@ -36,12 +37,15 @@
     } @empty {
       <p>Strange... This book seem to be empty.</p>
     }
+  } @placeholder (minimum 250ms) {
+    <app-skeleton class="content-skeleton" />
   }
 </div>
 <div class="player-spacer"></div>
-<app-player [book]="book()"
-            [playlist]="playlist()"
-            (showPagesChanged)="showOrHidePages($event)"
-            (sectionPlayed)="setCurrentSectionId($event)"
-            [handleKeyBindings]="!isEditingSection()"
-></app-player>
+@defer (when bookWithContent()) {
+  <app-player [book]="bookWithContent().overview"
+              (showPagesChanged)="showOrHidePages($event)"
+              (sectionPlayed)="setCurrentSectionId($event)"
+              [handleKeyBindings]="!isEditingSection()"
+  ></app-player>
+}

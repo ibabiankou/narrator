@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { BookContent, BookDetails, CreateBookRequest } from '../models/books.dto';
+import { BookOverview, BookWithContent, CreateBookRequest } from '../models/books.dto';
 import { DomSanitizer } from '@angular/platform-browser';
 
 @Injectable({
@@ -15,41 +15,22 @@ export class BooksService {
   constructor(private http: HttpClient, private sanitizer: DomSanitizer) {
   }
 
-  createBook(data: CreateBookRequest): Observable<BookDetails> {
-    return this.http.post<BookDetails>(`${this.apiUrl}/`, data);
+  createBook(data: CreateBookRequest): Observable<BookOverview> {
+    return this.http.post<BookOverview>(`${this.apiUrl}/`, data);
   }
 
-  getBook(bookId: string): Observable<BookDetails> {
+  getBookWithContent(bookId: string): Observable<BookWithContent> {
     const url = `${this.apiUrl}/${bookId}`;
-    return this.http.get<BookDetails>(url);
+    return this.http.get<BookWithContent>(url).pipe(tap(bookWithContent => {
+      bookWithContent.pages.forEach(page => {
+        const url = `${environment.api_base_url}/files/${bookId}/pages/${page.file_name}#toolbar=0&navpanes=0&scrollbar=0`
+        page.file_url = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+      });
+    }));
   }
 
-  listBooks(): Observable<BookDetails[]> {
-    return this.http.get<BookDetails[]>(`${this.apiUrl}/`);
-  }
-
-  getBookContent(bookId: string,
-                 lastPageIndex: number | null = null,
-                 sectionId: number | null = null,
-                 limit: number | null = null
-  ): Observable<BookContent> {
-    let httpParams = new HttpParams();
-    if (lastPageIndex) {
-      httpParams = httpParams.set('last_page_idx', lastPageIndex.toString());
-    }
-    if (sectionId) {
-      httpParams = httpParams.set('section_id', sectionId.toString());
-    }
-    if (limit) {
-      httpParams = httpParams.set('limit', limit.toString());
-    }
-    return this.http.get<BookContent>(`${this.apiUrl}/${bookId}/content`, {params: httpParams})
-      .pipe(tap(content => {
-        content.pages.forEach(page => {
-          const url = `${environment.api_base_url}/files/${bookId}/pages/${page.file_name}#toolbar=0&navpanes=0&scrollbar=0`
-          page.file_url = this.sanitizer.bypassSecurityTrustResourceUrl(url);
-        });
-      }));
+  listBooks(): Observable<BookOverview[]> {
+    return this.http.get<BookOverview[]>(`${this.apiUrl}/`);
   }
 
   delete(id: string) {
