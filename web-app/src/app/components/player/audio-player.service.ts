@@ -1,4 +1,4 @@
-import { BookOverview, PlaybackProgress } from '../../core/models/books.dto';
+import { BookOverview, PlaybackInfo } from '../../core/models/books.dto';
 import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
@@ -7,10 +7,10 @@ import {
   filter, interval,
   map, switchMap, take,
 } from 'rxjs';
-import { Injectable } from '@angular/core';
-import { PlaylistsService } from '../../core/services/playlists.service';
+import { inject, Injectable } from '@angular/core';
 
 import Hls from 'hls.js';
+import { BooksService } from '../../core/services/books.service';
 
 enum PlayerStatus {
   playing = "playing",
@@ -36,6 +36,8 @@ const FIRST_SECTION: HlsSection = {
  */
 @Injectable({providedIn: 'root'})
 export class AudioPlayerService {
+  private bookService = inject(BooksService);
+
   private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.paused);
   private readonly audio: HTMLAudioElement;
   private hls: Hls | null = null;
@@ -60,7 +62,7 @@ export class AudioPlayerService {
   $playbackRate = new BehaviorSubject<number>(1);
   $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
 
-  constructor(private playlistService: PlaylistsService) {
+  constructor() {
     this.audio = new Audio();
     this.audio.preservesPitch = true;
     this.audio.addEventListener('timeupdate', () => this.readProgress());
@@ -130,7 +132,7 @@ export class AudioPlayerService {
       .pipe(
         take(1),
         switchMap(([bookDetails, progressSeconds, playbackRate]) => {
-          return this.playlistService.updateProgress({
+          return this.bookService.updatePlaybackInfo({
             "book_id": bookDetails.id,
             "data": {
               "progress_seconds": progressSeconds,
@@ -193,13 +195,14 @@ export class AudioPlayerService {
     this.$playbackRate.next(Math.max(Math.min(newRate, maxValue), minValue));
   }
 
-  setBookDetails(book: BookOverview) {
-    this.$bookDetails.next(book);
-  }
-
-  setPlaybackProgress(progress: PlaybackProgress) {
-    this.$playbackRate.next(progress.playback_rate);
-    this.audio.currentTime = progress.global_progress_seconds
+  initPlayer(overview: BookOverview, playbackInfo: PlaybackInfo) {
+    this.$bookDetails.next(overview);
+    if (playbackInfo.data["playback_rate"]) {
+      this.$playbackRate.next(playbackInfo.data["playback_rate"]);
+    }
+    if (playbackInfo.data["progress_seconds"]) {
+      this.audio.currentTime = playbackInfo.data["progress_seconds"]
+    }
   }
 }
 

@@ -43,7 +43,7 @@
 </div>
 <div class="player-spacer"></div>
 @defer (when bookWithContent()) {
-  <app-player [book]="bookWithContent().overview"
+  <app-player [bookWithContent]="bookWithContent()"
               (showPagesChanged)="showOrHidePages($event)"
               (sectionPlayed)="setCurrentSectionId($event)"
               [handleKeyBindings]="!isEditingSection()"

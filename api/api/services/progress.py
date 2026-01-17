@@ -12,59 +12,11 @@ from common_lib.service import Service
 LOG = get_logger(__name__)
 
 
-@dataclass
-class ProgressData:
-    playback_progress: Optional[db.PlaybackProgress]
-    stats: dict
-
-
 class PlaybackProgressService(Service):
 
-    def get_progress(self, book_id: uuid.UUID) -> Optional[ProgressData]:
-        query = """
-                select coalesce(sum(length(s.content)), 0) as length, 'total' as type
-                from sections s
-                where s.book_id = :book_id
-                union
-                select coalesce(sum(a.duration), 0) as length, 'played_duration' as type
-                from audio_tracks a
-                where a.book_id = :book_id
-                  and a.section_id < (select section_id from playback_progress where book_id = :book_id)
-                union
-                select coalesce(sum(a.duration), 0) as length, 'narrated_duration' as type
-                from audio_tracks a
-                where a.book_id = :book_id
-                union
-                select coalesce(sum(length(s.content)), 0) as length, 'available' as type
-                from sections s
-                         join audio_tracks a on s.id = a.section_id
-                where s.book_id = :book_id
-                  and a.status = 'ready'
-                union
-                select coalesce(sum(length(s.content)), 0) as length, 'queued' as type
-                from sections s
-                         join audio_tracks a on s.id = a.section_id
-                where s.book_id = :book_id
-                  and a.status = 'queued'
-                union
-                select coalesce(sum(length(s.content)), 0) as length, 'missing' as type
-                from sections s
-                         left join audio_tracks a on s.id = a.section_id
-                where s.book_id = :book_id
-                  and a.id is null \
-                """
-
-        narration_stats = {}
+    def get_playback_info(self, book_id: uuid.UUID) -> Optional[db.PlaybackProgress]:
         with DbSession() as session:
-            book = session.get_one(db.Book, book_id)
-            if book.status != BookStatus.ready:
-                return None
-            rs = session.execute(text(query), {"book_id": book_id})
-            for length, stat_type in rs:
-                narration_stats[stat_type] = length
-            progress = session.scalar(select(db.PlaybackProgress).where(db.PlaybackProgress.book_id == book_id))
-
-        return ProgressData(progress, narration_stats)
+            return session.scalar(select(db.PlaybackProgress).where(db.PlaybackProgress.book_id == book_id))
 
     def upsert_progress(self, progress: db.PlaybackProgress):
         with DbSession() as session:

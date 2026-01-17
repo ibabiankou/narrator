@@ -1,5 +1,5 @@
-import { Component, HostListener, inject, input, model, OnDestroy, OnInit, output } from '@angular/core';
-import { BookOverview, PlaybackProgress, Playlist } from '../../core/models/books.dto';
+import { Component, HostListener, inject, input, model, OnDestroy, output } from '@angular/core';
+import { BookWithContent } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import {
@@ -7,13 +7,15 @@ import {
   combineLatest,
   filter,
   map,
-  Subject,
+  Subject, switchMap,
   take,
   takeUntil,
 } from 'rxjs';
 import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { AudioPlayerService } from './audio-player.service';
 import { MatTooltip } from '@angular/material/tooltip';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { BooksService } from '../../core/services/books.service';
 
 @Component({
   selector: 'app-player',
@@ -27,14 +29,17 @@ import { MatTooltip } from '@angular/material/tooltip';
   templateUrl: './player.component.html',
   styleUrl: './player.component.scss',
 })
-export class PlayerComponent implements OnInit, OnDestroy {
+export class PlayerComponent implements OnDestroy {
   private $destroy = new Subject<boolean>();
 
-  private audioPlayer: AudioPlayerService = inject(AudioPlayerService);
+  private bookService = inject(BooksService);
 
-  book = input.required<BookOverview>();
-
-  // TODO: Load settings; Once loaded, init the audioPlayer;
+  bookWithContent = input.required<BookWithContent>();
+  playbackInfo = toObservable(this.bookWithContent).pipe(
+    switchMap(book => {
+      return this.bookService.getPlaybackInfo(book.overview.id)
+    })
+  )
 
   sectionPlayed = output<number>();
   showPages = model(false);
@@ -53,10 +58,9 @@ export class PlayerComponent implements OnInit, OnDestroy {
   $playbackRate;
 
   $availablePercent = new BehaviorSubject<number>(0);
-  $unavailablePercent = new BehaviorSubject<number>(0);
+  $unavailablePercent = this.$availablePercent.pipe(map(availablePercent => 100 - availablePercent));
 
-  constructor() {
-
+  constructor(private audioPlayer: AudioPlayerService) {
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;
     this.$nowTime = this.audioPlayer.$globalProgressSeconds.pipe(
@@ -76,23 +80,16 @@ export class PlayerComponent implements OnInit, OnDestroy {
         filter(() => this.syncCurrentSection()),
         takeUntil(this.$destroy)
       ).subscribe(sectionId => this.sectionPlayed.emit(sectionId));
-  }
 
-  ngOnInit(): void {
-    // this.initPlayerService(this.playlist(), this.book());
-    // this.setAvailability(this.playlist().progress);
-  }
+    this.playbackInfo
+      .pipe(takeUntil(this.$destroy))
+      .subscribe((playbackInfo) => {
+        const book = this.bookWithContent();
+        this.audioPlayer.initPlayer(book.overview, playbackInfo);
 
-  initPlayerService(playlist: Playlist, book: BookOverview) {
-    this.audioPlayer.setBookDetails(book);
-    this.audioPlayer.setPlaybackProgress(playlist.progress);
-  }
-
-  setAvailability(progress: PlaybackProgress) {
-    this.$totalNarratedSeconds.next(progress.total_narrated_seconds);
-
-    this.$availablePercent.next(progress.available_percent);
-    this.$unavailablePercent.next(progress.unavailable_percent);
+        this.$totalNarratedSeconds.next(book.stats.total_narrated_seconds);
+        this.$availablePercent.next(book.stats.available_percent);
+      });
   }
 
   @HostListener("document:keydown.shift.arrowleft", ["$event"])

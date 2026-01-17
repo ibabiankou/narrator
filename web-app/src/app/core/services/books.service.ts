@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { BookOverview, BookWithContent, CreateBookRequest } from '../models/books.dto';
+import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
 import { DomSanitizer } from '@angular/platform-browser';
 
 @Injectable({
@@ -35,5 +35,13 @@ export class BooksService {
 
   delete(id: string) {
     return this.http.delete(`${this.apiUrl}/${id}`);
+  }
+
+  getPlaybackInfo(bookId: string) {
+    return this.http.get<PlaybackInfo>(`${this.apiUrl}/${bookId}/playback_info`);
+  }
+
+  updatePlaybackInfo(progress: PlaybackInfo) {
+    return this.http.post<void>(`${this.apiUrl}/${progress.book_id}/playback_info`, progress);
   }
 }

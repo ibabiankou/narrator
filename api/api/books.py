@@ -1,6 +1,7 @@
 import os
 import uuid
 from datetime import datetime, UTC
+from typing import Optional, Set, List
 
 import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
@@ -9,8 +10,10 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from api import SessionDep, get_logger
 from api.models import db, api
+from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
 from api.services.files import FilesServiceDep
+from api.services.progress import PlaybackProgressServiceDep
 from api.services.sections import SectionServiceDep
 
 LOG = get_logger(__name__)
@@ -75,6 +78,7 @@ def list_books(session: SessionDep) -> list[api.BookOverview]:
 
     return resp
 
+
 def get_book_pages(book: db.Book, section_svc: SectionServiceDep) -> list[api.BookPage]:
     if book.status != db.BookStatus.ready or book.number_of_pages is None:
         # There will be no content, so return immediately.
@@ -117,7 +121,7 @@ def get_book_with_content(book_id: uuid.UUID,
     raw_stats = book_service.get_stats(book_id)
     total = raw_stats.get("total")
     stats = api.BookStats(total_narrated_seconds=raw_stats.get("narrated_duration"),
-                          available_percent=raw_stats.get("available") / total if total > 0 else 1)
+                          available_percent=(raw_stats.get("available") / total if total > 0 else 1) * 100)
     pages = get_book_pages(book, section_svc)
 
     return api.BookWithContent(overview=overview, stats=stats, pages=pages)
@@ -192,3 +196,53 @@ def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
         playlist.segments.append(segment)
 
     return playlist.dumps()
+
+
+@books_router.get("/{book_id}/playback_info")
+def get_playback_info(book_id: uuid.UUID, progress_service: PlaybackProgressServiceDep) -> api.PlaybackInfo:
+    playback_info = progress_service.get_playback_info(book_id)
+    return api.PlaybackInfo(book_id=book_id, data=playback_info.data if playback_info else {})
+
+
+@books_router.post("/{book_id}/playback_info")
+def update_playback_info(request: api.PlaybackInfo, progress_service: PlaybackProgressServiceDep):
+    progress_service.upsert_progress(db.PlaybackProgress(book_id=request.book_id, data=request.data))
+    return Response(status_code=201)
+
+
+@books_router.post("/{book_id}/generate")
+def generate_speech(book_id: uuid.UUID,
+                    sections: Optional[Set[int]],
+                    session: SessionDep,
+                    audio_track_service: AudioTrackServiceDep,
+                    limit: Optional[int] = None) -> List[api.AudioTrack]:
+    if not sections and not limit:
+        raise HTTPException(status_code=400, detail="Either sections or limit must be provided")
+    if sections and limit:
+        raise HTTPException(status_code=400, detail="Only one of sections or limit can be provided")
+
+    if sections:
+        stmt = (select(db.Section)
+                .where(db.Section.id.in_(sections))
+                .order_by(db.Section.section_index))
+        db_sections = session.execute(stmt).scalars().all()
+
+        # Ensure all sections exist.
+        for section in db_sections:
+            sections.remove(section.id)
+
+        if sections:
+            raise HTTPException(status_code=404, detail=f"Sections {sections} not found")
+    else:
+        stmt = (select(db.Section).outerjoin(db.AudioTrack, db.Section.id == db.AudioTrack.section_id)
+                .where(db.AudioTrack.id.is_(None), db.Section.book_id == book_id)
+                .order_by(db.Section.section_index).limit(limit))
+
+        db_sections = session.execute(stmt).scalars().all()
+
+    if not db_sections:
+        LOG.info("No sections found to generate speech for")
+        new_tracks = []
+    else:
+        new_tracks = audio_track_service.generate_speech(db_sections)
+    return new_tracks

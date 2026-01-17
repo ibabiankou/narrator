@@ -53,32 +53,7 @@ export interface BookWithContent {
   pages: BookPage[];
 }
 
-export interface AudioTrack {
-  book_id: string;
-  section_id: number;
-  status: string;
-  file_name: string;
-  duration: number;
-}
-
-export interface PlaybackProgress {
-  global_progress_seconds: number;
-  total_narrated_seconds: number;
-
-  available_percent: number;
-  queued_percent: number;
-  unavailable_percent: number;
-
-  sync_current_section: boolean;
-  playback_rate: number;
-}
-
-export interface Playlist {
-  progress: PlaybackProgress;
-  tracks: AudioTrack[];
-}
-
-export interface PlaybackStateUpdate {
+export interface PlaybackInfo {
   book_id: string;
   data: { [key: string]: any };
 }
