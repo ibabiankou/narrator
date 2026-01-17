@@ -3,6 +3,7 @@ import logging
 import os
 import random
 from collections import defaultdict
+from concurrent.futures import Future
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import partial
@@ -12,7 +13,6 @@ from typing import Optional, ClassVar, Callable, TypeVar, Any, Type
 
 from pika import BlockingConnection, ConnectionParameters, BasicProperties, PlainCredentials
 from pika.exceptions import ConnectionWrongStateError
-from pika.exchange_type import ExchangeType
 from pika.spec import Basic
 from pika.adapters.blocking_connection import BlockingChannel
 from pydantic import BaseModel
@@ -68,7 +68,17 @@ class RMQClient(Service):
 
     def get_queue_size(self, queue_name: str):
         channel = self._publisher_connection.default_channel()
-        return channel.queue_declare(queue_name, passive=True).method.message_count
+
+        future = Future()
+        def get_message_count():
+            try:
+                declare_ok = channel.queue_declare(queue_name, passive=True)
+                future.set_result(declare_ok.method.message_count)
+            except Exception as e:
+                future.set_exception(e)
+        channel.connection.add_callback_threadsafe(get_message_count)
+
+        return future.result(timeout=1)
 
     def set_queue_message_handler(self, queue: str, cls: type[SubclassOfRMQMessage],
                                   message_handler: Callable[[SubclassOfRMQMessage], Any]):
