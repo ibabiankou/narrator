@@ -122,7 +122,7 @@ def reprocess_book(book_id: uuid.UUID,
 
     section_service.delete_sections(book_id=book.id)
 
-    background_tasks.add_task(book_service.extract_text, book)
+    background_tasks.add_task(book_service.extract_text, book.id, book.file_name)
 
 
 @books_router.get("/{book_id}/m3u8")
