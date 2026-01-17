@@ -33,8 +33,6 @@ async def lifespan(app: FastAPI):
     # Configure message handlers and start consuming.
     rmq_client.set_queue_message_handler(phonemization_queue, rmq.PhonemizeText, speech_gen_svc.handle_phonemize_msg)
     rmq_client.set_queue_message_handler(speech_gen_queue, rmq.SynthesizeSpeech, speech_gen_svc.handle_synthesize_msg)
-    rmq_client.set_queue_message_handler(
-        speech_gen_queue, rmq.GenerateMediaHeader, speech_gen_svc.handle_generate_media_header_msg)
     rmq_client.start_consuming()
     yield
 

@@ -42,7 +42,3 @@ class SpeechResponse(RMQMessage):
     file_path: str
     duration: float
     bytes: int
-
-class GenerateMediaHeader(RMQMessage):
-    type = "generate_media_header"
-    book_id: uuid.UUID

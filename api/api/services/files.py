@@ -3,14 +3,14 @@ import mimetypes
 import os
 import uuid
 from dataclasses import dataclass
-from io import BytesIO
 from typing import Annotated, Optional
 
 import boto3
 from botocore.exceptions import ClientError
 
 from api import get_logger
-from api.models.db import TempFile, Book
+from api.models import db
+from api.models.db import DbSession
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
@@ -41,27 +41,25 @@ class FilesService(Service):
         )
         self.bucket_name = os.getenv("S3_BUCKET", "narrator")
 
-    def store_book_file(self, book_id: uuid.UUID, book_file: TempFile):
+    def store_book_file(self, book_id: uuid.UUID, book_file_id: uuid.UUID):
         """Move the book file from the local disk to the object store."""
-        remote_file_path = f"{book_id}/{book_file.file_name}"
-        LOG.info(f"Uploading {remote_file_path}")
+        with DbSession() as session:
+            book_file = session.get_one(db.TempFile, book_file_id)
 
-        try:
-            self.s3_client.upload_file(book_file.file_path, self.bucket_name, remote_file_path)
-        except ClientError as e:
-            logging.error(e)
-            raise e
+            remote_file_path = f"{book_id}/{book_file.file_name}"
+            LOG.info(f"Uploading {remote_file_path}")
 
-    def get_book_file(self, book: Book) -> BytesIO:
-        """Get the book file from the object store."""
-        remote_file_path = f"{book.id}/{book.file_name}"
-        pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
-        return BytesIO(pdf_object["Body"].read())
+            try:
+                self.s3_client.upload_file(book_file.file_path, self.bucket_name, remote_file_path)
+            except ClientError as e:
+                logging.error(e)
+                raise e
+            return book_file.file_name
 
-    def upload_book_pages(self, book: Book, pdf_pages):
+    def upload_book_pages(self, book_id: uuid.UUID, pdf_pages):
         """Upload the book pages to the object store."""
 
-        pages_dir_path = f"{book.id}/pages"
+        pages_dir_path = f"{book_id}/pages"
         for page in pdf_pages:
             page_file_name = page["file_name"]
             remote_path = f"{pages_dir_path}/{page_file_name}"

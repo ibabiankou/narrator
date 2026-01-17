@@ -22,9 +22,6 @@ class AudioTrackService(Service):
         self.rmq_client = rmq_client
 
     def generate_speech(self, sections: list[db.Section]) -> List[api.AudioTrack]:
-        # TODO: Think how to do it just once.
-        self.rmq_client.publish("synthesize", rmq.GenerateMediaHeader(book_id=sections[0].book_id))
-
         LOG.info("Enqueueing speech generation for %s sections: \n%s", len(sections), sections)
         self.delete_for_sections(sections)
 

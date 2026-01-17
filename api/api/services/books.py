@@ -1,13 +1,17 @@
+import io
 import uuid
+from datetime import datetime, UTC
 from io import BytesIO
 from typing import Annotated
 
 import pymupdf
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import update, text
+from sqlalchemy.exc import IntegrityError
 
 from api import get_logger
-from api.models.db import Book, Section, DbSession, BookStatus
+from api.models import api, db
+from api.models.db import DbSession
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
 from api.services.sections import SectionServiceDep
@@ -27,18 +31,45 @@ class BookService(Service):
         self.sections_service = sections_service
         self.playback_progress_service = playback_progress_service
 
-    def split_pages(self, book: Book):
-        LOG.debug(f"Splitting book {book.id} into pages.")
+    def create_book(self, book: api.CreateBookRequest) -> api.BookOverview:
+        # Upload the book file to the object store
+        try:
+            book_file_name = self.files_service.store_book_file(book.id, book.pdf_temp_file_id)
+        except Exception as e:
+            LOG.info("Error uploading book file to object store", exc_info=True)
+            raise e
 
-        pdf_file = self.files_service.get_book_file(book)
+        # Store book metadata in DB
+        book = db.Book(id=book.id,
+                       title=book.title,
+                       file_name=book_file_name,
+                       created_time=datetime.now(UTC),
+                       status=db.BookStatus.processing)
+        with DbSession() as session:
+            try:
+                session.add(book)
+                session.commit()
+            except IntegrityError as e:
+                session.rollback()
+                raise e
+            return api.BookOverview(id=book.id,
+                                    title=book.title,
+                                    pdf_file_name=book.file_name,
+                                    status=book.status)
+
+    def split_pages(self, book_id: uuid.UUID, book_file_name: str):
+        LOG.debug(f"Splitting book {book_id} into pages.")
+
+        pdf_file_key = f"{book_id}/{book_file_name}"
+        pdf_file_data = self.files_service._get_object(pdf_file_key)
 
         # Split it into individual page files
-        pdf_pages = self._split_into_pages(pdf_file)
+        pdf_pages = self._split_into_pages(io.BytesIO(pdf_file_data.body))
 
         # Upload page files to the object store
-        self.files_service.upload_book_pages(book, pdf_pages)
+        self.files_service.upload_book_pages(book_id, pdf_pages)
 
-    def get_text(self, book: Book, first_page: int = None, last_page: int = None, raw: bool = False):
+    def get_text(self, book: db.Book, first_page: int = None, last_page: int = None, raw: bool = False):
         pdf_bytes = self.files_service.get_book_file(book)
         doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
         pages = [p.get_text() for p in doc]
@@ -57,7 +88,7 @@ class BookService(Service):
 
         return "\n".join(lines)
 
-    def get_paragraphs(self, book: Book, first_page: int = None, last_page: int = None):
+    def get_paragraphs(self, book: db.Book, first_page: int = None, last_page: int = None):
         pdf_bytes = self.files_service.get_book_file(book)
         doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
         pages = [p.get_text() for p in doc]
@@ -72,11 +103,13 @@ class BookService(Service):
 
         return "\n".join(result)
 
-    def extract_text(self, book: Book):
-        LOG.info(f"Extracting text of the book {book.id}")
+    def extract_text(self, book_id: uuid.UUID, book_file_name: str):
+        LOG.info(f"Extracting text of the book {book_id}")
 
         # Split each page into sections. A section is one or more paragraphs.
-        pdf_bytes = self.files_service.get_book_file(book)
+        pdf_file_key = f"{book_id}/{book_file_name}"
+        pdf_file_data = self.files_service._get_object(pdf_file_key)
+        pdf_bytes = io.BytesIO(pdf_file_data.body)
 
         doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
         pages = [p.get_text() for p in doc]
@@ -88,16 +121,17 @@ class BookService(Service):
         sections = []
         for section_index in range(len(section_dicts)):
             section_dict = section_dicts[section_index]
-            section = Section(book_id=book.id,
-                              page_index=section_dict["page_index"],
-                              section_index=section_index,
-                              content=section_dict["content"])
+            section = db.Section(book_id=book_id,
+                                 page_index=section_dict["page_index"],
+                                 section_index=section_index,
+                                 content=section_dict["content"])
             sections.append(section)
 
         with DbSession() as session:
             session.add_all(sections)
             session.execute(
-                update(Book).where(Book.id == book.id).values(status=BookStatus.ready, number_of_pages=page_num))
+                update(db.Book).where(db.Book.id == book_id).values(status=db.BookStatus.ready,
+                                                                    number_of_pages=page_num))
             session.commit()
 
     def _split_into_pages(self, pdf_file: BytesIO):
@@ -120,7 +154,7 @@ class BookService(Service):
 
     def get_book(self, book_id: uuid.UUID):
         with DbSession() as session:
-            return session.get_one(Book, book_id)
+            return session.get_one(db.Book, book_id)
 
     def delete_book(self, book_id: uuid.UUID):
         book = self.get_book(book_id)

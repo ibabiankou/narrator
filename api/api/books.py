@@ -1,6 +1,5 @@
 import os
 import uuid
-from datetime import datetime, UTC
 from typing import Optional, Set, List
 
 import m3u8
@@ -12,7 +11,6 @@ from api import SessionDep, get_logger
 from api.models import db, api
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
-from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
 from api.services.sections import SectionServiceDep
 
@@ -23,43 +21,18 @@ books_router = APIRouter(tags=["Books API"])
 
 @books_router.post("/")
 def create_book(book: api.CreateBookRequest,
-                session: SessionDep,
                 background_tasks: BackgroundTasks,
-                files_service: FilesServiceDep,
                 book_service: BookServiceDep) -> api.BookOverview:
-    # Load temp_file metadata from DB
-    pdf_temp_file = session.get(db.TempFile, book.pdf_temp_file_id)
-    if pdf_temp_file is None:
-        raise HTTPException(status_code=404, detail="PDF file not found")
-
-    # Upload the book file to the object store
     try:
-        files_service.store_book_file(book.id, pdf_temp_file)
-    except Exception:
-        LOG.info("Error uploading book file to object store", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to store book file")
-
-    # Store book metadata in DB
-    book = db.Book(id=book.id,
-                   title=book.title,
-                   file_name=pdf_temp_file.file_name,
-                   created_time=datetime.now(UTC),
-                   status=db.BookStatus.processing)
-    try:
-        session.add(book)
-        session.commit()
+        book = book_service.create_book(book)
     except IntegrityError:
-        session.rollback()
-        raise HTTPException(status_code=409, detail="Book with this ID already exists")
+        raise HTTPException(status_code=409, detail="Book with this title already exists")
 
     # Process the book in the background
-    background_tasks.add_task(book_service.split_pages, book)
-    background_tasks.add_task(book_service.extract_text, book)
+    background_tasks.add_task(book_service.split_pages, book.id, book.pdf_file_name)
+    background_tasks.add_task(book_service.extract_text, book.id, book.pdf_file_name)
 
-    return api.BookOverview(id=book.id,
-                            title=book.title,
-                            pdf_file_name=pdf_temp_file.file_name,
-                            status=book.status)
+    return book
 
 
 @books_router.get("/")
@@ -154,14 +127,17 @@ def reprocess_book(book_id: uuid.UUID,
 
 
 @books_router.get("/{book_id}/m3u8")
-def book_playlist(book_id: uuid.UUID, session: SessionDep):
-    book = session.get(db.Book, book_id)
-    if book is None:
+def book_playlist(book_id: uuid.UUID,
+                  book_service: BookServiceDep,
+                  audio_track_service: AudioTrackServiceDep):
+    try:
+        book_service.get_book(book_id)
+    except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    stmt = select(db.AudioTrack).where(db.AudioTrack.book_id == book_id).where(
-        db.AudioTrack.status == db.AudioStatus.ready).order_by(db.AudioTrack.playlist_order)
-    ready_tracks = list(session.execute(stmt).scalars().all())
+    all_tracks = audio_track_service.get_tracks(book_id)
+    ready_tracks = [t for t in all_tracks if t.status == db.AudioStatus.ready]
+
     LOG.info("Loaded %s tracks", len(ready_tracks))
 
     return Response(
@@ -176,7 +152,7 @@ def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
     playlist = m3u8.M3U8()
 
     playlist.version = "4"
-    playlist.target_duration = max([t.duration for t in tracks]) + 1
+    playlist.target_duration = max([t.duration for t in tracks] or [0]) + 1
     playlist.media_sequence = 0
     # TODO: What would be behavior if I set it to False? Would it help for books that are being generated?
     playlist.is_endlist = True

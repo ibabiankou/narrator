@@ -1,8 +1,6 @@
 import io
-import mimetypes
 import os
 from dataclasses import dataclass
-from io import BytesIO
 from typing import Annotated
 
 import av
@@ -10,8 +8,6 @@ import boto3
 import numpy as np
 from botocore.exceptions import ClientError
 from kokoro import KModel, KPipeline
-from soundfile import SoundFile
-from sympy.stats import sample_iter
 
 from api import get_logger
 from common_lib import RMQClientDep
@@ -19,6 +15,7 @@ from common_lib.models import rmq
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
+
 
 @dataclass
 class GeneratedSpeech:
@@ -108,29 +105,6 @@ class SpeechGenService(Service):
                                      file_path=key, duration=result.duration, bytes=len(result.content))
         self.rmq_client.publish(routing_key="speech", payload=payload)
 
-    def handle_generate_media_header_msg(self, payload: rmq.GenerateMediaHeader):
-        key = f"{payload.book_id}/map.mp4"
-        self._upload_file(key, "audio/mp4", self._generate_media_header())
-
-    def _generate_media_header(self) -> bytes:
-        # Pass muxer options directly during container opening
-        options = {
-            'movflags': 'frag_keyframe+empty_moov+default_base_moof',
-        }
-        sample_rate = 24000
-        bit_rate=32000
-
-        output = io.BytesIO()
-        with av.open(output, mode='w', format='mp4', options=options) as container:
-            stream = container.add_stream('opus', rate=sample_rate, bit_rate=bit_rate, layout = "mono")
-            silence = np.zeros(int(0.1 * 24000), dtype=np.float32).reshape(1, -1)
-            frame = av.AudioFrame.from_ndarray(silence, format='fltp', layout='mono')
-            frame.sample_rate = sample_rate
-            container.mux(stream.encode(frame))
-
-        return output.getvalue()
-
-
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):
         try:
             self.s3_client.put_object(
@@ -157,5 +131,6 @@ class SpeechGenService(Service):
         s3_object = self.s3_client.get_object(Bucket=self.bucket_name,
                                               Key=key)
         return s3_object["Body"].read()
+
 
 SpeechGenServiceDep = Annotated[SpeechGenService, SpeechGenService.dep()]

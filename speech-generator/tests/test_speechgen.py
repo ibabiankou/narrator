@@ -1,5 +1,3 @@
-import logging
-
 from api.speechgen import SpeechGenService
 from common_lib.test import time_it
 
@@ -22,10 +20,3 @@ def test_speech_generation():
     print("Duration", speech.duration)
     with open("audio.aac", "wb") as f:
         f.write(speech.content)
-
-
-def test_media_header():
-    header = speechgen._generate_media_header()
-    print(len(header))
-    with open("map.mp4", "wb") as f:
-        f.write(header)
