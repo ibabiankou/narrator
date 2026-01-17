@@ -4,14 +4,14 @@ from typing import Annotated
 
 import pymupdf
 from pypdf import PdfReader, PdfWriter
-from sqlalchemy import update
+from sqlalchemy import update, text
 
 from api import get_logger
 from api.models.db import Book, Section, DbSession, BookStatus
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
 from api.services.sections import SectionServiceDep
-from api.utils.text import ParagraphBuilder, SectionBuilder, LineReader, CleanupPipeline, pages_to_paragraphs, \
+from api.utils.text import LineReader, CleanupPipeline, pages_to_paragraphs, \
     paragraphs_to_sections
 from common_lib.service import Service
 
@@ -132,6 +132,30 @@ class BookService(Service):
         with DbSession() as session:
             session.delete(book)
             session.commit()
+
+    def get_stats(self, book_id: uuid.UUID) -> dict:
+        query = """
+                select coalesce(sum(length(s.content)), 0) as length, 'total' as type
+                from sections s
+                where s.book_id = :book_id
+                union
+                select coalesce(sum(a.duration), 0) as length, 'narrated_duration' as type
+                from audio_tracks a
+                where a.book_id = :book_id
+                union
+                select coalesce(sum(length(s.content)), 0) as length, 'available' as type
+                from sections s
+                         join audio_tracks a on s.id = a.section_id
+                where s.book_id = :book_id
+                  and a.status = 'ready'
+                """
+
+        book_stats = {}
+        with DbSession() as session:
+            rs = session.execute(text(query), {"book_id": book_id})
+            for length, stat_type in rs:
+                book_stats[stat_type] = length
+        return book_stats
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

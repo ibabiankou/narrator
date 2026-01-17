@@ -21,6 +21,11 @@ class SectionService(Service):
         self.audiotracks_service = audiotracks_service
         self.progress_service = progress_service
 
+    def get_sections(self, book_id: uuid.UUID):
+        with DbSession() as session:
+            stmt = select(db.Section).where(db.Section.book_id == book_id).order_by(db.Section.section_index)
+            return session.execute(stmt).scalars().all()
+
     def delete_sections(self, book_id: uuid.UUID = None, section_ids: list[int] = None):
         if not book_id and not section_ids:
             raise ValueError("Either book_id or section_ids must be provided")

@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, UTC
 
 import m3u8
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Header, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
@@ -23,7 +23,7 @@ def create_book(book: api.CreateBookRequest,
                 session: SessionDep,
                 background_tasks: BackgroundTasks,
                 files_service: FilesServiceDep,
-                book_service: BookServiceDep) -> api.BookDetails:
+                book_service: BookServiceDep) -> api.BookOverview:
     # Load temp_file metadata from DB
     pdf_temp_file = session.get(db.TempFile, book.pdf_temp_file_id)
     if pdf_temp_file is None:
@@ -53,40 +53,74 @@ def create_book(book: api.CreateBookRequest,
     background_tasks.add_task(book_service.split_pages, book)
     background_tasks.add_task(book_service.extract_text, book)
 
-    return api.BookDetails(id=book.id,
-                           title=book.title,
-                           pdf_file_name=pdf_temp_file.file_name,
-                           status=book.status)
+    return api.BookOverview(id=book.id,
+                            title=book.title,
+                            pdf_file_name=pdf_temp_file.file_name,
+                            status=book.status)
 
 
 @books_router.get("/")
-def get_books(session: SessionDep) -> list[api.BookDetails]:
+def list_books(session: SessionDep) -> list[api.BookOverview]:
     # Read books from DB ordered by the date they added.
     stmt = select(db.Book).order_by(db.Book.created_time.desc(), db.Book.title)
     books = session.execute(stmt).scalars().all()
 
     resp = []
     for book in books:
-        resp.append(api.BookDetails(id=book.id,
-                                    title=book.title,
-                                    pdf_file_name=book.file_name,
-                                    number_of_pages=book.number_of_pages,
-                                    status=book.status))
+        resp.append(api.BookOverview(id=book.id,
+                                     title=book.title,
+                                     pdf_file_name=book.file_name,
+                                     number_of_pages=book.number_of_pages,
+                                     status=book.status))
 
     return resp
 
+def get_book_pages(book: db.Book, section_svc: SectionServiceDep) -> list[api.BookPage]:
+    if book.status != db.BookStatus.ready or book.number_of_pages is None:
+        # There will be no content, so return immediately.
+        return []
+
+    # Convert into the API model.
+    pages = []
+    pages_dict = {}
+    # For now, I simply generate pages, but I might need to store that data explicitly instead.
+    for i in range(book.number_of_pages or 0):
+        pages.append(api.BookPage(index=i, file_name=f"{i}.pdf", sections=[]))
+        pages_dict[i] = pages[-1]
+
+    db_sections = section_svc.get_sections(book.id)
+    for section in db_sections:
+        book_section = api.BookSection(id=section.id,
+                                       book_id=section.book_id,
+                                       page_index=section.page_index,
+                                       section_index=section.section_index,
+                                       content=section.content)
+        pages_dict[section.page_index].sections.append(book_section)
+    return pages
+
 
 @books_router.get("/{book_id}")
-def get_book(book_id: uuid.UUID, session: SessionDep) -> api.BookDetails:
-    book = session.get(db.Book, book_id)
-    if book is None:
+def get_book_with_content(book_id: uuid.UUID,
+                          book_service: BookServiceDep,
+                          section_svc: SectionServiceDep
+                          ) -> api.BookWithContent:
+    try:
+        book = book_service.get_book(book_id)
+        overview = api.BookOverview(id=book.id,
+                                    title=book.title,
+                                    pdf_file_name=book.file_name,
+                                    number_of_pages=book.number_of_pages,
+                                    status=book.status)
+    except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    return api.BookDetails(id=book.id,
-                           title=book.title,
-                           pdf_file_name=book.file_name,
-                           number_of_pages=book.number_of_pages,
-                           status=book.status)
+    raw_stats = book_service.get_stats(book_id)
+    total = raw_stats.get("total")
+    stats = api.BookStats(total_narrated_seconds=raw_stats.get("narrated_duration"),
+                          available_percent=raw_stats.get("available") / total if total > 0 else 1)
+    pages = get_book_pages(book, section_svc)
+
+    return api.BookWithContent(overview=overview, stats=stats, pages=pages)
 
 
 @books_router.delete("/{book_id}", status_code=204)
@@ -113,39 +147,6 @@ def reprocess_book(book_id: uuid.UUID,
     section_service.delete_sections(book_id=book.id)
 
     background_tasks.add_task(book_service.extract_text, book)
-
-
-@books_router.get("/{book_id}/content")
-def get_book_content(book_id: uuid.UUID,
-                     session: SessionDep,
-                     ) -> api.BookContent:
-    book = session.get(db.Book, book_id)
-    if book is None:
-        raise HTTPException(status_code=404, detail="Book not found")
-
-    if book.status != db.BookStatus.ready or book.number_of_pages is None:
-        # There will be no content, so return immediately.
-        return api.BookContent(pages=[])
-
-    db_sections = session.execute(
-        select(db.Section).where(db.Section.book_id == book_id).order_by(db.Section.section_index)).scalars().all()
-
-    # Convert into the API model.
-    pages = []
-    pages_dict = {}
-    # For now, I simply generate pages, but I might need to store that data explicitly instead.
-    for i in range(book.number_of_pages or 0):
-        pages.append(api.BookPage(index=i, file_name=f"{i}.pdf", sections=[]))
-        pages_dict[i] = pages[-1]
-
-    for section in db_sections:
-        book_section = api.BookSection(id=section.id,
-                                       book_id=section.book_id,
-                                       page_index=section.page_index,
-                                       section_index=section.section_index,
-                                       content=section.content)
-        pages_dict[section.page_index].sections.append(book_section)
-    return api.BookContent(pages=pages)
 
 
 @books_router.get("/{book_id}/m3u8")

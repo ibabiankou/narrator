@@ -17,12 +17,19 @@ class CreateBookRequest(BaseModel):
     pdf_temp_file_id: uuid.UUID
 
 
-class BookDetails(BaseModel):
+class BookOverview(BaseModel):
     id: uuid.UUID
     title: str
     pdf_file_name: str
     number_of_pages: Optional[int] = None
     status: str
+
+
+class BookStats(BaseModel):
+    # Seconds narrated so far.
+    total_narrated_seconds: float
+    # Percentage of the total book that is narrated.
+    available_percent: float
 
 
 class BookSection(BaseModel):
@@ -40,7 +47,9 @@ class BookPage(BaseModel):
     sections: list[BookSection]
 
 
-class BookContent(BaseModel):
+class BookWithContent(BaseModel):
+    overview: BookOverview
+    stats: BookStats
     pages: list[BookPage]
 
 
@@ -75,8 +84,6 @@ class PlaybackProgress(BaseModel):
 
 
 EMPTY_PLAYBACK_PROGRESS = PlaybackProgress(
-    section_id=None,
-    section_progress_seconds=None,
     global_progress_seconds=0,
     total_narrated_seconds=0,
     available_percent=0,
@@ -95,5 +102,6 @@ class PlaybackStateUpdate(BaseModel):
 class Playlist(BaseModel):
     progress: PlaybackProgress
     tracks: list[AudioTrack]
+
 
 EMPTY_PLAYLIST = Playlist(progress=EMPTY_PLAYBACK_PROGRESS, tracks=[])
