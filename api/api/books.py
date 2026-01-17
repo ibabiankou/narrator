@@ -1,6 +1,5 @@
 import os
 import uuid
-from typing import Optional, Set, List
 
 import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
@@ -184,41 +183,3 @@ def get_playback_info(book_id: uuid.UUID, progress_service: PlaybackProgressServ
 def update_playback_info(request: api.PlaybackInfo, progress_service: PlaybackProgressServiceDep):
     progress_service.upsert_progress(db.PlaybackProgress(book_id=request.book_id, data=request.data))
     return Response(status_code=201)
-
-
-@books_router.post("/{book_id}/generate")
-def generate_speech(book_id: uuid.UUID,
-                    sections: Optional[Set[int]],
-                    session: SessionDep,
-                    audio_track_service: AudioTrackServiceDep,
-                    limit: Optional[int] = None) -> List[api.AudioTrack]:
-    if not sections and not limit:
-        raise HTTPException(status_code=400, detail="Either sections or limit must be provided")
-    if sections and limit:
-        raise HTTPException(status_code=400, detail="Only one of sections or limit can be provided")
-
-    if sections:
-        stmt = (select(db.Section)
-                .where(db.Section.id.in_(sections))
-                .order_by(db.Section.section_index))
-        db_sections = session.execute(stmt).scalars().all()
-
-        # Ensure all sections exist.
-        for section in db_sections:
-            sections.remove(section.id)
-
-        if sections:
-            raise HTTPException(status_code=404, detail=f"Sections {sections} not found")
-    else:
-        stmt = (select(db.Section).outerjoin(db.AudioTrack, db.Section.id == db.AudioTrack.section_id)
-                .where(db.AudioTrack.id.is_(None), db.Section.book_id == book_id)
-                .order_by(db.Section.section_index).limit(limit))
-
-        db_sections = session.execute(stmt).scalars().all()
-
-    if not db_sections:
-        LOG.info("No sections found to generate speech for")
-        new_tracks = []
-    else:
-        new_tracks = audio_track_service.generate_speech(db_sections)
-    return new_tracks
