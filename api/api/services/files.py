@@ -122,15 +122,17 @@ class FilesService(Service):
         return keys
 
     def _delete_objects(self, keys: list[str]):
-        self.s3_client.delete_objects(
-            Bucket=self.bucket_name,
-            Delete={
-                "Objects": [
-                    {"Key": key}
-                    for key in keys
-                ]
-            }
-        )
+        for i in range(0, len(keys), 500):
+            chunk = keys[i:i + 500]
+            self.s3_client.delete_objects(
+                Bucket=self.bucket_name,
+                Delete={
+                    "Objects": [
+                        {"Key": key}
+                        for key in chunk
+                    ]
+                }
+            )
 
     def delete_book_files(self, book_id):
         keys = self._list_files(f"{book_id}/")
