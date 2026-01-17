@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import logging
 import os
@@ -66,7 +67,7 @@ class RMQClient(Service):
         configure_callback(channel)
         channel.close()
 
-    def get_queue_size(self, queue_name: str):
+    async def get_queue_size(self, queue_name: str) -> asyncio.Future[int]:
         channel = self._publisher_connection.default_channel()
 
         future = Future()
@@ -78,7 +79,7 @@ class RMQClient(Service):
                 future.set_exception(e)
         channel.connection.add_callback_threadsafe(get_message_count)
 
-        return future.result(timeout=5)
+        return await asyncio.wrap_future(future)
 
     def set_queue_message_handler(self, queue: str, cls: type[SubclassOfRMQMessage],
                                   message_handler: Callable[[SubclassOfRMQMessage], Any]):

@@ -20,8 +20,12 @@ from api.services.sections import SectionService
 from common_lib import RMQClient
 from common_lib.models import rmq
 from common_lib.rmq import Topology
+from common_lib.uvicorn import EndpointFilter
 
 load_dotenv()
+# Filter out health check from access logs.
+EndpointFilter.add_filter("/api/")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,6 +46,7 @@ async def lifespan(app: FastAPI):
         channel.queue_declare(Topology.api_queue, durable=True, arguments={"x-queue-type": "quorum"})
         channel.queue_bind(Topology.api_queue, Topology.default_exchange, "phonemes")
         channel.queue_bind(Topology.api_queue, Topology.default_exchange, "speech")
+
     rmq_client.configure(configure)
 
     rmq_client.set_queue_message_handler(Topology.api_queue, rmq.PhonemesResponse, section_svc.handle_phonemes_msg)
@@ -50,6 +55,7 @@ async def lifespan(app: FastAPI):
     yield
     speech_gen_task.cancel()
     RMQClient.instance.close()
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -63,6 +69,7 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware)
 
 base_url_router = APIRouter(prefix="/api")
+
 
 @base_url_router.get("/", tags=["System API"])
 def health_check():

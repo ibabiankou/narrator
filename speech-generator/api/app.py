@@ -11,9 +11,10 @@ from fastapi import FastAPI, APIRouter, Response
 from common_lib import RMQClient
 from common_lib.models import rmq
 from common_lib.rmq import Topology
+from common_lib.uvicorn import EndpointFilter
 
 load_dotenv()
-
+EndpointFilter.add_filter("/api/")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

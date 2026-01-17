@@ -95,15 +95,15 @@ class SectionService(Service):
         while True:
             LOG.info("Checking if need to generate some speech...")
             try:
-                self._do_generate_speech_maybe()
-                await asyncio.sleep(self._speech_generation_interval_sec)
+                await self._do_generate_speech_maybe()
             except:
                 LOG.info("Error while triggering speech generation, will try again later.", exc_info=True)
+            await asyncio.sleep(self._speech_generation_interval_sec)
 
-    def _do_generate_speech_maybe(self):
+    async def _do_generate_speech_maybe(self):
         message_num = 0
-        message_num += self.rmq_client.get_queue_size(Topology.phonemization_queue)
-        message_num += self.rmq_client.get_queue_size(Topology.speech_gen_queue)
+        message_num += await self.rmq_client.get_queue_size(Topology.phonemization_queue)
+        message_num += await self.rmq_client.get_queue_size(Topology.speech_gen_queue)
 
         if message_num > self._speech_generation_queue_size_threshold:
             return
@@ -129,7 +129,8 @@ class SectionService(Service):
                                      ORDER BY book_id, section_index)"""
         with DbSession() as session:
             db_sections = session.scalars(select(db.Section).from_statement(text(query_text))).all()
-            self.audiotracks_service.generate_speech(db_sections)
+            if len(db_sections):
+                self.audiotracks_service.generate_speech(db_sections)
 
 
 SectionServiceDep = Annotated[SectionService, SectionService.dep()]
