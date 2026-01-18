@@ -6,7 +6,7 @@ import {
   inject,
   input,
   model,
-  QueryList,
+  QueryList, TemplateRef,
   ViewChildren
 } from '@angular/core';
 import { BookStatus, Section } from '../../core/models/books.dto';
@@ -22,13 +22,21 @@ import {
 } from 'rxjs';
 import { MatIcon } from '@angular/material/icon';
 import { MatToolbar } from '@angular/material/toolbar';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
 import { PlayerComponent } from '../../components/player/player.component';
 import { AsyncPipe } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import {
+  MatDialog,
+  MatDialogActions,
+  MatDialogClose,
+  MatDialogContent,
+  MatDialogTitle
+} from '@angular/material/dialog';
 
 @Component({
   selector: 'app-view-book-page',
@@ -39,7 +47,13 @@ import { SkeletonComponent } from '../../components/skeleton/skeleton.component'
     SectionComponent,
     PlayerComponent,
     AsyncPipe,
-    SkeletonComponent
+    SkeletonComponent,
+    MatIconButton,
+    MatDialogTitle,
+    MatDialogContent,
+    MatDialogActions,
+    MatButton,
+    MatDialogClose
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
@@ -47,6 +61,8 @@ import { SkeletonComponent } from '../../components/skeleton/skeleton.component'
 export class ViewBookPage implements AfterViewInit {
   private booksService = inject(BooksService);
   private titleService = inject(Title);
+  private dialog = inject(MatDialog);
+  private router: Router = inject(Router);
 
   bookId = input.required<string>();
 
@@ -112,5 +128,23 @@ export class ViewBookPage implements AfterViewInit {
   protected setCurrentSectionId(sectionId: number) {
     this.$currentSectionId.next(sectionId);
     this.scrollToSection(sectionId);
+  }
+
+  protected deleteBookDialog(templateRef: TemplateRef<any>) {
+    const dialogRef = this.dialog.open(templateRef);
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.deleteBook();
+      }
+    });
+  }
+
+  private deleteBook() {
+    this.booksService.delete(this.bookId()).subscribe(
+      () => {
+        this.router.navigate(['/books']);
+      }
+    );
   }
 }

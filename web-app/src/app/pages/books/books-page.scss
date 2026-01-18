@@ -26,26 +26,11 @@ button[mat-fab] {
     text-decoration: none;
     color: #333;
   }
-
-  .delete-button {
-    position: absolute;
-    right: -35px;
-    transform: translateY(-15px);
-
-    opacity: 0; // Hidden by default, show on hover.
-    transition: all 0.3s ease-in-out; // Ensure smooth transitions
-    color: red;
-  }
 }
 
 .book-card:hover {
   /* Subtle lift effect on hover */
   transform: translateY(-5px);
-
-  .delete-button {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* Wrapper to maintain book shape (3:4 aspect ratio) */

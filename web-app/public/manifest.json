@@ -1,4 +1,5 @@
 {
+  "id": "/app/books",
   "name": "NNarator",
   "display": "standalone",
   "start_url": "/app/books",

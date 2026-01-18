@@ -4,6 +4,14 @@
   min-width: 100px;
 }
 
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.delete-button {
+  color: darkred !important;
+}
+
 $maxWidth: 1280px;
 .main-container {
   max-width: $maxWidth;
