@@ -4,7 +4,7 @@ import { Component, Input } from '@angular/core';
   selector: 'app-skeleton',
   standalone: true,
   template: `
-    <div [style.width]="width" [style.height]="height" class="skeleton"></div>`,
+    <div [style.width]="width" [style.min-width]="minWidth" [style.height]="height" class="skeleton"></div>`,
   styles: [`
     :host {
       display: block;
@@ -23,5 +23,6 @@ import { Component, Input } from '@angular/core';
 })
 export class SkeletonComponent {
   @Input() width = '100%';
+  @Input() minWidth = '100px';
   @Input() height = '100%';
 }

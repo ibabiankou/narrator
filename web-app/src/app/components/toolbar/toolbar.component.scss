@@ -1,0 +1,24 @@
+:host {
+  display: block;
+}
+
+.content-spacer {
+  height: 68px;
+}
+
+mat-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  transition: transform 0.3s ease-in-out;
+}
+
+.toolbar-hidden {
+  transform: translateY(-100%);
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+}

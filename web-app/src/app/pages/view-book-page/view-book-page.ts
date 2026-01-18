@@ -21,8 +21,7 @@ import {
   timer
 } from 'rxjs';
 import { MatIcon } from '@angular/material/icon';
-import { MatToolbar } from '@angular/material/toolbar';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
 import { PlayerComponent } from '../../components/player/player.component';
 import { AsyncPipe } from '@angular/common';
@@ -37,13 +36,16 @@ import {
   MatDialogContent,
   MatDialogTitle
 } from '@angular/material/dialog';
+import {
+  ActionButtonContentDirective,
+  BreadcrumbContentDirective,
+  ToolbarComponent
+} from '../../components/toolbar/toolbar.component';
 
 @Component({
   selector: 'app-view-book-page',
   imports: [
     MatIcon,
-    MatToolbar,
-    RouterLink,
     SectionComponent,
     PlayerComponent,
     AsyncPipe,
@@ -53,7 +55,10 @@ import {
     MatDialogContent,
     MatDialogActions,
     MatButton,
-    MatDialogClose
+    MatDialogClose,
+    ToolbarComponent,
+    BreadcrumbContentDirective,
+    ActionButtonContentDirective
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',

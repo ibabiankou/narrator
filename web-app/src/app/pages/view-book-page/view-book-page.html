@@ -1,16 +1,19 @@
-<mat-toolbar>
-  <a [routerLink]="['/books']">NNarrator Books</a>
-  <mat-icon>chevron_right</mat-icon>
-  @defer (when bookWithContent()) {
-    <h1>{{ bookWithContent().overview.title }}</h1>
-    <span class="toolbar-spacer"></span>
-    <button matIconButton class="delete-button" aria-label="Delete this book" (click)="deleteBookDialog(deleteBookTemplate)">
-      <mat-icon>delete_forever</mat-icon>
-    </button>
-  } @placeholder (minimum 250ms) {
-    <app-skeleton class="header-skeleton" height="1.5rem" />
-  }
-</mat-toolbar>
+<app-toolbar>
+  <div breadcrumb>
+    @defer (when bookWithContent()) {
+      <h1>{{ bookWithContent().overview.title }}</h1>
+    } @placeholder (minimum 250ms) {
+      <app-skeleton height="1.5rem" />
+    }
+  </div>
+  <div actionButton>
+    @defer (when bookWithContent()) {
+      <button  matIconButton class="delete-button" aria-label="Delete this book" (click)="deleteBookDialog(deleteBookTemplate)">
+        <mat-icon>delete_forever</mat-icon>
+      </button>
+    }
+  </div>
+</app-toolbar>
 
 <div class="main-container">
   @defer (when bookWithContent()) {

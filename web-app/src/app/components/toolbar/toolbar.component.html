@@ -1,0 +1,11 @@
+<mat-toolbar
+  [class.toolbar-hidden]="!isMenuVisible">
+  <a [routerLink]="['/books']">NNarrator Books</a>
+  @if (hasBreadcrumbContent) {
+    <mat-icon>chevron_right</mat-icon>
+  }
+  <ng-content select="[breadcrumb]"></ng-content>
+  <span class="toolbar-spacer"></span>
+  <ng-content select="[actionButton]"></ng-content>
+</mat-toolbar>
+<div class="content-spacer"></div>
