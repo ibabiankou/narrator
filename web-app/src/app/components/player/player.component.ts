@@ -188,6 +188,7 @@ export class PlayerComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.audioPlayer.resetPlayer();
     this.$destroy.next(true);
     this.$destroy.complete();
   }

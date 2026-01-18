@@ -155,6 +155,7 @@ export class AudioPlayerService {
     if (this.audio) {
       this.audio.pause();
       this.readProgress();
+      this.updateProgress();
       this.$status.next(PlayerStatus.paused);
     }
   }
@@ -202,6 +203,13 @@ export class AudioPlayerService {
     }
     if (playbackInfo.data["progress_seconds"]) {
       this.audio.currentTime = playbackInfo.data["progress_seconds"]
+    }
+  }
+
+  resetPlayer() {
+    this.pause();
+    if (this.hls) {
+      this.hls.destroy();
     }
   }
 }
