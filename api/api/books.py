@@ -1,4 +1,3 @@
-import os
 import uuid
 
 import m3u8
@@ -146,7 +145,6 @@ def book_playlist(book_id: uuid.UUID,
 
 
 def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
-    base_url = os.getenv("BASE_URL", "http://localhost:8000/api")
 
     playlist = m3u8.M3U8()
 
@@ -158,7 +156,7 @@ def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
 
     for track in tracks:
         segment = m3u8.Segment(
-            uri=f"{base_url}/files/{track.book_id}/speech/{track.file_name}",
+            uri=f"/api/files/{track.book_id}/speech/{track.file_name}",
             duration=track.duration,
             discontinuity=True,
             dateranges=[{
