@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -49,7 +49,12 @@ export class BooksService {
   }
 
   listBooks(): Observable<BookOverview[]> {
-    return this.http.get<BookOverview[]>(`${this.apiUrl}/`);
+    return this.connectionService.$isOnline.pipe(
+      take(1),
+      switchMap(online => online ?
+        this.http.get<BookOverview[]>(`${this.apiUrl}/`) :
+        this.booksCache.getAll().pipe(map(bwc => bwc.map(bwc => bwc.overview))))
+    );
   }
 
   delete(id: string) {

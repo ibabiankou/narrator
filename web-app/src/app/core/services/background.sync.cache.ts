@@ -139,4 +139,10 @@ export class BackgroundSyncCache<T> {
       request.onerror = () => reject(request.error);
     });
   }
+
+  getAll(): Observable<T[]> {
+    return fromPromise(this.getAllEntries()).pipe(
+      map(entries => entries.map(entry => entry.value))
+    );
+  }
 }
