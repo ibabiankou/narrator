@@ -3,8 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --serve-path /app/ --open --host 0.0.0.0 --ssl",
-    "start:prod": "ng serve --serve-path /app/ --open --host 0.0.0.0 --configuration=production --ssl",
+    "start": "npx local-web-server --hostname local.ggnt.eu --port 4200 --https --cert ./ssl/tls.crt --key ./ssl/tls.key --directory dist/web-app/browser --rewrite '/api/(.*) -> http://localhost:8000/api/$1' --rewrite '/app/(.*) -> https://local.ggnt.eu:4200/$1' --spa /index.html",
     "build": "ng build --base-href /app/ --configuration production",
     "build:local": "ng build --base-href /app/",
     "watch": "ng build --watch --configuration development",

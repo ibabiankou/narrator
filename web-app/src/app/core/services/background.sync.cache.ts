@@ -1,5 +1,5 @@
 import { ConnectionService } from './connection.service';
-import { catchError, forkJoin, map, Observable, switchMap, tap } from 'rxjs';
+import { catchError, firstValueFrom, forkJoin, map, Observable, switchMap, tap } from 'rxjs';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 
 // TODO: Limit number of sync attempts.
@@ -25,16 +25,21 @@ export class BackgroundSyncCache<T> {
       this.isOnline = online;
 
       if (needToSync) {
-        this.getPendingSyncEntries().then(entries => {
+        this.getAllEntries().then(entries => {
+          const syncEntries = entries.filter(entry => entry.syncWhenOnline);
+
+          if (syncEntries.length === 0) {
+            return;
+          }
 
           const observables: Observable<void>[] = [];
-          for (const entry of entries) {
+          for (const entry of syncEntries) {
             observables.push(this.sync(entry.url, entry.value).pipe(
               tap(() => this._set({url: entry.url, value: entry.value, syncWhenOnline: false})),
             ));
           }
 
-          return forkJoin(observables);
+          return firstValueFrom(forkJoin(observables));
         }).catch(reason => console.warn("Failed to sync some entries:", reason));
       }
     });
@@ -115,15 +120,11 @@ export class BackgroundSyncCache<T> {
       }));
   }
 
-  private async getPendingSyncEntries(): Promise<Entry<T>[]> {
+  private async getAllEntries(): Promise<Entry<T>[]> {
     const db = await this.getDB();
     const tx = db.transaction(this.storeName, 'readonly');
     const store = tx.objectStore(this.storeName);
-    const index = store.index(this.syncIdx);
-
-    const range = IDBKeyRange.only(true);
-    const request = index.getAll(range);
-
+    const request = store.getAll();
     return new Promise((resolve, reject) => {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);

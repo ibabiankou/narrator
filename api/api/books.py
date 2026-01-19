@@ -178,6 +178,8 @@ def get_playback_info(book_id: uuid.UUID, progress_service: PlaybackProgressServ
 
 
 @books_router.post("/{book_id}/playback_info")
-def update_playback_info(request: api.PlaybackInfo, progress_service: PlaybackProgressServiceDep):
+def update_playback_info(request: api.PlaybackInfo,
+                         book_id: uuid.UUID,
+                         progress_service: PlaybackProgressServiceDep):
     progress_service.upsert_progress(db.PlaybackProgress(book_id=request.book_id, data=request.data))
     return Response(status_code=201)
