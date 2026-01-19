@@ -24,17 +24,17 @@ const DUMMY_WRITER: EntryWriter<any> = () => EMPTY;
 /**
  * A cache that stores write requests when offline and retries them once online.
  */
-export class BackgroundSyncCache<T> {
+export class IndexDBCache<T> {
   private isOnline: boolean = false;
   private readonly load: EntryLoader<T>;
-  private readonly sync: EntryWriter<T>;
+  private readonly write: EntryWriter<T>;
 
   constructor(private connectionService: ConnectionService,
               private storeName: string,
               loader: EntryLoader<T>,
-              _sync?: EntryWriter<T> | undefined) {
+              writer?: EntryWriter<T> | undefined) {
     this.load = loader;
-    this.sync = _sync ? _sync : DUMMY_WRITER;
+    this.write = writer ? writer : DUMMY_WRITER;
 
     this.connectionService.$isOnline.subscribe(online => {
       const needToSync = !this.isOnline && online;
@@ -50,7 +50,7 @@ export class BackgroundSyncCache<T> {
 
           const observables: Observable<void>[] = [];
           for (const entry of syncEntries) {
-            observables.push(this.sync(entry.url, entry.value).pipe(
+            observables.push(this.write(entry.url, entry.value).pipe(
               tap(() => this._set({url: entry.url, value: entry.value, syncWhenOnline: false})),
             ));
           }
@@ -95,7 +95,7 @@ export class BackgroundSyncCache<T> {
       return fromPromise(this._set({url: key, value: value, syncWhenOnline: true}));
     }
 
-    return this.sync(key, value).pipe(
+    return this.write(key, value).pipe(
       switchMap(() => {
         return fromPromise(this._set({url: key, value: value, syncWhenOnline: false}));
       }),

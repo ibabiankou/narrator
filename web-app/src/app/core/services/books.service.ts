@@ -4,7 +4,7 @@ import { map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
 import { DomSanitizer } from '@angular/platform-browser';
-import { BackgroundSyncCache } from './background.sync.cache';
+import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
 
 @Injectable({
@@ -13,18 +13,18 @@ import { ConnectionService } from './connection.service';
 export class BooksService {
 
   private apiUrl = `${environment.api_base_url}/books`;
-  private playbackInfoCache: BackgroundSyncCache<PlaybackInfo>;
-  private booksCache: BackgroundSyncCache<BookWithContent>;
+  private playbackInfoCache: IndexDBCache<PlaybackInfo>;
+  private booksCache: IndexDBCache<BookWithContent>;
 
   constructor(private http: HttpClient,
               private sanitizer: DomSanitizer,
               private connectionService: ConnectionService) {
-    this.playbackInfoCache = new BackgroundSyncCache(
+    this.playbackInfoCache = new IndexDBCache(
       this.connectionService,
       "playback-info",
       (url: string) => this.http.get<PlaybackInfo>(url),
       (url: string, info: PlaybackInfo) => this.http.post<void>(url, info));
-    this.booksCache = new BackgroundSyncCache(
+    this.booksCache = new IndexDBCache(
       this.connectionService,
       "books",
       (url: string) => this.http.get<BookWithContent>(url));
