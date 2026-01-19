@@ -26,7 +26,7 @@ class EndpointFilter(logging.Filter):
             LOG.debug("Log record does not have status code argument. Skipping that check.")
         else:
             if record.args[4] != self._status_code:
-                return False
+                return True
 
         if len(record.args) < 3:
             LOG.warning("Log record does not have path argument. Skipping filtering.")
