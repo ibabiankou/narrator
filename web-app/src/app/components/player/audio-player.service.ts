@@ -11,6 +11,7 @@ import { inject, Injectable } from '@angular/core';
 
 import Hls from 'hls.js';
 import { BooksService } from '../../core/services/books.service';
+import { CachingPlaylistLoader } from '../../core/services/cachingPlaylistLoader';
 
 enum PlayerStatus {
   playing = "playing",
@@ -73,6 +74,7 @@ export class AudioPlayerService {
 
         if (Hls.isSupported()) {
           this.hls = new Hls({
+            pLoader: CachingPlaylistLoader,
             debug: false,
           });
 
