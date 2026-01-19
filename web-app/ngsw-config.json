@@ -27,19 +27,5 @@
       }
     }
   ],
-  "dataGroups": [
-    {
-      "name": "api",
-      "urls": [
-        "/api/books/**",
-        "/api/files/**"
-      ],
-      "cacheConfig": {
-        "maxSize": 500,
-        "maxAge": "7d",
-        "timeout": "10s",
-        "strategy": "performance"
-      }
-    }
-  ]
+  "dataGroups": []
 }
