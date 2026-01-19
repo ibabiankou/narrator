@@ -20,7 +20,6 @@ export class CachingPlaylistLoader implements Loader<PlaylistLoaderContext> {
   constructor(config: HlsConfig) {
     this.loader = new Hls.DefaultConfig.loader(config);
     this.stats = new LoadStats();
-    console.info("Initial stats %s", this.stats);
     this.cache = new IndexDBCache(
       new ConnectionService(),
       "playlists");
@@ -31,15 +30,7 @@ export class CachingPlaylistLoader implements Loader<PlaylistLoaderContext> {
 
     const cachingOnSuccess: LoaderOnSuccess<PlaylistLoaderContext> =
       (response: LoaderResponse, stats: LoaderStats, context: PlaylistLoaderContext, networkDetails: any) => {
-        // Should I do anything with the subscription?
-        console.log("Caching response obtained by loader.onSuccess");
-        this.cache.set(context.url, response).subscribe(
-          {
-            next: () => console.log("Cached response."),
-            error: reason => console.warn("Failed to cache response:", reason),
-            complete: () => console.log("Cache observable has completed.")
-          }
-        );
+        this.cache.set(context.url, response).subscribe();
         callbacks.onSuccess(response, stats, context, networkDetails)
       };
     const modifiedCallbacks: LoaderCallbacks<PlaylistLoaderContext> = {
@@ -53,10 +44,8 @@ export class CachingPlaylistLoader implements Loader<PlaylistLoaderContext> {
     this.cache.get(context.url)
       .subscribe(entry => {
         if (entry) {
-          console.log("Using cached response.");
           callbacks.onSuccess(entry, this.stats, context, null);
         } else {
-          console.log("Calling default loader.");
           this.loader.load(context, config, <LoaderCallbacks<LoaderContext>>modifiedCallbacks);
         }
       });
