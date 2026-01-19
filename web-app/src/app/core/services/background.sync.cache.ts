@@ -1,5 +1,5 @@
 import { ConnectionService } from './connection.service';
-import { catchError, firstValueFrom, forkJoin, map, Observable, switchMap, tap } from 'rxjs';
+import { catchError, EMPTY, firstValueFrom, forkJoin, map, Observable, switchMap, tap } from 'rxjs';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 
 // TODO: Limit number of sync attempts.
@@ -10,16 +10,32 @@ interface Entry<T> {
 }
 
 /**
+ * A function that loads an entry to be cached from its source (typically backend).
+ */
+type EntryLoader<T> = (key: string) => Observable<T>;
+
+/**
+ * A function that writes(syncs) an entry back to its source (typically backend).
+ */
+type EntryWriter<T> = (key: string, value: T) => Observable<void>;
+
+const DUMMY_WRITER: EntryWriter<any> = () => EMPTY;
+
+/**
  * A cache that stores write requests when offline and retries them once online.
  */
 export class BackgroundSyncCache<T> {
   private isOnline: boolean = false;
-  private syncIdx = "sync_idx";
+  private readonly load: EntryLoader<T>;
+  private readonly sync: EntryWriter<T>;
 
   constructor(private connectionService: ConnectionService,
               private storeName: string,
-              private load: (key: string) => Observable<T>,
-              private sync: (key: string, value: T) => Observable<void>) {
+              loader: EntryLoader<T>,
+              _sync?: EntryWriter<T> | undefined) {
+    this.load = loader;
+    this.sync = _sync ? _sync : DUMMY_WRITER;
+
     this.connectionService.$isOnline.subscribe(online => {
       const needToSync = !this.isOnline && online;
       this.isOnline = online;
@@ -57,12 +73,6 @@ export class BackgroundSyncCache<T> {
         } else {
           store = request.transaction!.objectStore(this.storeName);
         }
-
-        // Create the index for syncWhenOnline
-        // Parameter 1: Name of index, Parameter 2: Property path in your object
-        if (!store.indexNames.contains(this.syncIdx)) {
-          store.createIndex(this.syncIdx, 'syncWhenOnline', {unique: false});
-        }
       };
 
       request.onsuccess = () => resolve(request.result);
@@ -74,7 +84,6 @@ export class BackgroundSyncCache<T> {
    * Stores value in the cache with a flag if sync is needed when online.
    */
   private async _set(entry: Entry<T>): Promise<void> {
-    console.debug("Caching value for key %s", entry.url);
     const db = await this.getDB();
     const tx = db.transaction(this.storeName, 'readwrite');
     tx.objectStore(this.storeName).put(entry);

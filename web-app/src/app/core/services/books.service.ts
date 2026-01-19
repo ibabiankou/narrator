@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -14,6 +14,7 @@ export class BooksService {
 
   private apiUrl = `${environment.api_base_url}/books`;
   private playbackInfoCache: BackgroundSyncCache<PlaybackInfo>;
+  private booksCache: BackgroundSyncCache<BookWithContent>;
 
   constructor(private http: HttpClient,
               private sanitizer: DomSanitizer,
@@ -22,8 +23,11 @@ export class BooksService {
       this.connectionService,
       "playback-info",
       (url: string) => this.http.get<PlaybackInfo>(url),
-      (url: string, info: PlaybackInfo) => this.http.post<void>(url, info)
-    );
+      (url: string, info: PlaybackInfo) => this.http.post<void>(url, info));
+    this.booksCache = new BackgroundSyncCache(
+      this.connectionService,
+      "books",
+      (url: string) => this.http.get<BookWithContent>(url));
   }
 
   createBook(data: CreateBookRequest): Observable<BookOverview> {
@@ -32,12 +36,16 @@ export class BooksService {
 
   getBookWithContent(bookId: string): Observable<BookWithContent> {
     const url = `${this.apiUrl}/${bookId}`;
-    return this.http.get<BookWithContent>(url).pipe(tap(bookWithContent => {
-      bookWithContent.pages.forEach(page => {
-        const url = `${environment.api_base_url}/files/${bookId}/pages/${page.file_name}#toolbar=0&navpanes=0&scrollbar=0`
-        page.file_url = this.sanitizer.bypassSecurityTrustResourceUrl(url);
-      });
-    }));
+    return this.booksCache.get(url)
+      .pipe(
+        switchMap(bookMaybe =>
+          bookMaybe ? of(bookMaybe) : throwError(() => new Error('Unable to load the book'))),
+        tap(bookWithContent => {
+          bookWithContent.pages.forEach(page => {
+            const url = `${environment.api_base_url}/files/${bookId}/pages/${page.file_name}#toolbar=0&navpanes=0&scrollbar=0`
+            page.file_url = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+          });
+        }));
   }
 
   listBooks(): Observable<BookOverview[]> {
