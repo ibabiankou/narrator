@@ -75,6 +75,7 @@ export class AudioPlayerService {
 
         if (Hls.isSupported()) {
           this.hls = new Hls({
+            maxBufferLength: 300, // Keep 5min buffered.
             pLoader: CachingPlaylistLoader,
             fLoader: CachingFragmentLoader,
             debug: false,
