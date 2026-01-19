@@ -1,15 +1,15 @@
 import { Component, HostListener, inject, input, model, OnDestroy, output } from '@angular/core';
-import { BookWithContent } from '../../core/models/books.dto';
+import { BookWithContent, PlaybackInfo } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import {
-  BehaviorSubject,
+  BehaviorSubject, catchError,
   combineLatest,
   filter,
-  map,
+  map, of,
   Subject, switchMap,
   take,
-  takeUntil,
+  takeUntil, throwError,
 } from 'rxjs';
 import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { AudioPlayerService } from './audio-player.service';
@@ -36,8 +36,13 @@ export class PlayerComponent implements OnDestroy {
 
   bookWithContent = input.required<BookWithContent>();
   playbackInfo = toObservable(this.bookWithContent).pipe(
-    switchMap(book => {
-      return this.bookService.getPlaybackInfo(book.overview.id)
+    switchMap(book => this.bookService.getPlaybackInfo(book.overview.id)),
+    switchMap(info => {
+      return info ? of(info) : throwError(() => new Error("Undefined playback info"))
+    }),
+    catchError(error => {
+      console.warn("Failed to load playback info, falling back to default values.", error);
+      return of(<PlaybackInfo>{book_id: this.bookWithContent().overview.id, data: {}});
     })
   )
 

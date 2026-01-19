@@ -4,6 +4,8 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
 import { DomSanitizer } from '@angular/platform-browser';
+import { BackgroundSyncCache } from './background.sync.cache';
+import { ConnectionService } from './connection.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,8 +13,17 @@ import { DomSanitizer } from '@angular/platform-browser';
 export class BooksService {
 
   private apiUrl = `${environment.api_base_url}/books`;
+  private playbackInfoCache: BackgroundSyncCache<PlaybackInfo>;
 
-  constructor(private http: HttpClient, private sanitizer: DomSanitizer) {
+  constructor(private http: HttpClient,
+              private sanitizer: DomSanitizer,
+              private connectionService: ConnectionService) {
+    this.playbackInfoCache = new BackgroundSyncCache(
+      this.connectionService,
+      "playback-info",
+      (url: string) => this.http.get<PlaybackInfo>(url),
+      (url: string, info: PlaybackInfo) => this.http.post<void>(url, info)
+    );
   }
 
   createBook(data: CreateBookRequest): Observable<BookOverview> {
@@ -38,10 +49,10 @@ export class BooksService {
   }
 
   getPlaybackInfo(bookId: string) {
-    return this.http.get<PlaybackInfo>(`${this.apiUrl}/${bookId}/playback_info`);
+    return this.playbackInfoCache.get(`${this.apiUrl}/${bookId}/playback_info`);
   }
 
   updatePlaybackInfo(progress: PlaybackInfo) {
-    return this.http.post<void>(`${this.apiUrl}/${progress.book_id}/playback_info`, progress);
+    return this.playbackInfoCache.set(`${this.apiUrl}/${progress.book_id}/playback_info`, progress);
   }
 }
