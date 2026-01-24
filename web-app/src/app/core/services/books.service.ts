@@ -68,4 +68,8 @@ export class BooksService {
   updatePlaybackInfo(progress: PlaybackInfo) {
     return this.playbackInfoCache.set(`${this.apiUrl}/${progress.book_id}/playback_info`, progress);
   }
+
+  getPlaylistUrl(id: string) {
+    return `${environment.api_base_url}/books/${id}/m3u8`;
+  }
 }

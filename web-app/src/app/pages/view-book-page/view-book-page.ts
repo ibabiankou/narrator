@@ -41,6 +41,7 @@ import {
   BreadcrumbContentDirective,
   ToolbarComponent
 } from '../../components/toolbar/toolbar.component';
+import { DownloadService } from '../../core/services/download.service';
 
 @Component({
   selector: 'app-view-book-page',
@@ -65,6 +66,7 @@ import {
 })
 export class ViewBookPage implements AfterViewInit {
   private booksService = inject(BooksService);
+  private downloadService = inject(DownloadService);
   private titleService = inject(Title);
   private dialog = inject(MatDialog);
   private router: Router = inject(Router);
@@ -151,5 +153,9 @@ export class ViewBookPage implements AfterViewInit {
         this.router.navigate(['/books']);
       }
     );
+  }
+
+  protected downloadBook() {
+    this.downloadService.downloadBook(this.bookId());
   }
 }

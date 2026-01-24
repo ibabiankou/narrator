@@ -8,6 +8,10 @@
   </div>
   <div actionButton>
     @defer (when bookWithContent()) {
+      <button  matIconButton aria-label="Download this book"
+               (click)="downloadBook()">
+        <mat-icon>download</mat-icon>
+      </button>
       <button  matIconButton class="delete-button" aria-label="Delete this book" (click)="deleteBookDialog(deleteBookTemplate)">
         <mat-icon>delete_forever</mat-icon>
       </button>

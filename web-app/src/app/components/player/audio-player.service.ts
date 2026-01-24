@@ -1,11 +1,14 @@
 import { BookOverview, PlaybackInfo } from '../../core/models/books.dto';
-import { environment } from '../../../environments/environment';
 import {
   BehaviorSubject,
-  combineLatest, combineLatestWith,
+  combineLatest,
+  combineLatestWith,
   distinctUntilChanged,
-  filter, interval,
-  map, switchMap, take,
+  filter,
+  interval,
+  map,
+  switchMap,
+  take,
 } from 'rxjs';
 import { inject, Injectable } from '@angular/core';
 
@@ -106,7 +109,7 @@ export class AudioPlayerService {
             }
           });
 
-          this.hls.loadSource(`${environment.api_base_url}/books/${book.id}/m3u8`);
+          this.hls.loadSource(this.bookService.getPlaylistUrl(book?.id));
           this.hls.attachMedia(this.audio);
         } else {
           console.error("HLS not supported");

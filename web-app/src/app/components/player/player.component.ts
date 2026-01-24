@@ -2,15 +2,7 @@ import { Component, HostListener, inject, input, model, OnDestroy, output } from
 import { BookWithContent, PlaybackInfo } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
-import {
-  BehaviorSubject, catchError,
-  combineLatest,
-  filter,
-  map, of,
-  Subject, switchMap,
-  take,
-  takeUntil, throwError,
-} from 'rxjs';
+import { catchError, combineLatest, filter, map, of, Subject, switchMap, take, takeUntil, throwError, } from 'rxjs';
 import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { AudioPlayerService } from './audio-player.service';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -35,7 +27,7 @@ export class PlayerComponent implements OnDestroy {
   private bookService = inject(BooksService);
 
   bookWithContent = input.required<BookWithContent>();
-  playbackInfo = toObservable(this.bookWithContent).pipe(
+  private readonly $playbackInfo = toObservable(this.bookWithContent).pipe(
     switchMap(book => this.bookService.getPlaybackInfo(book.overview.id)),
     switchMap(info => {
       return info ? of(info) : throwError(() => new Error("Undefined playback info"))
@@ -54,7 +46,8 @@ export class PlayerComponent implements OnDestroy {
   handleKeyBindings = input(true);
 
   // Total duration of the narrated part.
-  private readonly $totalNarratedSeconds = new BehaviorSubject<number>(0)
+  private readonly $totalNarratedSeconds =
+    toObservable(this.bookWithContent).pipe(map(b => b.stats.total_narrated_seconds));
 
   $isPlaying;
   $nowTime;
@@ -62,7 +55,7 @@ export class PlayerComponent implements OnDestroy {
   $nowPercent;
   $playbackRate;
 
-  $availablePercent = new BehaviorSubject<number>(0);
+  $availablePercent = toObservable(this.bookWithContent).pipe(map(b => b.stats.available_percent));
   $unavailablePercent = this.$availablePercent.pipe(map(availablePercent => 100 - availablePercent));
 
   constructor(private audioPlayer: AudioPlayerService) {
@@ -86,14 +79,10 @@ export class PlayerComponent implements OnDestroy {
         takeUntil(this.$destroy)
       ).subscribe(sectionId => this.sectionPlayed.emit(sectionId));
 
-    this.playbackInfo
+    this.$playbackInfo
       .pipe(takeUntil(this.$destroy))
       .subscribe((playbackInfo) => {
-        const book = this.bookWithContent();
-        this.audioPlayer.initPlayer(book.overview, playbackInfo);
-
-        this.$totalNarratedSeconds.next(book.stats.total_narrated_seconds);
-        this.$availablePercent.next(book.stats.available_percent);
+        this.audioPlayer.initPlayer(this.bookWithContent().overview, playbackInfo);
       });
   }
 
