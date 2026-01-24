@@ -61,7 +61,8 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://local.ggnt.eu:4200", "https://narrator.in.ggnt.eu"],
+    allow_origin_regex="(\w+\.)*ggnt\.eu(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
