@@ -1,5 +1,5 @@
 import { ConnectionService } from './connection.service';
-import { catchError, EMPTY, firstValueFrom, forkJoin, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 
 // TODO: Limit number of sync attempts.
@@ -19,6 +19,8 @@ type EntryLoader<T> = (key: string) => Observable<T>;
  */
 type EntryWriter<T> = (key: string, value: T) => Observable<any>;
 
+type OnlineChangeCallback<T> = (online: boolean, loader: EntryLoader<T>, writer: EntryWriter<T>) => void;
+
 const DUMMY_WRITER: EntryWriter<any> = () => of(null);
 
 const DUMMY_LOADER: EntryLoader<any> = () => throwError(() => new Error("Not implemented"));
@@ -30,6 +32,7 @@ export class IndexDBCache<T> {
   private isOnline: boolean = false;
   private readonly load: EntryLoader<T>;
   private readonly write: EntryWriter<T>;
+  private onlineChangeCallback?: OnlineChangeCallback<T>;
 
   constructor(private connectionService: ConnectionService,
               private storeName: string,
@@ -39,26 +42,11 @@ export class IndexDBCache<T> {
     this.write = writer ? writer : DUMMY_WRITER;
 
     this.connectionService.$isOnline.subscribe(online => {
-      const needToSync = !this.isOnline && online;
+      const onlineChanged = this.isOnline != online;
       this.isOnline = online;
 
-      if (needToSync) {
-        this.getAllEntries().then(entries => {
-          const syncEntries = entries.filter(entry => entry.syncWhenOnline);
-
-          if (syncEntries.length === 0) {
-            return;
-          }
-
-          const observables: Observable<void>[] = [];
-          for (const entry of syncEntries) {
-            observables.push(this.write(entry.url, entry.value).pipe(
-              tap(() => this._set({url: entry.url, value: entry.value, syncWhenOnline: false})),
-            ));
-          }
-
-          return firstValueFrom(forkJoin(observables));
-        }).catch(reason => console.warn("Failed to sync some entries:", reason));
+      if (onlineChanged && this.onlineChangeCallback) {
+        this.onlineChangeCallback(online, this.load, this.write);
       }
     });
   }
@@ -127,7 +115,7 @@ export class IndexDBCache<T> {
       }));
   }
 
-  private async getAllEntries(): Promise<Entry<T>[]> {
+  async getAllEntries(): Promise<Entry<T>[]> {
     const db = await this.getDB();
     const tx = db.transaction(this.storeName, 'readonly');
     const store = tx.objectStore(this.storeName);
@@ -142,5 +130,9 @@ export class IndexDBCache<T> {
     return fromPromise(this.getAllEntries()).pipe(
       map(entries => entries.map(entry => entry.value))
     );
+  }
+
+  onOnlineChange(callback: OnlineChangeCallback<T>) {
+    this.onlineChangeCallback = callback;
   }
 }

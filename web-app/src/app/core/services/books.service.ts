@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
+import { firstValueFrom, forkJoin, map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -24,6 +24,24 @@ export class BooksService {
       "playback-info",
       (url: string) => this.http.get<PlaybackInfo>(url),
       (url: string, info: PlaybackInfo) => this.http.post<void>(url, info));
+    this.playbackInfoCache.onOnlineChange((online) => {
+      if (online) {
+        this.playbackInfoCache.getAllEntries().then(entries => {
+          const syncEntries = entries.filter(entry => entry.syncWhenOnline);
+
+          if (syncEntries.length === 0) {
+            return;
+          }
+
+          const observables: Observable<void>[] = [];
+          for (const entry of syncEntries) {
+            observables.push(this.playbackInfoCache.set(entry.url, entry.value));
+          }
+
+          return firstValueFrom(forkJoin(observables));
+        }).catch(reason => console.warn("Failed to sync some entries:", reason));
+      }
+    })
     this.booksCache = new IndexDBCache(
       this.connectionService,
       "books",
