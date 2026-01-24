@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { EMPTY, firstValueFrom, forkJoin, map, Observable, switchMap } from 'rxjs';
+import { EMPTY, firstValueFrom, forkJoin, from, map, mergeMap, Observable, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { TempFile } from '../models/files.dto';
 import { IndexDBCache } from './indexDBCache';
@@ -20,21 +20,12 @@ export class DownloadService {
 
   downloadBook(bookId: string) {
     // TODO: Load all pages. Also need to figure out how to display pdf page from cache.
-
     this.bookService.getBookWithContent(bookId)
       .pipe(
-        switchMap((_) => {
-          return this.getFragmentUrls(this.bookService.getPlaylistUrl(bookId));
-        }),
-        switchMap(urls => {
-          console.log("Loading %s fragments", urls.length);
-          if (urls.length == 0) {
-            return EMPTY;
-          }
-          const observables: Observable<any>[] = [];
-          urls.forEach(url => observables.push(this.fileService.getFileData(url)));
-          return firstValueFrom(forkJoin(observables));
-        })
+        switchMap((_) =>
+          this.getFragmentUrls(this.bookService.getPlaylistUrl(bookId))),
+        switchMap(urls => from(urls)),
+        mergeMap(url => this.fileService.getFileData(url), 5),
       ).subscribe();
   }
 
