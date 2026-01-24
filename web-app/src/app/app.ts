@@ -2,6 +2,7 @@ import { Component, Injector } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { OSBindingsService } from './components/player/os-binding.service';
+import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 
 @Component({
   selector: 'app-root',
@@ -16,6 +17,18 @@ export class App {
     ServiceLocator.injector = injector;
 
     // this.checkStorage().catch(err => console.error(err));
+    fromPromise(this.requestPersistentStorage()).subscribe();
+  }
+
+  async requestPersistentStorage() {
+    if (navigator.storage && navigator.storage.persist) {
+      const isPersisted = await navigator.storage.persist();
+      if (isPersisted) {
+        console.log("Storage will not be cleared except by explicit user action.");
+      } else {
+        console.warn("Storage is still 'Best Effort' and may be evicted.");
+      }
+    }
   }
 
   // TODO: Collect this info and show on some kind of info page.
