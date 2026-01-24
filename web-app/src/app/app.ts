@@ -13,6 +13,7 @@ export class App {
   constructor(iconRegistry: MatIconRegistry, injector: Injector) {
     iconRegistry.setDefaultFontSetClass('material-symbols-outlined');
     injector.get(OSBindingsService);
+    ServiceLocator.injector = injector;
 
     // this.checkStorage().catch(err => console.error(err));
   }
@@ -43,4 +44,8 @@ export class App {
   //     }
   //   }
   // }
+}
+
+export class ServiceLocator {
+  static injector: Injector;
 }

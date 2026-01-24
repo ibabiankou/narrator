@@ -11,8 +11,7 @@ import { inject, Injectable } from '@angular/core';
 
 import Hls from 'hls.js';
 import { BooksService } from '../../core/services/books.service';
-import { CachingPlaylistLoader } from '../../core/services/cachingPlaylistLoader';
-import { CachingFragmentLoader } from '../../core/services/cachingFragmentLoader';
+import { CachingHlsLoader } from '../../core/services/cachingHlsLoader';
 
 enum PlayerStatus {
   playing = "playing",
@@ -76,8 +75,7 @@ export class AudioPlayerService {
         if (Hls.isSupported()) {
           this.hls = new Hls({
             maxBufferLength: 300, // Keep 5min buffered.
-            pLoader: CachingPlaylistLoader,
-            fLoader: CachingFragmentLoader,
+            loader: CachingHlsLoader,
             debug: false,
           });
 
