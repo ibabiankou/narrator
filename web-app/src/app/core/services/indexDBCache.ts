@@ -142,6 +142,20 @@ export class IndexDBCache<T> {
     );
   }
 
+  private async _has(key: string) {
+    const db = await this.getDB();
+    const tx = db.transaction(this.storeName, 'readonly');
+    const store = tx.objectStore(this.storeName);
+    const request = store.count(key);
+    return new Promise<boolean>((resolve) => {
+      request.onsuccess = () => resolve(request.result > 0);
+    });
+  }
+
+  has(key: string): Observable<boolean> {
+    return fromPromise(this._has(key));
+  }
+
   private hasWriter(): boolean {
     return this.write != DUMMY_WRITER;
   }

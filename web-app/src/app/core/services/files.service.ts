@@ -42,7 +42,6 @@ export class FilesService {
    * Loads file data from API.
    */
   private loadFileData(url: string): Observable<FileData> {
-
     return this.http.get(url, {observe: 'response', responseType: 'blob'}).pipe(
       switchMap(async (response) => {
         if (!response.body) {
@@ -84,5 +83,9 @@ export class FilesService {
         }
         return value;
       }));
+  }
+
+  isCached(url: string): Observable<boolean> {
+    return this.cache.has(url);
   }
 }

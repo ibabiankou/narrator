@@ -40,10 +40,7 @@ export class CachingHlsLoader implements Loader<LoaderContext> {
       )
       .subscribe({
         next: (file) => {
-          const response: LoaderResponse = {
-            url: file.url,
-            data: file.data,
-          }
+          const response: LoaderResponse = {url: file.url, data: file.data}
           callbacks.onSuccess(response, this.stats, context, null);
         },
         error: (err) => {

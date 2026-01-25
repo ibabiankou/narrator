@@ -1,10 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { EMPTY, firstValueFrom, forkJoin, from, map, mergeMap, Observable, switchMap } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { TempFile } from '../models/files.dto';
-import { IndexDBCache } from './indexDBCache';
-import { ConnectionService } from './connection.service';
+import { EMPTY, from, mergeMap, Observable, switchMap } from 'rxjs';
 import { BooksService } from './books.service';
 import Hls, { Events, LevelLoadedData } from 'hls.js';
 import { CachingHlsLoader } from './cachingHlsLoader';
@@ -25,7 +20,18 @@ export class DownloadService {
         switchMap((_) =>
           this.getFragmentUrls(this.bookService.getPlaylistUrl(bookId))),
         switchMap(urls => from(urls)),
-        mergeMap(url => this.fileService.getFileData(url), 5),
+        mergeMap(url => {
+          return this.fileService.isCached(url).pipe(
+            switchMap(cached => {
+                if (cached) {
+                  return EMPTY;
+                } else {
+                  return this.fileService.getFileData(url);
+                }
+              }
+            )
+          );
+        }, 5),
       ).subscribe();
   }
 
