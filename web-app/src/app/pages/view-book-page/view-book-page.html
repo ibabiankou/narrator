@@ -8,13 +8,20 @@
   </div>
   <div actionButton>
     @defer (when bookWithContent()) {
-      <button  matIconButton aria-label="Download this book"
-               (click)="downloadBook()">
-        <mat-icon>download</mat-icon>
+      <button  matIconButton aria-label="Book menu" [matMenuTriggerFor]="menu">
+        <mat-icon>more_vert</mat-icon>
       </button>
-      <button  matIconButton class="delete-button" aria-label="Delete this book" (click)="deleteBookDialog(deleteBookTemplate)">
-        <mat-icon>delete_forever</mat-icon>
-      </button>
+
+      <mat-menu #menu="matMenu">
+        <button mat-menu-item aria-label="Download this book" (click)="downloadBook()">
+          <mat-icon>download</mat-icon>
+          <span>Download</span>
+        </button>
+        <button mat-menu-item class="delete-button" aria-label="Delete this book" (click)="deleteBookDialog(deleteBookTemplate)">
+          <mat-icon>delete_forever</mat-icon>
+          <span>Delete</span>
+        </button>
+      </mat-menu>
     }
   </div>
 </app-toolbar>

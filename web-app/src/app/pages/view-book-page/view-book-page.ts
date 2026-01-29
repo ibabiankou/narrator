@@ -42,6 +42,7 @@ import {
   ToolbarComponent
 } from '../../components/toolbar/toolbar.component';
 import { DownloadService } from '../../core/services/download.service';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 
 @Component({
   selector: 'app-view-book-page',
@@ -59,7 +60,10 @@ import { DownloadService } from '../../core/services/download.service';
     MatDialogClose,
     ToolbarComponent,
     BreadcrumbContentDirective,
-    ActionButtonContentDirective
+    ActionButtonContentDirective,
+    MatMenuTrigger,
+    MatMenu,
+    MatMenuItem
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
@@ -91,7 +95,6 @@ export class ViewBookPage implements AfterViewInit {
   bookWithContent = computed(() => this._bookWithContent()!);
 
   pages = computed(() => this.bookWithContent().pages);
-  sections = computed<Section[]>(() => this.pages().flatMap(page => page.sections))
 
   isEditingSection = model(false);
   isShowingPages = model(false);
