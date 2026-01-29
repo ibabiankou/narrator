@@ -1,12 +1,9 @@
 .title {
+  width: 75%;
+}
+.title h1 {
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-@media (max-width: 500px) {
-  .title {
-    width: 300px;
-  }
 }
 
 .delete-button, .delete-button mat-icon {
