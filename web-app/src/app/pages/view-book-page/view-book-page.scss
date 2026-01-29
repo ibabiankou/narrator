@@ -1,3 +1,14 @@
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 500px) {
+  .title {
+    width: 300px;
+  }
+}
+
 .delete-button {
   color: darkred !important;
 }

@@ -1,7 +1,7 @@
 <app-toolbar>
   <div breadcrumb>
     @defer (when bookWithContent()) {
-      <h1>{{ bookWithContent().overview.title }}</h1>
+      <h1 class="title">{{ bookWithContent().overview.title }}</h1>
     } @placeholder (minimum 250ms) {
       <app-skeleton height="1.5rem" />
     }
