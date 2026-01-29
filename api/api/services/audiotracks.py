@@ -114,12 +114,20 @@ class AudioTrackService(Service):
             session.execute(update(db.AudioTrack).where(db.AudioTrack.id == track.id).values(track.as_dict()))
             session.commit()
 
-    def get_tracks(self, book_id: uuid.UUID, sections: List[int] = None) -> List[db.AudioTrack]:
+    def get_tracks(self, book_id: uuid.UUID = None, sections: List[int] = None) -> List[db.AudioTrack]:
         with DbSession() as session:
             stmt = select(db.AudioTrack).where(db.AudioTrack.book_id == book_id)
+            if book_id:
+                stmt = stmt.where(db.AudioTrack.book_id == book_id)
             if sections:
                 stmt = stmt.where(db.AudioTrack.section_id.in_(sections))
-            stmt = stmt.order_by(db.AudioTrack.playlist_order)
+            stmt = stmt.order_by(db.AudioTrack.book_id, db.AudioTrack.playlist_order)
             return list(session.execute(stmt).scalars().all())
+
+    def delete(self, track_id: int):
+        with DbSession() as session:
+            session.execute(delete(db.AudioTrack).where(db.AudioTrack.id == track_id))
+            session.commit()
+
 
 AudioTrackServiceDep = Annotated[AudioTrackService, AudioTrackService.dep()]

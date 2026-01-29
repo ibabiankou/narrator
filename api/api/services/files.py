@@ -140,5 +140,15 @@ class FilesService(Service):
         if keys:
             self._delete_objects(keys)
 
+    def exists(self, file_key: str):
+        try:
+            self.s3_client.head_object(Bucket=self.bucket_name, Key=file_key)
+            return True
+        except ClientError as e:
+            if e.response['Error']['Code'] == "404":
+                return False
+            else:
+                raise e
+
 
 FilesServiceDep = Annotated[FilesService, FilesService.dep()]

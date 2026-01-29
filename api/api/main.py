@@ -11,6 +11,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from api.books import books_router
 from api.debug import debug_router
 from api.files import files_router
+from api.maintenance import maintenance_router
 from api.sections import sections_router
 from api.services.audiotracks import AudioTrackService
 from api.services.books import BookService
@@ -26,6 +27,7 @@ load_dotenv()
 # Filter out health check from access logs.
 EndpointFilter.add_filter("/api/")
 
+CORS_REGEX = "(https://)?(\w+\.)*ggnt\.eu(:\d+)?"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -62,7 +64,7 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://local.ggnt.eu:4200", "https://narrator.in.ggnt.eu"],
-    allow_origin_regex="(\w+\.)*ggnt\.eu(:\d+)?",
+    allow_origin_regex=CORS_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -81,5 +83,6 @@ def health_check():
 base_url_router.include_router(files_router, prefix="/files")
 base_url_router.include_router(books_router, prefix="/books")
 base_url_router.include_router(sections_router, prefix="/sections")
+base_url_router.include_router(maintenance_router, prefix="/maintenance")
 base_url_router.include_router(debug_router, prefix="/debug")
 app.include_router(base_url_router)
