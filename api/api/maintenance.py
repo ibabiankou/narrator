@@ -26,6 +26,7 @@ def check_audio_tracks(
      exist in the object store. If not, then the audio-track is deleted, forcing re-generation."""
 
     audio_tracks = audio_tracks_service.get_tracks(book_id)
+    LOG.info("Loaded %s tracks to check.", len(audio_tracks))
     for track in audio_tracks:
         if track.status != db.AudioStatus.ready:
             continue
@@ -51,6 +52,7 @@ def check_orphan_files(
      Similarly, checks the existence of audio-tracks corresponding to existing speech files."""
 
     dirs = files_service.list_dirs(prefix or "")
+    LOG.info("Found %s top level directories to check.", len(dirs))
     existing_books = []
     for dir_name in dirs:
         LOG.info("Found dir %s", dir_name)
@@ -65,7 +67,7 @@ def check_orphan_files(
 
     # Now for each existing book, check corresponding audio tracks exist.
     for book in existing_books:
-        speech_files = files_service.list_files(str(book.id))
+        speech_files = files_service.list_files(f"{book.id}/speech")
         LOG.info("Checking %s speech files in book %s", len(speech_files), book.id)
 
         for file in speech_files:
