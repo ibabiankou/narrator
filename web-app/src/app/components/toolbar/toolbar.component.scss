@@ -22,3 +22,29 @@ mat-toolbar {
 .toolbar-spacer {
   flex: 1 1 auto;
 }
+
+.toolbar-row-item {
+  display: flex;
+  align-items: center;
+}
+
+.large-screen {
+  display: flex;
+}
+
+.small-screen {
+  display: none;
+}
+
+.home-button {
+  padding-right: 8px;
+}
+
+@media (max-width: 500px) {
+  .large-screen {
+    display: none;
+  }
+  .small-screen {
+    display: flex;
+  }
+}

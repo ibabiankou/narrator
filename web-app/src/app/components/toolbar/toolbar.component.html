@@ -1,9 +1,19 @@
 <mat-toolbar
   [class.toolbar-hidden]="!isMenuVisible">
-  <a [routerLink]="['/books']">NNarrator Books</a>
-  @if (hasBreadcrumbContent) {
-    <mat-icon>chevron_right</mat-icon>
-  }
+
+  <div class="toolbar-row-item large-screen">
+    <a [routerLink]="['/books']">NNarrator Books</a>
+    @if (hasBreadcrumbContent) {
+      <mat-icon>chevron_right</mat-icon>
+    }
+  </div>
+
+  <div class="toolbar-row-item small-screen">
+    <button matIconButton class="home-button" aria-label="Home" routerLink="/books">
+      <mat-icon>home</mat-icon>
+    </button>
+  </div>
+
   <ng-content select="[breadcrumb]"></ng-content>
   <span class="toolbar-spacer"></span>
   <ng-content select="[actionButton]"></ng-content>
