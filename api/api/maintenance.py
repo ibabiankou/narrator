@@ -2,10 +2,12 @@ import logging
 import uuid
 
 from fastapi import APIRouter
+from sqlalchemy.exc import NoResultFound
 
 from api.models import db
 from api.services.audiotracks import AudioTrackServiceDep
-from api.services.files import FilesServiceDep, LOG
+from api.services.books import BookServiceDep
+from api.services.files import FilesServiceDep
 
 maintenance_router = APIRouter(tags=["Maintenance API"])
 
@@ -33,3 +35,26 @@ def check_audio_tracks(
             if cleanup:
                 LOG.warning("Deleting track without file: %s", track)
                 audio_tracks_service.delete(track.id)
+
+
+@maintenance_router.post("/check-orphan-files")
+def check_orphan_files(
+        audio_tracks_service: AudioTrackServiceDep,
+        book_service: BookServiceDep,
+        files_service: FilesServiceDep,
+        prefix: str = None,
+        cleanup: bool = False
+):
+    """Integrity check of files in the object store. Lists all top level directories and checks
+     books with corresponding IDs exist. If not, deletes directories.
+     Similarly, checks the existence of audio-tracks corresponding to existing speech files."""
+
+    dirs = files_service.list_dirs(prefix or "")
+    for dir_name in dirs:
+        LOG.info("Found dir %s", dir_name)
+        try:
+            book_service.get_book(uuid.UUID(dir_name))
+        except NoResultFound:
+            LOG.warning("Book with ID %s not found. Deleting dir %s.", dir_name, dir_name)
+            if cleanup:
+                files_service.delete_book_files(dir_name)

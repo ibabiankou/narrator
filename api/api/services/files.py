@@ -3,7 +3,7 @@ import mimetypes
 import os
 import uuid
 from dataclasses import dataclass
-from typing import Annotated, Optional
+from typing import Annotated, Optional, List
 
 import boto3
 from botocore.exceptions import ClientError
@@ -140,7 +140,7 @@ class FilesService(Service):
         if keys:
             self._delete_objects(keys)
 
-    def exists(self, file_key: str):
+    def exists(self, file_key: str) -> bool:
         try:
             self.s3_client.head_object(Bucket=self.bucket_name, Key=file_key)
             return True
@@ -150,5 +150,14 @@ class FilesService(Service):
             else:
                 raise e
 
+    def list_dirs(self, prefix: str, delimiter: str = '/') -> List[str]:
+        result = []
+        response = self.s3_client.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix, Delimiter=delimiter)
+        if 'CommonPrefixes' in response:
+            for pre in response['CommonPrefixes']:
+                # Remove trailing delimiter
+                parts = pre['Prefix'].rsplit(delimiter, 1)
+                result.append("".join(parts))
+        return result
 
 FilesServiceDep = Annotated[FilesService, FilesService.dep()]
