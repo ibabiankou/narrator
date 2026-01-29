@@ -76,7 +76,7 @@ class AudioTrackService(Service):
                                 voice="am_michael")
         self.rmq_client.publish("phonemize", msg)
 
-    def _get_track(self, track_id: int) -> Optional[db.AudioTrack]:
+    def get_track(self, track_id: int) -> Optional[db.AudioTrack]:
         with DbSession() as session:
             stmt = select(db.AudioTrack).where(db.AudioTrack.id == track_id)
             return session.scalars(stmt).first()
@@ -99,7 +99,7 @@ class AudioTrackService(Service):
 
     def handle_speech_msg(self, payload: rmq.SpeechResponse):
         LOG.debug("Speech is ready for track %s.", payload.track_id)
-        track = self._get_track(payload.track_id)
+        track = self.get_track(payload.track_id)
         if track:
             track.status = db.AudioStatus.ready
             track.file_name = payload.file_path.split("/")[-1]

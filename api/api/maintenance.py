@@ -1,5 +1,6 @@
 import logging
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter
 from sqlalchemy.exc import NoResultFound
@@ -50,11 +51,31 @@ def check_orphan_files(
      Similarly, checks the existence of audio-tracks corresponding to existing speech files."""
 
     dirs = files_service.list_dirs(prefix or "")
+    existing_books = []
     for dir_name in dirs:
         LOG.info("Found dir %s", dir_name)
         try:
-            book_service.get_book(uuid.UUID(dir_name))
+            book = book_service.get_book(uuid.UUID(dir_name))
+            existing_books.append(book)
         except NoResultFound:
-            LOG.warning("Book with ID %s not found. Deleting dir %s.", dir_name, dir_name)
+            LOG.info("Book with ID %s not found.", dir_name)
             if cleanup:
+                LOG.warning("Deleting dir %s.", dir_name)
                 files_service.delete_book_files(dir_name)
+
+    # Now for each existing book, check corresponding audio tracks exist.
+    for book in existing_books:
+        speech_files = files_service.list_files(str(book.id))
+        LOG.info("Checking %s speech files in book %s", len(speech_files), book.id)
+
+        for file in speech_files:
+            # TODO: Here I assume file name will always have format [track_id].[ext]
+            track_id_str = Path(file).stem
+
+            track_id = int(track_id_str)
+            track = audio_tracks_service.get_track(track_id)
+            if not track:
+                LOG.info("Track %s no longer exist.", track_id)
+                if cleanup:
+                    LOG.warning("Deleting file %s.", file)
+                    files_service.delete_file(file)

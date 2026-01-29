@@ -152,7 +152,7 @@ class BookService(Service):
 
         return pages
 
-    def get_book(self, book_id: uuid.UUID):
+    def get_book(self, book_id: uuid.UUID) -> db.Book:
         with DbSession() as session:
             return session.get_one(db.Book, book_id)
 

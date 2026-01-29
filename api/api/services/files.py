@@ -101,16 +101,18 @@ class FilesService(Service):
 
     def delete_speech_file(self, book_id: uuid.UUID, file_name: str):
         remote_file_path = self.speech_filename(book_id, file_name)
+        self.delete_file(remote_file_path)
 
+    def delete_file(self, key: str):
         try:
             self.s3_client.delete_object(
                 Bucket=self.bucket_name,
-                Key=remote_file_path)
+                Key=key)
         except ClientError as e:
             logging.error(e)
             raise e
 
-    def _list_files(self, path_prefix: str):
+    def list_files(self, path_prefix: str) -> List[str]:
         paginator = self.s3_client.get_paginator('list_objects_v2')
 
         keys = []
@@ -135,7 +137,7 @@ class FilesService(Service):
             )
 
     def delete_book_files(self, book_id):
-        keys = self._list_files(f"{book_id}/")
+        keys = self.list_files(f"{book_id}/")
         LOG.info("Deleting %s files \n%s", len(keys), keys)
         if keys:
             self._delete_objects(keys)
