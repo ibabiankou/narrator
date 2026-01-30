@@ -88,4 +88,8 @@ export class FilesService {
   isCached(url: string): Observable<boolean> {
     return this.cache.has(url);
   }
+
+  deleteFromCache(url: string): Observable<void> {
+    return this.cache.delete(url);
+  }
 }

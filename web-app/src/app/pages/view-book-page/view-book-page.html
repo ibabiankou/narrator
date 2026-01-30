@@ -13,10 +13,17 @@
       </button>
 
       <mat-menu #menu="matMenu">
-        <button mat-menu-item aria-label="Download this book" (click)="downloadBookDialog(downloadBookTemplate)">
-          <mat-icon>download</mat-icon>
-          <span>Download</span>
-        </button>
+        @if (isDownloaded()) {
+          <button mat-menu-item aria-label="Show storage info" (click)="storageInfoDialog(storageInfoTemplate)">
+            <mat-icon>database</mat-icon>
+            <span>Storage info</span>
+          </button>
+        } @else {
+          <button mat-menu-item aria-label="Download this book" (click)="downloadBookDialog(downloadBookTemplate)">
+            <mat-icon>download</mat-icon>
+            <span>Download</span>
+          </button>
+        }
         <button mat-menu-item class="delete-button" aria-label="Delete this book"
                 (click)="deleteBookDialog(deleteBookTemplate)">
           <mat-icon>delete_forever</mat-icon>
@@ -84,10 +91,27 @@
   <h2 mat-dialog-title>Download "{{ bookWithContent().overview.title }}"?</h2>
   <mat-dialog-content>
     <p>You are about to download this book for offline listening. Total size
-      is {{ bookWithContent().stats.total_size_bytes / 1024 / 1024 | number:'1.0-1' }}MB.</p>
+      is {{ totalSizeMb() }}MB.</p>
   </mat-dialog-content>
   <mat-dialog-actions align="end">
     <button mat-button mat-dialog-close>Cancel</button>
     <button mat-button [mat-dialog-close]="true">Download</button>
   </mat-dialog-actions>
+</ng-template>
+
+<ng-template #storageInfoTemplate>
+  @defer (when downloadInfo()) {
+    <mat-dialog-content>
+      <p>Total size: {{ totalSizeMb() }}MB.</p>
+      <p>Downloaded: {{ downloadProgressPercent() }}%</p>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      @if (isDownloading()) {
+        <button mat-button class="delete-button" [mat-dialog-close]="true">Cancel download</button>
+      } @else {
+        <button mat-button class="delete-button" [mat-dialog-close]="true">Delete cached data</button>
+      }
+      <button mat-button mat-dialog-close>Ok</button>
+    </mat-dialog-actions>
+  }
 </ng-template>

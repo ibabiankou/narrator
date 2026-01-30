@@ -113,7 +113,7 @@ export class IndexDBCache<T> {
   }
 
   get(key: string): Observable<T | undefined> {
-    if (!this.isOnline) {
+    if (!this.isOnline || this.load === DUMMY_LOADER) {
       return fromPromise(this._get(key)).pipe(map(v => v?.value));
     }
 
@@ -147,8 +147,9 @@ export class IndexDBCache<T> {
     const tx = db.transaction(this.storeName, 'readonly');
     const store = tx.objectStore(this.storeName);
     const request = store.count(key);
-    return new Promise<boolean>((resolve) => {
+    return new Promise<boolean>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result > 0);
+      request.onerror = () => reject(request.error);
     });
   }
 
@@ -158,5 +159,20 @@ export class IndexDBCache<T> {
 
   private hasWriter(): boolean {
     return this.write != DUMMY_WRITER;
+  }
+
+  private async _delete(key: string) {
+    const db = await this.getDB();
+    const tx = db.transaction(this.storeName, 'readwrite');
+    const store = tx.objectStore(this.storeName);
+    const request = store.delete(key);
+    return new Promise<void>((resolve, reject) => {
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  delete(key: string): Observable<void> {
+    return fromPromise(this._delete(key));
   }
 }

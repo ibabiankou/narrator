@@ -58,3 +58,13 @@ export interface PlaybackInfo {
   book_id: string;
   data: { [key: string]: any };
 }
+
+/**
+ * Metadata of a locally downloaded book.
+ */
+export interface DownloadInfo {
+  id: string;
+
+  fragments_total: number;
+  fragments_downloaded: number;
+}
