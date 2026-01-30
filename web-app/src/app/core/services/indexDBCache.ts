@@ -4,7 +4,7 @@ import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 
 // TODO: Limit number of sync attempts.
 interface Entry<T> {
-  url: string;
+  key: string;
   value: T;
   syncWhenOnline: boolean;
 }
@@ -52,7 +52,7 @@ export class IndexDBCache<T> {
 
           const observables: Observable<void>[] = [];
           for (const entry of syncEntries) {
-            observables.push(this.set(entry.url, entry.value));
+            observables.push(this.set(entry.key, entry.value));
           }
 
           return firstValueFrom(forkJoin(observables));
@@ -67,7 +67,7 @@ export class IndexDBCache<T> {
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName, {keyPath: 'url'});
+          db.createObjectStore(this.storeName, {keyPath: 'key'});
         }
       };
 
@@ -88,16 +88,16 @@ export class IndexDBCache<T> {
 
   set(key: string, value: T): Observable<any> {
     if (!this.isOnline) {
-      return fromPromise(this._set({url: key, value: value, syncWhenOnline: this.hasWriter()}));
+      return fromPromise(this._set({key: key, value: value, syncWhenOnline: this.hasWriter()}));
     }
 
     return this.write(key, value).pipe(
       switchMap(() => {
-        return fromPromise(this._set({url: key, value: value, syncWhenOnline: false}));
+        return fromPromise(this._set({key: key, value: value, syncWhenOnline: false}));
       }),
       catchError((err) => {
         console.warn('Sync has failed, marking for background sync', err);
-        return fromPromise(this._set({url: key, value: value, syncWhenOnline: this.hasWriter()}));
+        return fromPromise(this._set({key: key, value: value, syncWhenOnline: this.hasWriter()}));
       })
     );
   }
@@ -118,7 +118,7 @@ export class IndexDBCache<T> {
     }
 
     return this.load(key).pipe(
-      tap((val) => this._set({url: key, value: val, syncWhenOnline: false})),
+      tap((val) => this._set({key: key, value: val, syncWhenOnline: false})),
       catchError((error) => {
         console.warn("Loader has failed, falling back to cache:", error);
         return fromPromise(this._get(key)).pipe(map(v => v?.value));
