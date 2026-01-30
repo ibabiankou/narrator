@@ -92,7 +92,8 @@ def get_book_with_content(book_id: uuid.UUID,
     raw_stats = book_service.get_stats(book_id)
     total = raw_stats.get("total")
     stats = api.BookStats(total_narrated_seconds=raw_stats.get("narrated_duration"),
-                          available_percent=(raw_stats.get("available") / total if total > 0 else 1) * 100)
+                          available_percent=(raw_stats.get("available") / total if total > 0 else 1) * 100,
+                          total_size_bytes=raw_stats.get("total_size_bytes"))
     pages = get_book_pages(book, section_svc)
 
     return api.BookWithContent(overview=overview, stats=stats, pages=pages)

@@ -3,21 +3,22 @@
     @defer (when bookWithContent()) {
       <h1>{{ bookWithContent().overview.title }}</h1>
     } @placeholder (minimum 250ms) {
-      <app-skeleton height="1.5rem" />
+      <app-skeleton height="1.5rem"/>
     }
   </div>
   <div actionButton>
     @defer (when bookWithContent()) {
-      <button  matIconButton aria-label="Book menu" [matMenuTriggerFor]="menu">
+      <button matIconButton aria-label="Book menu" [matMenuTriggerFor]="menu">
         <mat-icon>more_vert</mat-icon>
       </button>
 
       <mat-menu #menu="matMenu">
-        <button mat-menu-item aria-label="Download this book" (click)="downloadBook()">
+        <button mat-menu-item aria-label="Download this book" (click)="downloadBookDialog(downloadBookTemplate)">
           <mat-icon>download</mat-icon>
           <span>Download</span>
         </button>
-        <button mat-menu-item class="delete-button" aria-label="Delete this book" (click)="deleteBookDialog(deleteBookTemplate)">
+        <button mat-menu-item class="delete-button" aria-label="Delete this book"
+                (click)="deleteBookDialog(deleteBookTemplate)">
           <mat-icon>delete_forever</mat-icon>
           <span>Delete</span>
         </button>
@@ -56,7 +57,7 @@
       <p>Strange... This book seem to be empty.</p>
     }
   } @placeholder (minimum 250ms) {
-    <app-skeleton class="content-skeleton" />
+    <app-skeleton class="content-skeleton"/>
   }
 </div>
 <div class="player-spacer"></div>
@@ -76,5 +77,17 @@
   <mat-dialog-actions align="end">
     <button mat-button mat-dialog-close>Keep it</button>
     <button mat-button class="delete-button" [mat-dialog-close]="true">Delete permanently</button>
+  </mat-dialog-actions>
+</ng-template>
+
+<ng-template #downloadBookTemplate>
+  <h2 mat-dialog-title>Download "{{ bookWithContent().overview.title }}"?</h2>
+  <mat-dialog-content>
+    <p>You are about to download this book for offline listening. Total size
+      is {{ bookWithContent().stats.total_size_bytes / 1024 / 1024 | number:'1.0-1' }}MB.</p>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancel</button>
+    <button mat-button [mat-dialog-close]="true">Download</button>
   </mat-dialog-actions>
 </ng-template>

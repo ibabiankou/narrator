@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom, forkJoin, map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
+import { map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
 import { DomSanitizer } from '@angular/platform-browser';

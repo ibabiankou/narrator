@@ -24,7 +24,7 @@ import { MatIcon } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
 import { PlayerComponent } from '../../components/player/player.component';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
@@ -63,7 +63,8 @@ import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
     ActionButtonContentDirective,
     MatMenuTrigger,
     MatMenu,
-    MatMenuItem
+    MatMenuItem,
+    DecimalPipe
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
@@ -156,6 +157,17 @@ export class ViewBookPage implements AfterViewInit {
         this.router.navigate(['/books']);
       }
     );
+  }
+
+  protected downloadBookDialog(templateRef: TemplateRef<any>) {
+    const dialogRef = this.dialog.open(templateRef);
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.downloadBook();
+        // TODO: Immediately open storage info dialog.
+      }
+    });
   }
 
   protected downloadBook() {

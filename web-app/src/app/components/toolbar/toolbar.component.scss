@@ -36,8 +36,8 @@ mat-toolbar {
   display: none;
 }
 
-.home-button {
-  padding-right: 8px;
+.toolbar-row-item.small-screen {
+  padding-right: 16px;
 }
 
 @media (max-width: 730px) {

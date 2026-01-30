@@ -30,6 +30,8 @@ class BookStats(BaseModel):
     total_narrated_seconds: float
     # Percentage of the total book that is narrated.
     available_percent: float
+    # Sum of every audio_track size in bytes.
+    total_size_bytes: int
 
 
 class BookSection(BaseModel):

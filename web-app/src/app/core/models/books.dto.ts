@@ -22,6 +22,7 @@ export interface BookOverview {
 export interface BookStats {
   total_narrated_seconds: number;
   available_percent: number;
+  total_size_bytes: number;
 }
 
 export interface Section {

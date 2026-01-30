@@ -182,6 +182,10 @@ class BookService(Service):
                          join audio_tracks a on s.id = a.section_id
                 where s.book_id = :book_id
                   and a.status = 'ready'
+                union 
+                select coalesce(sum(a.bytes), 0) as length, 'total_size_bytes' as type
+                from audio_tracks a
+                where a.book_id = :book_id
                 """
 
         book_stats = {}
