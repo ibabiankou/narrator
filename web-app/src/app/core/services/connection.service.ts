@@ -18,5 +18,7 @@ export class ConnectionService {
       shareReplay(1)
     );
     this.isOnline = toSignal(this.$isOnline, {initialValue: navigator.onLine});
+
+    this.$isOnline.subscribe((online) => console.log("Online:", online ? "yes" : "no"));
   }
 }
