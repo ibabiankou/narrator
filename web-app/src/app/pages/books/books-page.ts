@@ -5,6 +5,9 @@ import { Router, RouterLink } from '@angular/router';
 import { BookOverview } from '../../core/models/books.dto';
 import { MatToolbar } from '@angular/material/toolbar';
 import { Title } from '@angular/platform-browser';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { BooksService } from '../../core/services/books.service';
+import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-books-page',
@@ -13,16 +16,17 @@ import { Title } from '@angular/platform-browser';
     MatFabButton,
     RouterLink,
     MatToolbar,
+    SkeletonComponent,
   ],
   templateUrl: './books-page.html',
   styleUrl: './books-page.scss',
 })
 export class BooksPage implements OnInit {
-
+  private titleService = inject(Title);
   private router: Router = inject(Router);
-  books = model.required<BookOverview[]>();
+  private bookService = inject(BooksService);
 
-  constructor(private titleService: Title) {}
+  books = toSignal(this.bookService.listBooks());
 
   ngOnInit() {
     this.titleService.setTitle('Books - NNarrator');

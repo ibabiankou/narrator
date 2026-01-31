@@ -4,17 +4,21 @@
 
 <div class="main-container">
   <div class="book-grid">
-    @for (book of books(); track book.id) {
-      <div class="book-card">
-        <a [routerLink]="['/books', book.id]">
-          <div class="cover-wrapper">
-            <img src="covers/{{$index % 2 === 0 ? 'blue' : 'red'}}.png" alt="{{ book.title }}">
-          </div>
-          <h3 class="book-title">{{ book.title }}</h3>
-        </a>
-      </div>
-    } @empty {
-      <li>There are no books yet. Add a new book using the button below.</li>
+    @defer (when books()) {
+      @for (book of books(); track book.id) {
+        <div class="book-card">
+          <a [routerLink]="['/books', book.id]">
+            <div class="cover-wrapper">
+              <img src="covers/{{$index % 2 === 0 ? 'blue' : 'red'}}.png" alt="{{ book.title }}">
+            </div>
+            <h3 class="book-title">{{ book.title }}</h3>
+          </a>
+        </div>
+      }
+    } @placeholder (minimum 250ms) {
+      @for (i of [].constructor(10); track $index) {
+        <app-skeleton class="book-skeleton cover-wrapper"/>
+      }
     }
   </div>
 </div>
