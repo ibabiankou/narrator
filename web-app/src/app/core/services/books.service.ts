@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -49,12 +49,15 @@ export class BooksService {
   }
 
   listBooks(): Observable<BookOverview[]> {
-    return this.connectionService.$isOnline.pipe(
-      take(1),
-      switchMap(online => online ?
-        this.http.get<BookOverview[]>(`${this.apiUrl}/`) :
-        this.booksCache.getAll().pipe(map(bwc => bwc.map(bwc => bwc.overview))))
+    const loadFromCache =
+      this.booksCache.getAll().pipe(map(bwc => bwc.map(bwc => bwc.overview)));
+
+    const loadFromApi = this.http.get<BookOverview[]>(`${this.apiUrl}/`).pipe(
+      // Fall back to cache in case of error? Might be frustrating, if its a genuine API error...
+      catchError((err, caught) => loadFromCache)
     );
+
+    return this.connectionService.isOnline() ? loadFromApi : loadFromCache;
   }
 
   delete(id: string) {
