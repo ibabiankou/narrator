@@ -75,46 +75,46 @@ export class AudioPlayer {
     this.$bookDetails
       .pipe(filter(book => book != null))
       .subscribe((book) => {
-
-        if (Hls.isSupported()) {
-          this.hls = new Hls({
-            maxBufferLength: 300, // Keep 5min buffered.
-            loader: CachingHlsLoader,
-            debug: false,
-          });
-
-          // Get section timeline metadata from HLS model.
-          this.hls.on(Hls.Events.LEVEL_UPDATED, (event, data) => {
-            if (data.details.dateRanges) {
-              const hlsSections: HlsSection[] = [FIRST_SECTION];
-
-              Object.values(data.details.dateRanges).forEach(range => {
-                if (!range) return;
-                hlsSections.push({
-                  section_id: parseInt(range.id),
-                  duration: parseFloat(range.attr["X-DURATION"]),
-                  end_time: 0,
-                  playback_order: parseInt(range.attr["X-ORDER"])
-                })
-              });
-
-              // Ensure the sections are sorted according to the playback order and calculate the cumulative end times.
-              hlsSections.sort((a, b) => a.playback_order - b.playback_order);
-              hlsSections.forEach((hlsSection, index) => {
-                if (index == 0) return;
-                hlsSection.end_time = hlsSections[index - 1].end_time + hlsSection.duration;
-              });
-              this.sectionTimeline = hlsSections;
-            } else {
-              console.warn("No date ranges found, unable to sync section being played.")
-            }
-          });
-
-          this.hls.loadSource(this.bookService.getPlaylistUrl(book?.id));
-          this.hls.attachMedia(this.audio);
-        } else {
+        if (!Hls.isSupported()) {
           console.error("HLS not supported");
+          return;
         }
+
+        this.hls = new Hls({
+          maxBufferLength: 300, // Keep 5min buffered.
+          loader: CachingHlsLoader,
+          debug: false,
+        });
+
+        // Get section timeline metadata from HLS model.
+        this.hls.on(Hls.Events.LEVEL_UPDATED, (event, data) => {
+          if (data.details.dateRanges) {
+            const hlsSections: HlsSection[] = [FIRST_SECTION];
+
+            Object.values(data.details.dateRanges).forEach(range => {
+              if (!range) return;
+              hlsSections.push({
+                section_id: parseInt(range.id),
+                duration: parseFloat(range.attr["X-DURATION"]),
+                end_time: 0,
+                playback_order: parseInt(range.attr["X-ORDER"])
+              })
+            });
+
+            // Ensure the sections are sorted according to the playback order and calculate the cumulative end times.
+            hlsSections.sort((a, b) => a.playback_order - b.playback_order);
+            hlsSections.forEach((hlsSection, index) => {
+              if (index == 0) return;
+              hlsSection.end_time = hlsSections[index - 1].end_time + hlsSection.duration;
+            });
+            this.sectionTimeline = hlsSections;
+          } else {
+            console.warn("No date ranges found, unable to sync section being played.")
+          }
+        });
+
+        this.hls.loadSource(this.bookService.getPlaylistUrl(book?.id));
+        this.hls.attachMedia(this.audio);
       });
 
     this.$playbackRate.subscribe(() => {
@@ -136,7 +136,17 @@ export class AudioPlayer {
       this.hls.destroy();
     }
 
+    if (this.audio) {
+      this.audio.removeEventListener('timeupdate', () => this.readProgress());
+      this.audio.src = "";
+    }
+
     this.osBindings.onDestroy();
+
+    this.$status.complete();
+    this.$bookDetails.complete();
+    this.$globalProgressSeconds.complete();
+    this.$playbackRate.complete();
   }
 
   private readProgress() {
