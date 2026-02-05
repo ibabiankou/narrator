@@ -126,6 +126,7 @@ def test_paragraph_builder_v2():
     assert pb._starts_with_lower("test")
     assert not pb._starts_with_lower("- test")
     assert not pb._starts_with_lower("He")
+    assert not pb._starts_with_lower("---")
 
 
 def test_pages_to_paragraphs():

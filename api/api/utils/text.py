@@ -233,7 +233,7 @@ class ParagraphBuilderV2:
         if len(line) == 0:
             return False
         i = -1
-        while i < len(line):
+        while i < len(line) - 1:
             i += 1
             if line[i] in self._continuation_characters:
                 continue
