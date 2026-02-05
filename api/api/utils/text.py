@@ -230,6 +230,8 @@ class ParagraphBuilderV2:
         self._continuation_characters = '-–'
 
     def _starts_with_lower(self, line: str):
+        if len(line) == 0:
+            return False
         i = -1
         while i < len(line):
             i += 1
