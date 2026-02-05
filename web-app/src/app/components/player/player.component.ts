@@ -4,7 +4,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import { catchError, combineLatest, filter, map, of, Subject, switchMap, take, takeUntil, throwError, } from 'rxjs';
 import { AsyncPipe, DecimalPipe } from '@angular/common';
-import { AudioPlayerService } from './audio-player.service';
+import { AudioPlayer } from './audio.player';
 import { MatTooltip } from '@angular/material/tooltip';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { BooksService } from '../../core/services/books.service';
@@ -25,6 +25,7 @@ export class PlayerComponent implements OnDestroy {
   private $destroy = new Subject<boolean>();
 
   private bookService = inject(BooksService);
+  private audioPlayer: AudioPlayer;
 
   bookWithContent = input.required<BookWithContent>();
   private readonly $playbackInfo = toObservable(this.bookWithContent).pipe(
@@ -58,7 +59,9 @@ export class PlayerComponent implements OnDestroy {
   $availablePercent = toObservable(this.bookWithContent).pipe(map(b => b.stats.available_percent));
   $unavailablePercent = this.$availablePercent.pipe(map(availablePercent => 100 - availablePercent));
 
-  constructor(private audioPlayer: AudioPlayerService) {
+  constructor() {
+    this.audioPlayer = new AudioPlayer(this.bookService);
+
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;
     this.$nowTime = this.audioPlayer.$globalProgressSeconds.pipe(
@@ -182,7 +185,7 @@ export class PlayerComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.audioPlayer.resetPlayer();
+    this.audioPlayer.onDestroy();
     this.$destroy.next(true);
     this.$destroy.complete();
   }

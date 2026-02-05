@@ -1,5 +1,4 @@
-import { Injectable } from '@angular/core';
-import { AudioPlayerService } from './audio-player.service';
+import { AudioPlayer } from './audio.player';
 import { filter } from 'rxjs';
 
 const SUPPORTED_ACTIONS: MediaSessionAction[] = ["nexttrack", "pause", "play", "previoustrack", "seekbackward", "seekforward", "seekto", "stop"];
@@ -10,8 +9,7 @@ type HandlerMap = {
 /**
  * Binds OS controls to the player.
  */
-@Injectable({providedIn: 'root'})
-export class OSBindingsService {
+export class OSBindings {
 
   private actionHandlers: HandlerMap = {
     "nexttrack": (details: MediaSessionActionDetails) => {
@@ -40,7 +38,7 @@ export class OSBindingsService {
     },
   };
 
-  constructor(private audioPlayer: AudioPlayerService) {
+  constructor(private audioPlayer: AudioPlayer) {
     SUPPORTED_ACTIONS.forEach((action) => {
       try {
         const handler = this.actionHandlers[action];
@@ -67,5 +65,15 @@ export class OSBindingsService {
           });
         }
       );
+  }
+
+  onDestroy(): void {
+    SUPPORTED_ACTIONS.forEach((action) => {
+      try {
+        navigator.mediaSession.setActionHandler(action, null);
+      } catch (error) {
+        console.error(`The media session action "${action}" is not supported.`);
+      }
+    });
   }
 }

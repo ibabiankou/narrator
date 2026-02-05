@@ -10,11 +10,11 @@ import {
   switchMap,
   take,
 } from 'rxjs';
-import { inject, Injectable } from '@angular/core';
 
 import Hls from 'hls.js';
 import { BooksService } from '../../core/services/books.service';
 import { CachingHlsLoader } from '../../core/services/cachingHlsLoader';
+import { OSBindings } from './os-binding';
 
 enum PlayerStatus {
   playing = "playing",
@@ -38,9 +38,8 @@ const FIRST_SECTION: HlsSection = {
 /**
  * Responsible for playback logic: Playing each track, navigating back and forth, changing tracks.
  */
-@Injectable({providedIn: 'root'})
-export class AudioPlayerService {
-  private bookService = inject(BooksService);
+export class AudioPlayer {
+  private osBindings: OSBindings;
 
   private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.paused);
   private readonly audio: HTMLAudioElement;
@@ -66,7 +65,9 @@ export class AudioPlayerService {
   $playbackRate = new BehaviorSubject<number>(1);
   $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
 
-  constructor() {
+  constructor(private bookService: BooksService) {
+    this.osBindings = new OSBindings(this);
+
     this.audio = new Audio();
     this.audio.preservesPitch = true;
     this.audio.addEventListener('timeupdate', () => this.readProgress());
@@ -127,6 +128,15 @@ export class AudioPlayerService {
         combineLatestWith(this.$isPlaying),
         filter(([_, isPlaying]) => isPlaying),
       ).subscribe(() => this.updateProgress());
+  }
+
+  onDestroy(): void {
+    this.pause();
+    if (this.hls) {
+      this.hls.destroy();
+    }
+
+    this.osBindings.onDestroy();
   }
 
   private readProgress() {
@@ -209,13 +219,6 @@ export class AudioPlayerService {
     }
     if (playbackInfo.data["progress_seconds"]) {
       this.audio.currentTime = playbackInfo.data["progress_seconds"]
-    }
-  }
-
-  resetPlayer() {
-    this.pause();
-    if (this.hls) {
-      this.hls.destroy();
     }
   }
 }

@@ -1,7 +1,6 @@
 import { Component, Injector } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
-import { OSBindingsService } from './components/player/os-binding.service';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 
 @Component({
@@ -13,7 +12,6 @@ import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 export class App {
   constructor(iconRegistry: MatIconRegistry, injector: Injector) {
     iconRegistry.setDefaultFontSetClass('material-symbols-outlined');
-    injector.get(OSBindingsService);
     ServiceLocator.injector = injector;
 
     // this.checkStorage().catch(err => console.error(err));
