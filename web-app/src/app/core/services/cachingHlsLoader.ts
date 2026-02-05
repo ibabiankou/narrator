@@ -9,12 +9,13 @@ import {
 } from 'hls.js';
 import { FilesService } from './files.service';
 import { ServiceLocator } from '../../app';
-import { retry, timer } from 'rxjs';
+import { retry, Subject, takeUntil, timer } from 'rxjs';
 
 export class CachingHlsLoader implements Loader<LoaderContext> {
   stats: LoaderStats;
   context!: LoaderContext;
   private filesService: FilesService;
+  private $destroy = new Subject<void>();
 
   constructor() {
     this.stats = new LoadStats();
@@ -36,7 +37,8 @@ export class CachingHlsLoader implements Loader<LoaderContext> {
             const finalDelay = backoffTime + jitter;
             return timer(finalDelay);
           }
-        })
+        }),
+        takeUntil(this.$destroy)
       )
       .subscribe({
         next: (file) => {
@@ -55,6 +57,7 @@ export class CachingHlsLoader implements Loader<LoaderContext> {
   }
 
   destroy(): void {
-    // No-op
+    this.$destroy.next();
+    this.$destroy.complete();
   }
 }
