@@ -115,6 +115,14 @@ export class AudioPlayer {
 
         this.hls.loadSource(this.bookService.getPlaylistUrl(book?.id));
         this.hls.attachMedia(this.audio);
+
+        // Boost the volume
+        const audioContext = new window.AudioContext();
+        const source = audioContext.createMediaElementSource(this.audio);
+        const gainNode = audioContext.createGain();
+        source.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        gainNode.gain.value = 1.25;
       });
 
     this.$playbackRate.subscribe(() => {
