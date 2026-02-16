@@ -13,6 +13,17 @@
       </button>
 
       <mat-menu #menu="matMenu">
+        <div class="theme-button" (click)="$event.stopPropagation()">
+          <mat-button-toggle-group name="themeMode" aria-label="Theme Mode">
+            <mat-button-toggle value="light" (click)="setTheme('light')">
+              <mat-icon>light_mode</mat-icon>
+            </mat-button-toggle>
+            <mat-button-toggle value="dark" (click)="setTheme('dark')">
+              <mat-icon>dark_mode</mat-icon>
+            </mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+
         @if (isDownloaded()) {
           <button mat-menu-item aria-label="Show storage info" (click)="storageInfoDialog(storageInfoTemplate)">
             <mat-icon>database</mat-icon>
@@ -50,7 +61,7 @@
         <div class="sections">
           @for (section of page.sections; track section.section_index) {
             <app-section id="section-{{section.id}}" #section
-                         [class]="{'current': section.id == ($currentSectionId | async)}"
+                         [current]="section.id == ($currentSectionId | async)"
                          [section]="section"
                          (sectionDeleted)="deleteSection(section)"
                          (editingModeChanged)="setEditingSection($event)"></app-section>

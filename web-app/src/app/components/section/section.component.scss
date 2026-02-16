@@ -13,16 +13,6 @@
   z-index: 10;
 }
 
-:host.current {
-  background-color: lightgray;
-}
-
-@media (prefers-color-scheme: dark) {
-  :host.current {
-    background-color: #3c3c3c;
-  }
-}
-
 :host:hover {
   border: 1px solid #e0e0e0;
   box-shadow: 0 4px 4px rgba(0, 0, 0, 0.08);
