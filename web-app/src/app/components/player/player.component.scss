@@ -60,7 +60,7 @@ div#controls {
     justify-content: space-between;
 
     .active {
-      color: var(--mat-sys-on-primary-container);
+      color: #005CBBFF;
     }
 
     .playbackSpeed {
@@ -100,7 +100,7 @@ $slider_height: 8px;
     height: $slider_height;
     cursor: pointer;
 
-    background-color: var(--mat-sys-primary);
+    background-color: #005CBBFF;
     left: 0;
     width: 10%; // Changed programmatically
     z-index: 1;
@@ -130,7 +130,7 @@ $slider_height: 8px;
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background-color: var(--mat-sys-primary);
+    background-color: #005CBBFF;
     top: 50%;
     transform: translate(-50%, -50%); /* Center the circle on the 'left' percentage */
     z-index: 10;
