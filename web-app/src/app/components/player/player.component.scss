@@ -114,16 +114,6 @@ $slider_height: 8px;
     z-index: -1;
   }
 
-  .queued {
-    position: absolute;
-    height: $slider_height;
-
-    background-color: rgb(159, 174, 180);
-
-    width: 100%;
-    z-index: -2;
-  }
-
   .unavailable {
     position: absolute;
     height: $slider_height;
