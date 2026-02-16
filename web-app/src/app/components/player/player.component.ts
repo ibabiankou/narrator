@@ -1,8 +1,20 @@
-import { Component, HostListener, inject, input, model, OnDestroy, output } from '@angular/core';
+import { Component, HostListener, inject, input, model, OnDestroy, output, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { BookWithContent, PlaybackInfo } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
-import { catchError, combineLatest, filter, map, of, Subject, switchMap, take, takeUntil, throwError, } from 'rxjs';
+import {
+  BehaviorSubject,
+  catchError,
+  combineLatest,
+  filter,
+  map,
+  of,
+  Subject,
+  switchMap,
+  take,
+  takeUntil,
+  throwError,
+} from 'rxjs';
 import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { AudioPlayer } from './audio.player';
 import { MatTooltip } from '@angular/material/tooltip';
@@ -21,7 +33,9 @@ import { BooksService } from '../../core/services/books.service';
   templateUrl: './player.component.html',
   styleUrl: './player.component.scss',
 })
-export class PlayerComponent implements OnDestroy {
+export class PlayerComponent implements OnDestroy, AfterViewInit {
+  @ViewChild('slider', { static: true }) slider!: ElementRef<HTMLDivElement>;
+
   private $destroy = new Subject<boolean>();
 
   private bookService = inject(BooksService);
@@ -59,17 +73,34 @@ export class PlayerComponent implements OnDestroy {
   $availablePercent = toObservable(this.bookWithContent).pipe(map(b => b.stats.available_percent));
   $unavailablePercent = this.$availablePercent.pipe(map(availablePercent => 100 - availablePercent));
 
+  $dragToPercent = new BehaviorSubject<number | undefined>(undefined);
+  private sliderRect!: DOMRect;
+
   constructor() {
     this.audioPlayer = new AudioPlayer(this.bookService);
 
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;
-    this.$nowTime = this.audioPlayer.$globalProgressSeconds.pipe(
+
+    const dragTimeSeconds = combineLatest([this.$dragToPercent, this.$totalNarratedSeconds]).pipe(
+      map(([percent, totalTime]) => {
+        if (percent === undefined) {
+          return undefined;
+        } else {
+          return totalTime * percent / 100;
+        }
+      })
+    );
+    const nowTimeSeconds = dragTimeSeconds.pipe(
+      switchMap(timeSeconds => timeSeconds === undefined ? this.audioPlayer.$globalProgressSeconds : of(timeSeconds))
+    );
+
+    this.$nowTime = nowTimeSeconds.pipe(
       map(progressSeconds => secondsToTimeFormat(progressSeconds))
     );
-    this.$remainingTime = combineLatest([this.audioPlayer.$globalProgressSeconds, this.$totalNarratedSeconds])
+    this.$remainingTime = combineLatest([nowTimeSeconds, this.$totalNarratedSeconds])
       .pipe(map(([nowTime, totalTime]) => secondsToTimeFormat(nowTime - totalTime)));
-    this.$nowPercent = combineLatest([this.audioPlayer.$globalProgressSeconds, this.$totalNarratedSeconds, this.$availablePercent])
+    this.$nowPercent = combineLatest([nowTimeSeconds, this.$totalNarratedSeconds, this.$availablePercent])
       .pipe(
         map(([nowTime, totalTime, availablePercent]) =>
           totalTime > 0 ? (nowTime / totalTime * availablePercent) : 0
@@ -87,6 +118,10 @@ export class PlayerComponent implements OnDestroy {
       .subscribe((playbackInfo) => {
         this.audioPlayer.initPlayer(this.bookWithContent().overview, playbackInfo);
       });
+  }
+
+  ngAfterViewInit() {
+    this.sliderRect = this.slider.nativeElement.getBoundingClientRect();
   }
 
   @HostListener("document:keydown.shift.arrowleft", ["$event"])
@@ -161,7 +196,6 @@ export class PlayerComponent implements OnDestroy {
   }
 
   private clickTimer: number = -1;
-
   protected clickPlaybackRate(e: PointerEvent) {
     if (this.clickTimer > 0) {
       // This is a consequent click, so do nothing.
@@ -183,6 +217,67 @@ export class PlayerComponent implements OnDestroy {
     this.clickTimer = -1;
     this.lowerPlaybackRate(e);
   }
+
+  // --- Seek To / Drag ---
+  /** Handle user clicking on a specific point in time on the progress bar. */
+  onSliderClick(event: MouseEvent | TouchEvent) {
+    const clientX = 'clientX' in event ? event.clientX : event.touches[0].clientX;
+    const percent = this.getPercentFromEvent(clientX);
+    this.seekToPercent(percent);
+  }
+
+  private isDragging = false;
+  onDragStart(event: MouseEvent | TouchEvent) {
+    event.preventDefault(); // Prevent default browser behavior like text selection
+    this.isDragging = true;
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  @HostListener('document:touchmove', ['$event'])
+  onDrag(event: MouseEvent | TouchEvent) {
+    if (!this.isDragging) {
+      return;
+    }
+
+    const clientX = 'clientX' in event ? event.clientX : event.touches[0].clientX;
+    const percent = this.getPercentFromEvent(clientX);
+
+    this.$dragToPercent.next(percent);
+  }
+
+  @HostListener('document:mouseup')
+  @HostListener('document:touchend')
+  onDragEnd() {
+    if (!this.isDragging) {
+      return;
+    }
+
+    this.isDragging = false;
+    const newPercent = this.$dragToPercent.value;
+    if (newPercent !== undefined) {
+      this.seekToPercent(newPercent);
+    }
+    setTimeout(() => {
+      this.$dragToPercent.next(undefined);
+    }, 500);
+  }
+
+  private getPercentFromEvent(clientX: number): number {
+    const newLeft = clientX - this.sliderRect.left;
+    let percent = (newLeft / this.sliderRect.width) * 100;
+    percent = Math.max(0, Math.min(100, percent)); // Clamp between 0 and 100
+    return percent;
+  }
+
+  private seekToPercent(percent: number) {
+    const seekTime = this.convertPercentToSeconds(percent);
+    this.audioPlayer.seekTo(seekTime);
+  }
+
+  private convertPercentToSeconds(percent: number): number {
+    return (percent / 100) * this.audioPlayer.getDurationSeconds();
+  }
+  // --- Seek To / Drag ---
 
   ngOnDestroy(): void {
     this.audioPlayer.onDestroy();

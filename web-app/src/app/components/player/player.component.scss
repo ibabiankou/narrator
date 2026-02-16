@@ -98,20 +98,22 @@ $slider_height: 8px;
   .now {
     position: absolute;
     height: $slider_height;
+    cursor: pointer;
 
     background-color: var(--mat-sys-primary);
     left: 0;
     width: 10%; // Changed programmatically
+    z-index: 1;
   }
 
   .available {
     position: absolute;
     height: $slider_height;
+    cursor: pointer;
 
     background-color: var(--mat-sys-primary-fixed-dim);
     left: 0;
     width: 40%; // Changed programmatically
-    z-index: -1;
   }
 
   .unavailable {
@@ -121,7 +123,19 @@ $slider_height: 8px;
     right: 0;
     width: 60%; // Changed programmatically
     background-color: rgba(255, 177, 177, 0.73);
-    z-index: -1;
+  }
+
+  .drag-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: var(--mat-sys-primary);
+    top: 50%;
+    transform: translate(-50%, -50%); /* Center the circle on the 'left' percentage */
+    z-index: 10;
+    cursor: grab;
+    touch-action: none;
   }
 }
 

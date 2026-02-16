@@ -50,9 +50,20 @@
 
 <div class="progress">
   <div class="slider">
-    <div class="now" [style]="{ width: ($nowPercent | async) + '%' }"></div>
-    <div class="available" [style]="{ width: ($availablePercent | async) + '%' }"></div>
+    <div class="now"
+         (mousedown)="onSliderClick($event)"
+         (touchstart)="onSliderClick($event)"
+         [style]="{ width: ($nowPercent | async) + '%' }"></div>
+    <div class="available"
+         #slider
+         (mousedown)="onSliderClick($event)"
+         (touchstart)="onSliderClick($event)"
+         [style]="{ width: ($availablePercent | async) + '%' }"></div>
     <div class="unavailable" [style]="{ width: ($unavailablePercent | async) + '%' }"></div>
+    <div class="drag-handle"
+         [style]="{ left: ($nowPercent | async) + '%' }"
+         (mousedown)="onDragStart($event)"
+         (touchstart)="onDragStart($event)"></div>
   </div>
   <div class="times">
     <div class="current-progress">{{ $nowTime | async }}</div>

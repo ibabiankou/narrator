@@ -1,6 +1,6 @@
 {
   "/api": {
-    "target": "http://localhost:8000",
+    "target": "https://narrator.in.ggnt.eu",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"

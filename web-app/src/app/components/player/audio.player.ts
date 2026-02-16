@@ -239,6 +239,10 @@ export class AudioPlayer {
       this.audio.currentTime = playbackInfo.data["progress_seconds"]
     }
   }
+
+  getDurationSeconds(): number {
+    return this.audio.duration;
+  }
 }
 
 // Returns index of the element with the largest value smaller than target.
