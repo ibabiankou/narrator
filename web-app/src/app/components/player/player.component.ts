@@ -17,9 +17,11 @@ import {
 } from 'rxjs';
 import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { AudioPlayer } from './audio.player';
-import { MatTooltip } from '@angular/material/tooltip';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { BooksService } from '../../core/services/books.service';
+import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
+import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
 
 @Component({
   selector: 'app-player',
@@ -28,7 +30,12 @@ import { BooksService } from '../../core/services/books.service';
     MatIconButton,
     AsyncPipe,
     DecimalPipe,
-    MatTooltip
+    MatButtonToggle,
+    MatButtonToggleGroup,
+    MatMenu,
+    MatMenuItem,
+    MatMenuTrigger,
+    MatSlideToggle
   ],
   templateUrl: './player.component.html',
   styleUrl: './player.component.scss',
@@ -178,44 +185,24 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   }
 
   @HostListener("document:keydown.shift.arrowup", ["$event"])
-  increasePlaybackRate(e: Event, adjustment: number = 0.1) {
+  increasePlaybackRate(e: Event, adjustment: number = 0.05) {
     if (!this.handleKeyBindings()) {
       return;
     }
     e.preventDefault();
-    this.audioPlayer.adjustPlaybackRate(adjustment);
+    this.adjustPlaybackRate(adjustment);
   }
 
   @HostListener("document:keydown.shift.arrowdown", ["$event"])
-  lowerPlaybackRate(e: Event, adjustment: number = -0.1) {
+  lowerPlaybackRate(e: Event, adjustment: number = -0.05) {
     if (!this.handleKeyBindings()) {
       return;
     }
     e.preventDefault();
+    this.adjustPlaybackRate(adjustment);
+  }
+  adjustPlaybackRate(adjustment: number) {
     this.audioPlayer.adjustPlaybackRate(adjustment);
-  }
-
-  private clickTimer: number = -1;
-  protected clickPlaybackRate(e: PointerEvent) {
-    if (this.clickTimer > 0) {
-      // This is a consequent click, so do nothing.
-      return;
-    }
-
-    this.clickTimer = setTimeout(() => {
-      if (e.shiftKey) {
-        this.lowerPlaybackRate(e);
-      } else {
-        this.increasePlaybackRate(e);
-      }
-      this.clickTimer = -1;
-    }, 250);
-  }
-
-  protected dblclickPlaybackRate(e: MouseEvent) {
-    clearTimeout(this.clickTimer);
-    this.clickTimer = -1;
-    this.lowerPlaybackRate(e);
   }
 
   // --- Seek To / Drag ---
@@ -295,21 +282,20 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  toggleShowPages() {
-    this.showPages.set(!this.showPages());
+  setShowPages(value: boolean = false) {
+    this.showPages.set(value);
     this.showPagesChanged.emit(this.showPages());
   }
 
-  showPagesTooltip() {
-    return this.showPages() ? "Hide PDF pages" : "Show PDF pages";
-  }
-
-  private fontSizeIndex = 1;
-  private fontSizeOptions = ["90%", "100%", "110%"];
-
-  protected toggleFontSize(_: PointerEvent) {
-    this.fontSizeIndex = (this.fontSizeIndex + 1) % this.fontSizeOptions.length;
-    document.documentElement.style.setProperty('--font-scale', this.fontSizeOptions[this.fontSizeIndex]);
+  protected fontSizePx = 16;
+  protected setFontSizePx(px: number) {
+    this.fontSizePx = px;
+    const element = document.querySelector('app-view-book-page') as HTMLElement;
+    if (element) {
+      element.style.setProperty('--book-font-size', `${px}px`);
+    } else {
+      console.warn("Could not find app-view-book-page element");
+    }
   }
 }
 

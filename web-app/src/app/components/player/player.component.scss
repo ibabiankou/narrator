@@ -1,5 +1,7 @@
 @use '@angular/material' as mat;
 
+// .playback-settings-menu styles defined in styles.scss
+
 :host {
   position: fixed;
   bottom: 0;
@@ -58,23 +60,6 @@ div#controls {
     display: flex;
     align-items: center;
     justify-content: space-between;
-
-    .active {
-      color: #005CBBFF;
-    }
-
-    .playbackSpeed {
-      font-size: 14px;
-    }
-
-    .flip-horizontal {
-      display: inline-block;
-      transform: scaleX(-1);
-    }
-  }
-
-  .left {
-    left: 16px;
   }
 
   .right {

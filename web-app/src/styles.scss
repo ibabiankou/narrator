@@ -6,10 +6,6 @@
 // custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
 
-:root {
-  --font-scale: 100%;
-}
-
 html {
   @include mat.theme((
     color: (
@@ -33,7 +29,6 @@ body {
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
-  font-size: var(--font-scale);
 
   // Reset the user agent margin.
   margin: 0;
@@ -65,4 +60,34 @@ a {
 
 mat-toolbar.mat-toolbar {
   margin-bottom: 20px;
+}
+
+// Styles for the settings menu in the player component.
+.playback-settings-menu {
+  mat-slide-toggle {
+    padding-left: 12px;
+  }
+
+  .mat-mdc-menu-item-text {
+    display: flex;
+    align-items: center;
+  }
+
+  .font-size, .playback-speed {
+    span.value {
+      padding: 0 8px;
+      width: 30px;
+    }
+  }
+
+  .reader-mode-buttons {
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .flip-horizontal {
+    display: inline-block;
+    transform: scaleX(-1);
+  }
 }

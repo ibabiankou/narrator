@@ -1,3 +1,7 @@
+:host {
+  --book-font-size: 16px;
+}
+
 .title {
   width: 75%;
 }
@@ -20,6 +24,9 @@ $maxWidth: 1280px;
 .main-container {
   max-width: $maxWidth;
   margin: 0 auto;
+
+  font-size: var(--book-font-size);
+  line-height: 1.4;
 
   .page-number {
     text-align: center;
