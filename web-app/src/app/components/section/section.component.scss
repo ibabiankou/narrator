@@ -1,7 +1,7 @@
 :host {
   display: block;
   transition: all 0.3s ease-in-out;
-  padding: 5px;
+  padding: 4px;
   border: 1px solid transparent;
   border-radius: 4px;
 
@@ -14,10 +14,17 @@
   z-index: 10;
 }
 
-:host:hover {
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.08);
+:host.current-dark {
+  background-color: #3c3c3c;
+  box-shadow: 0 0 6px 5px #3c3c3c;
+}
 
+:host.current-light {
+  background-color: #d3d3d3;
+  box-shadow: 0 0 6px 5px #d3d3d3;
+}
+
+:host:hover {
   // Active host should be above the inactive hosts.
   z-index: 20;
 

@@ -35,10 +35,11 @@ export class SectionComponent {
     combineLatest([toObservable(this.current), this.themeService.isDark$])
       .pipe(takeUntilDestroyed())
       .subscribe(([isCurrent, isDark]) => {
+        this.renderer.removeClass(this.el.nativeElement, 'current-dark');
+        this.renderer.removeClass(this.el.nativeElement, 'current-light');
+
         if (isCurrent) {
-          this.renderer.setStyle(this.el.nativeElement, 'background-color', isDark ? '#3c3c3c' : '#d3d3d3');
-        } else {
-          this.renderer.removeStyle(this.el.nativeElement, 'background-color');
+          this.renderer.addClass(this.el.nativeElement, isDark ? 'current-dark' : 'current-light');
         }
       });
   }
