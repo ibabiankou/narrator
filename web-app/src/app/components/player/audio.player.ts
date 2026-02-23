@@ -62,7 +62,7 @@ export class AudioPlayer {
     map(i => this.sectionTimeline[i].section_id),
   );
 
-  $playbackRate = new BehaviorSubject<number>(1);
+  $playbackRate = new BehaviorSubject<number>(-1);
   $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
 
   constructor(private bookService: BooksService) {
@@ -116,6 +116,8 @@ export class AudioPlayer {
         this.hls.loadSource(this.bookService.getPlaylistUrl(book?.id));
         this.hls.attachMedia(this.audio);
 
+        this.audio.playbackRate = this.$playbackRate.value;
+
         // Boost the volume
         const audioContext = new window.AudioContext();
         const source = audioContext.createMediaElementSource(this.audio);
@@ -126,7 +128,7 @@ export class AudioPlayer {
       });
 
     this.$playbackRate.subscribe(() => {
-      if (this.audio) {
+      if (this.audio && this.$playbackRate.value > 0) {
         this.audio.playbackRate = this.$playbackRate.value;
       }
     });

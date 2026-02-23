@@ -75,7 +75,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     })
   )
 
-  preferences = toSignal(this.settingsService.userPreferences$);
+  private preferences = toSignal(this.settingsService.userPreferences$);
 
   sectionPlayed = output<number>();
   showPages = computed(() => <string>this.preferences()!["viewer_mode"]);
