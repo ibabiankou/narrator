@@ -101,3 +101,13 @@ class PlaybackProgress(Base):
     book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"), unique=True)
 
     data: Mapped[dict] = mapped_column(type_=JSONB)
+
+
+class Settings(Base):
+    __tablename__ = "settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    # One of: system, user_preferences
+    kind: Mapped[str]
+
+    data: Mapped[dict] = mapped_column(type_=JSONB)

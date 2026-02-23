@@ -18,6 +18,8 @@ from api.services.books import BookService
 from api.services.files import FilesService
 from api.services.progress import PlaybackProgressService
 from api.services.sections import SectionService
+from api.services.settings import SettingsService
+from api.settings import settings_router
 from common_lib import RMQClient
 from common_lib.models import rmq
 from common_lib.rmq import Topology
@@ -36,6 +38,7 @@ async def lifespan(app: FastAPI):
     # Initialize services.
     files_svc = FilesService()
     progress_svc = PlaybackProgressService()
+    settings_svc = SettingsService()
 
     rmq_client = RMQClient(Topology.default_exchange)
     audiotrack_svc = AudioTrackService(files_svc, rmq_client)
@@ -83,6 +86,7 @@ def health_check():
 base_url_router.include_router(files_router, prefix="/files")
 base_url_router.include_router(books_router, prefix="/books")
 base_url_router.include_router(sections_router, prefix="/sections")
+base_url_router.include_router(settings_router, prefix="/settings")
 base_url_router.include_router(maintenance_router, prefix="/maintenance")
 base_url_router.include_router(debug_router, prefix="/debug")
 app.include_router(base_url_router)
