@@ -1,11 +1,24 @@
-import { Component, HostListener, inject, input, model, OnDestroy, output, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { BookWithContent, PlaybackInfo } from '../../core/models/books.dto';
+import {
+  AfterViewInit,
+  Component,
+  computed,
+  ElementRef,
+  HostListener,
+  inject,
+  input,
+  OnDestroy,
+  output,
+  ViewChild
+} from '@angular/core';
+import { BookWithContent, PlaybackInfo, Settings } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import {
   BehaviorSubject,
   catchError,
   combineLatest,
+  debounceTime,
+  EMPTY,
   filter,
   map,
   of,
@@ -17,11 +30,12 @@ import {
 } from 'rxjs';
 import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { AudioPlayer } from './audio.player';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { BooksService } from '../../core/services/books.service';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
+import { SettingsService } from '../../core/services/settings.service';
 
 @Component({
   selector: 'app-player',
@@ -41,11 +55,12 @@ import { MatSlideToggle } from '@angular/material/slide-toggle';
   styleUrl: './player.component.scss',
 })
 export class PlayerComponent implements OnDestroy, AfterViewInit {
-  @ViewChild('slider', { static: true }) slider!: ElementRef<HTMLDivElement>;
+  @ViewChild('slider', {static: true}) slider!: ElementRef<HTMLDivElement>;
 
   private $destroy = new Subject<boolean>();
 
   private bookService = inject(BooksService);
+  private settingsService = inject(SettingsService);
   private audioPlayer: AudioPlayer;
 
   bookWithContent = input.required<BookWithContent>();
@@ -60,10 +75,13 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     })
   )
 
+  preferences = toSignal(this.settingsService.userPreferences$);
+
   sectionPlayed = output<number>();
-  showPages = model(false);
-  showPagesChanged = output<boolean>();
-  syncCurrentSection = model(true);
+  showPages = computed(() => <string>this.preferences()!["viewer_mode"]);
+  syncCurrentSection = computed(() => !!this.preferences()!["auto_scroll"]);
+
+  fontSizePx = computed(() => <number>this.preferences()!["text_size"]);
 
   handleKeyBindings = input(true);
 
@@ -125,6 +143,25 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
       .subscribe((playbackInfo) => {
         this.audioPlayer.initPlayer(this.bookWithContent().overview, playbackInfo);
       });
+
+    //--- User preferences ---
+    this.settingsService.userPreferences$
+      .pipe(take(1))
+      .subscribe(preferences => {
+        // Passing through initial configurations;
+        this.setFontSizeStyle(preferences["text_size"]);
+        this.audioPlayer.setPlaybackRate(preferences["playback_rate"]);
+      });
+    this.audioPlayer.$playbackRate.pipe(
+      debounceTime(1000),
+      switchMap(newRate => {
+        if (newRate != this.preferences()!["playback_rate"]) {
+          return this.settingsService.patch("user_preferences", {"playback_rate": newRate});
+        }
+        return EMPTY
+      }),
+      takeUntil(this.$destroy)
+    ).subscribe();
   }
 
   ngAfterViewInit() {
@@ -201,6 +238,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     e.preventDefault();
     this.adjustPlaybackRate(adjustment);
   }
+
   adjustPlaybackRate(adjustment: number) {
     this.audioPlayer.adjustPlaybackRate(adjustment);
   }
@@ -214,6 +252,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   }
 
   private isDragging = false;
+
   onDragStart(event: MouseEvent | TouchEvent) {
     event.preventDefault(); // Prevent default browser behavior like text selection
     this.isDragging = true;
@@ -264,6 +303,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   private convertPercentToSeconds(percent: number): number {
     return (percent / 100) * this.audioPlayer.getDurationSeconds();
   }
+
   // --- Seek To / Drag ---
 
   ngOnDestroy(): void {
@@ -272,24 +312,31 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.$destroy.complete();
   }
 
+  patchPreferences(patch: Partial<Settings>) {
+    this.settingsService.patch("user_preferences", patch).subscribe();
+  }
+
   toggleSync() {
-    this.syncCurrentSection.set(!this.syncCurrentSection());
-    if (!this.syncCurrentSection()) {
+    const newValue = !this.syncCurrentSection();
+    if (newValue) {
       this.sectionPlayed.emit(0);
     } else {
       this.audioPlayer.$sectionId.pipe(take(1))
         .subscribe(sectionId => this.sectionPlayed.emit(sectionId));
     }
+    this.patchPreferences({auto_scroll: newValue});
   }
 
-  setShowPages(value: boolean = false) {
-    this.showPages.set(value);
-    this.showPagesChanged.emit(this.showPages());
+  setShowPages(viewerMode: string) {
+    this.patchPreferences({viewer_mode: viewerMode});
   }
 
-  protected fontSizePx = 16;
   protected setFontSizePx(px: number) {
-    this.fontSizePx = px;
+    this.setFontSizeStyle(px);
+    this.patchPreferences({text_size: px});
+  }
+
+  private setFontSizeStyle(px: number) {
     const element = document.querySelector('app-view-book-page') as HTMLElement;
     if (element) {
       element.style.setProperty('--book-font-size', `${px}px`);

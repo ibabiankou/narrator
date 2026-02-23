@@ -162,16 +162,14 @@ export class AudioPlayer {
   }
 
   private updateProgress() {
-    combineLatest([this.$bookDetails.pipe(filter(b => b != null)), this.$globalProgressSeconds, this.$playbackRate])
+    combineLatest([this.$bookDetails.pipe(filter(b => b != null)), this.$globalProgressSeconds])
       .pipe(
         take(1),
-        switchMap(([bookDetails, progressSeconds, playbackRate]) => {
+        switchMap(([bookDetails, progressSeconds]) => {
           return this.bookService.updatePlaybackInfo({
             "book_id": bookDetails.id,
             "data": {
-              "progress_seconds": progressSeconds,
-              "sync_current_section": true,
-              "playback_rate": playbackRate
+              "progress_seconds": progressSeconds
             }
           });
         })
@@ -223,18 +221,19 @@ export class AudioPlayer {
     this.audio.currentTime = seekTime;
   }
 
+  setPlaybackRate(playbackRate: number) {
+    this.$playbackRate.next(playbackRate);
+  }
+
   adjustPlaybackRate(adjustment: number) {
     const maxValue = 2;
     const minValue = 0.5;
-    const newRate = this.$playbackRate.value + adjustment;
-    this.$playbackRate.next(Math.max(Math.min(newRate, maxValue), minValue));
+    const newRate = Math.max(Math.min(this.$playbackRate.value + adjustment, maxValue), minValue);
+    this.setPlaybackRate(newRate);
   }
 
   initPlayer(overview: BookOverview, playbackInfo: PlaybackInfo) {
     this.$bookDetails.next(overview);
-    if (playbackInfo.data["playback_rate"]) {
-      this.$playbackRate.next(playbackInfo.data["playback_rate"]);
-    }
     if (playbackInfo.data["progress_seconds"]) {
       this.audio.currentTime = playbackInfo.data["progress_seconds"]
     }

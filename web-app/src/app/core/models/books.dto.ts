@@ -68,3 +68,7 @@ export interface DownloadInfo {
   fragments_total: number;
   fragments_downloaded: number;
 }
+
+export interface Settings {
+  [key: string]: any
+}

@@ -39,6 +39,7 @@ import { DownloadService } from '../../core/services/download.service';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { ThemeService } from '../../core/services/theme.service';
+import { SettingsService } from '../../core/services/settings.service';
 
 @Component({
   selector: 'app-view-book-page',
@@ -72,6 +73,7 @@ export class ViewBookPage implements AfterViewInit {
   private titleService = inject(Title);
   private dialog = inject(MatDialog);
   private router: Router = inject(Router);
+  private settingsService: SettingsService = inject(SettingsService);
   private themeService: ThemeService = inject(ThemeService);
 
   bookId = input.required<string>();
@@ -104,10 +106,12 @@ export class ViewBookPage implements AfterViewInit {
     return !(info.fragments_total > 0 && info.fragments_downloaded == info.fragments_total);
   });
 
+  settings = toSignal(this.settingsService.userPreferences$);
+
   private downloadSubscription: Subscription | null = null;
 
   isEditingSection = model(false);
-  isShowingPages = model(false);
+  isShowingPages = computed(() => this.settings()!["viewer_mode"] === "both");
 
   $currentSectionId = new BehaviorSubject<number>(0);
 
@@ -157,10 +161,6 @@ export class ViewBookPage implements AfterViewInit {
 
   protected setEditingSection(isEditing: boolean) {
     this.isEditingSection.set(isEditing);
-  }
-
-  protected showOrHidePages(showPages: boolean) {
-    this.isShowingPages.set(showPages);
   }
 
   protected setCurrentSectionId(sectionId: number) {
@@ -239,6 +239,7 @@ export class ViewBookPage implements AfterViewInit {
   }
 
   protected setTheme(theme: string) {
-    this.themeService.setTheme(theme == "dark");
+    this.themeService.setTheme(theme);
+    this.settingsService.patch("user_preferences", {theme: theme}).subscribe();
   }
 }

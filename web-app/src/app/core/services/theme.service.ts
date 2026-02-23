@@ -12,13 +12,13 @@ export class ThemeService {
     this.renderer = rendererFactory.createRenderer(null, null);
   }
 
-  setTheme(dark: boolean) {
-    console.log("Setting theme to:", dark ? "dark" : "light");
+  setTheme(theme: string) {
+    console.log("Setting theme to:", theme);
+    const dark = theme === "dark";
     this.isDark.next(dark);
     if (dark) {
       this.renderer.addClass(this.document.body, 'dark-mode');
       this.renderer.removeClass(this.document.body, 'light-mode');
-
     } else {
       this.renderer.addClass(this.document.body, 'light-mode');
       this.renderer.removeClass(this.document.body, 'dark-mode');

@@ -14,7 +14,7 @@
 
       <mat-menu #menu="matMenu">
         <div class="theme-button" (click)="$event.stopPropagation()">
-          <mat-button-toggle-group name="themeMode" aria-label="Theme Mode">
+          <mat-button-toggle-group name="themeMode" aria-label="Theme Mode" [value]="settings()!['theme']">
             <mat-button-toggle value="light" (click)="setTheme('light')">
               <mat-icon>light_mode</mat-icon>
             </mat-button-toggle>
@@ -81,7 +81,6 @@
 <div class="player-spacer"></div>
 @defer (when bookWithContent()) {
   <app-player [bookWithContent]="bookWithContent()"
-              (showPagesChanged)="showOrHidePages($event)"
               (sectionPlayed)="setCurrentSectionId($event)"
               [handleKeyBindings]="!isEditingSection()"
   ></app-player>

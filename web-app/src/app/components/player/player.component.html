@@ -28,11 +28,11 @@
 
     <mat-menu #playbackSettingsMenu="matMenu" class="playback-settings-menu">
       <div class="reader-mode-buttons" (click)="$event.stopPropagation()">
-        <mat-button-toggle-group name="readerMode" aria-label="Reader Mode">
-          <mat-button-toggle value="text-only" (click)="setShowPages(false)">
+        <mat-button-toggle-group name="readerMode" aria-label="Reader Mode" [value]="showPages()">
+          <mat-button-toggle value="text" (click)="setShowPages('text')">
             <mat-icon>subject</mat-icon>
           </mat-button-toggle>
-          <mat-button-toggle value="text-and-pages" (click)="setShowPages(true)">
+          <mat-button-toggle value="both" (click)="setShowPages('both')">
             <mat-icon class="flip-horizontal">vertical_split</mat-icon>
           </mat-button-toggle>
         </mat-button-toggle-group>
@@ -46,11 +46,11 @@
 
       <button mat-menu-item class="font-size">
         <mat-icon>format_size</mat-icon>
-        <button matIconButton (click)="$event.stopPropagation();setFontSizePx(fontSizePx - 1)">
+        <button matIconButton (click)="$event.stopPropagation();setFontSizePx(fontSizePx() - 1)">
           <mat-icon>remove</mat-icon>
         </button>
-        <span class="value">{{ fontSizePx }}px</span>
-        <button matIconButton (click)="$event.stopPropagation();setFontSizePx(fontSizePx + 1)">
+        <span class="value">{{ fontSizePx() }}px</span>
+        <button matIconButton (click)="$event.stopPropagation();setFontSizePx(fontSizePx() + 1)">
           <mat-icon>add</mat-icon>
         </button>
       </button>
