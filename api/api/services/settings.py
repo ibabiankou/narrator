@@ -11,7 +11,11 @@ LOG = get_logger(__name__)
 
 
 class SettingsService(Service):
-    def get_settings(self, kind: str) -> Optional[db.Settings]:
+    def get_settings(self, kind: str) -> dict:
+        settings = self._load_settings(kind)
+        return settings.data if settings is not None else default_settings(kind)
+
+    def _load_settings(self, kind: str) -> Optional[db.Settings]:
         with DbSession() as session:
             return session.scalar(select(db.Settings).where(db.Settings.kind == kind))
 
@@ -25,13 +29,28 @@ class SettingsService(Service):
             session.execute(update(db.Settings).where(db.Settings.kind == kind).values(data=data))
             session.commit()
 
-    def patch_settings(self, kind: str, data: dict) -> Optional[db.Settings]:
-        current = self.get_settings(kind)
+    def patch_settings(self, kind: str, data: dict):
+        current = self._load_settings(kind)
         if current is None:
-            self._add_settings(kind, data)
+            self._add_settings(kind, recursive_patch(default_settings(kind), data))
         else:
             self._update_settings(kind, recursive_patch(current.data, data))
 
+
+def default_settings(kind: str):
+    if kind == "system":
+        return {}
+    if kind == "user_preferences":
+        return {
+            # light / dark
+            "theme": "light",
+            "playback_rate": 1,
+            "auto_scroll": True,
+            "text_size": 16,
+            # text / pages / both
+            "viewer_mode": "text"
+        }
+    raise ValueError(f"Unsupported kind of settings: {kind}")
 
 def recursive_patch(target: dict, patch: dict) -> dict:
     for key, value in patch.items():
