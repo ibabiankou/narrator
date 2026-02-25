@@ -40,6 +40,7 @@ import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { ThemeService } from '../../core/services/theme.service';
 import { SettingsService } from '../../core/services/settings.service';
+import { HideIdleDirective } from '../../core/hideIdleDirective';
 
 @Component({
   selector: 'app-view-book-page',
@@ -63,6 +64,7 @@ import { SettingsService } from '../../core/services/settings.service';
     MatMenuItem,
     MatButtonToggleGroup,
     MatButtonToggle,
+    HideIdleDirective,
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',

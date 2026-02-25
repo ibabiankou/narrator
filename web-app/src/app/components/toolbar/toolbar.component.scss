@@ -1,21 +1,14 @@
 :host {
-  display: block;
-}
-
-.content-spacer {
-  height: 68px;
-}
-
-mat-toolbar {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
-  transition: transform 0.3s ease-in-out;
+
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.toolbar-hidden {
+:host.hidden {
   transform: translateY(-100%);
 }
 

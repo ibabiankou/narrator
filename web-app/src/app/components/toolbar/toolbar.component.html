@@ -1,6 +1,4 @@
-<mat-toolbar
-  [class.toolbar-hidden]="!isMenuVisible">
-
+<mat-toolbar>
   <div class="toolbar-row-item large-screen">
     <a [routerLink]="['/books']">NNarrator Books</a>
     @if (hasBreadcrumbContent) {
@@ -18,4 +16,3 @@
   <span class="toolbar-spacer"></span>
   <ng-content select="[actionButton]"></ng-content>
 </mat-toolbar>
-<div class="content-spacer"></div>

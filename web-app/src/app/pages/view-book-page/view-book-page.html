@@ -1,4 +1,4 @@
-<app-toolbar>
+<app-toolbar appHideIdle>
   <div breadcrumb class="title">
     @defer (when bookWithContent()) {
       <h1>{{ bookWithContent().overview.title }}</h1>
@@ -78,9 +78,9 @@
     <app-skeleton class="content-skeleton"/>
   }
 </div>
-<div class="player-spacer"></div>
 @defer (when bookWithContent()) {
-  <app-player [bookWithContent]="bookWithContent()"
+  <app-player appHideIdle
+              [bookWithContent]="bookWithContent()"
               (sectionPlayed)="setCurrentSectionId($event)"
               [handleKeyBindings]="!isEditingSection()"
   ></app-player>

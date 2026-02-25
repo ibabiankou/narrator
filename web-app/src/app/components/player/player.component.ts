@@ -7,7 +7,7 @@ import {
   inject,
   input,
   OnDestroy,
-  output, Renderer2,
+  output,
   ViewChild
 } from '@angular/core';
 import { BookWithContent, PlaybackInfo, Settings } from '../../core/models/books.dto';
@@ -101,9 +101,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   $dragToPercent = new BehaviorSubject<number | undefined>(undefined);
   private sliderRect!: DOMRect;
 
-  private hideTimeoutId: any;
-
-  constructor(private el: ElementRef, private renderer: Renderer2) {
+  constructor() {
     this.audioPlayer = new AudioPlayer(this.bookService);
 
     this.$isPlaying = this.audioPlayer.$isPlaying;
@@ -168,34 +166,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     this.sliderRect = this.slider.nativeElement.getBoundingClientRect();
-    this.startHideTimer();
   }
-
-  // --- Hide the player logic ---
-  @HostListener('window:mousemove')
-  @HostListener('window:keydown')
-  @HostListener('window:touchstart')
-  onUserActivity() {
-    // Show the player when user interacts with the page.
-    this.showPlayer();
-  }
-
-  showPlayer() {
-    this.renderer.removeClass(this.el.nativeElement, 'hidden');
-
-    if (this.hideTimeoutId) {
-      clearTimeout(this.hideTimeoutId);
-    }
-    this.startHideTimer();
-  }
-
-  startHideTimer() {
-    this.hideTimeoutId = setTimeout(() => {
-      this.renderer.addClass(this.el.nativeElement, 'hidden');
-    }, 3000);
-  }
-
-  // --- Hide the player logic. end ---
 
   @HostListener("document:keydown.shift.arrowleft", ["$event"])
   previous(e: Event) {
