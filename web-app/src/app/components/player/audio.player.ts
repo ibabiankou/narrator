@@ -15,6 +15,7 @@ import Hls from 'hls.js';
 import { BooksService } from '../../core/services/books.service';
 import { CachingHlsLoader } from '../../core/services/cachingHlsLoader';
 import { OSBindings } from './os-binding';
+import { binarySearch } from '../../core/utils';
 
 enum PlayerStatus {
   playing = "playing",
@@ -243,22 +244,4 @@ export class AudioPlayer {
   getDurationSeconds(): number {
     return this.audio.duration;
   }
-}
-
-// Returns index of the element with the largest value smaller than target.
-function binarySearch<T>(arr: T[], keyExtractor: (item: T) => number, target: number): number {
-  let left = 0;
-  let right = arr.length;
-
-  while (left < right) {
-    const mid = Math.floor(left + (right - left) / 2);
-
-    if (keyExtractor(arr[mid]) <= target) {
-      left = mid + 1;
-    } else {
-      right = mid;
-    }
-  }
-
-  return left < arr.length ? left : -1;
 }
