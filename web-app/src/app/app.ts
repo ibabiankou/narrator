@@ -1,10 +1,11 @@
-import { Component, Injector } from '@angular/core';
+import { Component, Injector, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { MatIconModule, MatIconRegistry } from '@angular/material/icon';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
 import { SettingsService } from './core/services/settings.service';
 import { ThemeService } from './core/services/theme.service';
 import { of, retry, switchMap, take, throwError, timer } from 'rxjs';
+import { VERSION } from '../environments/version';
 
 @Component({
   selector: 'app-root',
@@ -12,7 +13,7 @@ import { of, retry, switchMap, take, throwError, timer } from 'rxjs';
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
-export class App {
+export class App implements OnInit {
   constructor(iconRegistry: MatIconRegistry,
               injector: Injector,
               settingsService: SettingsService,
@@ -39,6 +40,13 @@ export class App {
     ).subscribe(theme => {
       themeService.setTheme(theme);
     })
+  }
+
+  ngOnInit(): void {
+    console.log(
+      `%c Version: ${VERSION.commit} | Built on: ${VERSION.buildDate} `,
+      'background: #222; color: #bada55; padding: 2px 5px; border-radius: 3px;'
+    );
   }
 
   async requestPersistentStorage() {
