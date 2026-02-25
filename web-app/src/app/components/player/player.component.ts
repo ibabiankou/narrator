@@ -163,6 +163,15 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
       }),
       takeUntil(this.$destroy)
     ).subscribe();
+
+    // Keep the screen awake while playing audio.
+    this.$isPlaying.pipe(takeUntil(this.$destroy)).subscribe(async isPlaying => {
+      if (isPlaying) {
+        await this.requestWakeLock();
+      } else {
+        this.releaseWakeLock();
+      }
+    });
   }
 
   ngAfterViewInit() {
@@ -307,8 +316,44 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
 
   // --- Seek To / Drag ---
 
+  // --- Wake Lock ---
+
+  private wakeLock: any = null;
+
+  async requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        this.wakeLock = await (navigator as any).wakeLock.request('screen');
+      }
+    } catch (err: any) {
+      console.error(`${err.name}, ${err.message}`);
+    }
+  }
+
+  releaseWakeLock() {
+    if (this.wakeLock !== null) {
+      this.wakeLock.release();
+      this.wakeLock = null;
+    }
+  }
+
+  // Keep the screen awake while playing audio.
+  @HostListener('document:visibilitychange')
+  async handleVisibilityChange() {
+    this.$isPlaying.pipe(take(1)).subscribe(async isPlaying => {
+      if (isPlaying && this.wakeLock !== null && document.visibilityState === 'visible') {
+        await this.requestWakeLock();
+      } else {
+        this.releaseWakeLock();
+      }
+    });
+  }
+
+  // --- Wake Lock; end ---
+
   ngOnDestroy(): void {
     this.audioPlayer.onDestroy();
+    this.releaseWakeLock();
     this.$destroy.next(true);
     this.$destroy.complete();
   }
