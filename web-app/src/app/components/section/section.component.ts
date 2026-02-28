@@ -86,4 +86,13 @@ export class SectionComponent {
     const textarea = e.target as HTMLTextAreaElement;
     this.saveSection(textarea.value);
   }
+
+  @HostListener("document:keydown.esc", ["$event"])
+  cancelOnEscape(e: Event) {
+    if (!this.isEditing()) {
+      return;
+    }
+    e.preventDefault();
+    this.cancelEditing();
+  }
 }
