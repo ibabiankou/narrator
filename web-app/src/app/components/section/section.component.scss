@@ -28,7 +28,7 @@
   // Active host should be above the inactive hosts.
   z-index: 20;
 
-  .top-right-controls {
+  .top-right-controls, .top-left-controls {
     transform: translateX(0);
   }
 
@@ -39,11 +39,16 @@
   }
 }
 
-/* Styling for the container that holds the top right controls. */
 .top-right-controls {
   top: -45px;
   right: 0;
   transform: translateX(10px);
+}
+
+.top-left-controls {
+  top: -45px;
+  left: 0;
+  transform: translateX(-10px);
 }
 
 .controls {
@@ -61,6 +66,10 @@
   background-color: rgba(var(--mat-sys-surface), 0.75);
   backdrop-filter: blur(3px);
   border-radius: 20px;
+
+  .delete-button {
+    color: darkred;
+  }
 }
 
 textarea {
