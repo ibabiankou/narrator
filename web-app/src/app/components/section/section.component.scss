@@ -15,13 +15,13 @@
 }
 
 :host.current-dark {
-  background-color: #3c3c3c;
-  box-shadow: 0 0 6px 5px #3c3c3c;
+  background-color: #282828;
+  box-shadow: 0 0 6px 5px #282828;
 }
 
 :host.current-light {
-  background-color: #d3d3d3;
-  box-shadow: 0 0 6px 5px #d3d3d3;
+  background-color: #dddddd;
+  box-shadow: 0 0 6px 5px #dddddd;
 }
 
 :host:hover {
