@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, input, output, Renderer2, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, input, output, Renderer2, signal } from '@angular/core';
 import { Section } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
@@ -74,5 +74,16 @@ export class SectionComponent {
   cancelEditing() {
     this.isEditing.set(false);
     this.editingModeChanged.emit(this.isEditing());
+  }
+
+  @HostListener("keydown.shift.enter", ["$event"])
+  saveChanges(e: Event) {
+    if (!this.isEditing()) {
+      return;
+    }
+    e.preventDefault();
+
+    const textarea = e.target as HTMLTextAreaElement;
+    this.saveSection(textarea.value);
   }
 }

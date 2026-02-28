@@ -7,7 +7,7 @@
       <mat-icon>save</mat-icon>
     </button>
   </div>
-  <textarea matInput [cdkTextareaAutosize]="true" #textArea>{{section().content}}</textarea>
+  <textarea matInput [cdkTextareaAutosize]="true" #textArea>{{ section().content }}</textarea>
 } @else {
   <div class="top-left-controls controls">
     <button class="delete-button" matIconButton aria-label="Delete section" (click)="deleteSection()">
@@ -18,9 +18,6 @@
     <button matIconButton aria-label="Edit section" (click)="editSection()">
       <mat-icon>edit</mat-icon>
     </button>
-<!--    <button matIconButton aria-label="Delete section" (click)="deleteSection()">-->
-<!--      <mat-icon>delete_forever</mat-icon>-->
-<!--    </button>-->
   </div>
   @for (paragraph of getParagraphs(); track section().id.toString().concat($index.toString())) {
     <p>{{ paragraph }}</p>
