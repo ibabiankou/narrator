@@ -10,6 +10,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideServiceWorker } from '@angular/service-worker';
 import { timeoutInterceptor } from './core/httpInterceptors';
 import { GlobalErrorHandler } from './core/errorHandler';
+import { AutoRefreshTokenService, provideKeycloak, UserActivityService, withAutoRefreshToken } from 'keycloak-angular';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -20,6 +21,25 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([timeoutInterceptor])
     ),
+    provideKeycloak({
+      config: {
+        url: 'https://iam.nnarrator.eu',
+        realm: 'nnarrator',
+        clientId: 'nnarrator-webapp'
+      },
+      initOptions: {
+        onLoad: 'check-sso',
+        silentCheckSsoRedirectUri: window.location.origin + '/app/sso/silent-check.html',
+        pkceMethod: 'S256'
+      },
+      features: [
+        withAutoRefreshToken()
+      ],
+      providers: [
+        AutoRefreshTokenService,
+        UserActivityService
+      ]
+    }),
     provideServiceWorker('ngsw-worker.js', {
       enabled: true,
       registrationStrategy: 'registerWhenStable:30000'
