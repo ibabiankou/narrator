@@ -33,7 +33,9 @@ export const appConfig: ApplicationConfig = {
         pkceMethod: 'S256'
       },
       features: [
-        withAutoRefreshToken()
+        withAutoRefreshToken({
+          onInactivityTimeout: "login"
+        })
       ],
       providers: [
         AutoRefreshTokenService,
