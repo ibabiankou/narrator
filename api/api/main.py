@@ -1,9 +1,11 @@
 import asyncio
+import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_keycloak_middleware import setup_keycloak_middleware, KeycloakConfiguration
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exchange_type import ExchangeType
 from starlette.middleware.gzip import GZipMiddleware
@@ -30,6 +32,7 @@ load_dotenv()
 EndpointFilter.add_filter("/api/")
 
 CORS_REGEX = "(https://)?(\w+\.)*ggnt\.eu(:\d+)?"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -63,6 +66,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+# Set up Keycloak
+keycloak_config = KeycloakConfiguration(
+    url="https://iam.nnarrator.eu/",
+    realm="nnarrator",
+    client_id=os.getenv("KC_CLIENT_ID"),
+    client_secret=os.getenv("KC_CLIENT_SECRET"),
+)
+setup_keycloak_middleware(
+    app,
+    keycloak_configuration=keycloak_config,
+    exclude_patterns=["^\/api\/?$", "/docs", "/openapi.json"],
+)
 
 app.add_middleware(
     CORSMiddleware,
