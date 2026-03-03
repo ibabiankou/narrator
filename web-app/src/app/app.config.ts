@@ -46,7 +46,10 @@ export const appConfig: ApplicationConfig = {
       },
       features: [
         withAutoRefreshToken({
-          onInactivityTimeout: "none"
+          onInactivityTimeout: "login",
+          loginOptions: {
+            prompt: "none",
+          }
         })
       ],
       providers: [
