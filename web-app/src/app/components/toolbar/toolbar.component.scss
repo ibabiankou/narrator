@@ -1,4 +1,4 @@
-:host {
+mat-toolbar {
   position: fixed;
   top: 0;
   left: 0;
@@ -8,8 +8,17 @@
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-:host.hidden {
+:host.hidden mat-toolbar {
   transform: translateY(-100%);
+}
+
+:host.hidden .content-spacer {
+  height: 0;
+  transition: height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.content-spacer {
+  height: 65px
 }
 
 .toolbar-spacer {

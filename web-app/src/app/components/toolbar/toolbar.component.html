@@ -15,4 +15,8 @@
   <ng-content select="[breadcrumb]"></ng-content>
   <span class="toolbar-spacer"></span>
   <ng-content select="[actionButton]"></ng-content>
+  <button matIconButton (click)="logout()">
+    <mat-icon>logout</mat-icon>
+  </button>
 </mat-toolbar>
+<div class="content-spacer"></div>

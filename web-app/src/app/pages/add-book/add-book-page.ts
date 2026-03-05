@@ -13,6 +13,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { MatIcon } from '@angular/material/icon';
 import { MatToolbar } from '@angular/material/toolbar';
 import { Title } from '@angular/platform-browser';
+import { BreadcrumbContentDirective, ToolbarComponent } from '../../components/toolbar/toolbar.component';
+import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-add-book-page',
@@ -29,7 +31,10 @@ import { Title } from '@angular/platform-browser';
     MatCardActions,
     MatIcon,
     MatToolbar,
-    RouterLink
+    RouterLink,
+    ToolbarComponent,
+    BreadcrumbContentDirective,
+    SkeletonComponent
   ],
   templateUrl: './add-book-page.html',
   styleUrl: './add-book-page.scss',

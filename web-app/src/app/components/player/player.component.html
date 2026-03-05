@@ -1,95 +1,99 @@
-<div id="controls">
-  <div class="main-controls">
-    <button matIconButton (click)="previous($event)">
-      <mat-icon>skip_previous</mat-icon>
-    </button>
-    <button matIconButton (click)="replay($event)">
-      <mat-icon>replay_5</mat-icon>
-    </button>
-    <button matIconButton class="play-pause" (click)="playPause($event)">
-      @if ($isPlaying | async) {
-        <mat-icon>pause</mat-icon>
-      } @else {
-        <mat-icon>play_arrow</mat-icon>
-      }
-    </button>
-    <button matIconButton (click)="forward($event)">
-      <mat-icon>forward_5</mat-icon>
-    </button>
-    <button matIconButton (click)="next($event)">
-      <mat-icon>skip_next</mat-icon>
-    </button>
-  </div>
-  <div class="settings right">
+<div class="content-spacer"></div>
+<div class="player-container">
+  <div id="controls">
+    <div class="main-controls">
+      <button matIconButton (click)="previous($event)">
+        <mat-icon>skip_previous</mat-icon>
+      </button>
+      <button matIconButton (click)="replay($event)">
+        <mat-icon>replay_5</mat-icon>
+      </button>
+      <button matIconButton class="play-pause" (click)="playPause($event)">
+        @if ($isPlaying | async) {
+          <mat-icon>pause</mat-icon>
+        } @else {
+          <mat-icon>play_arrow</mat-icon>
+        }
+      </button>
+      <button matIconButton (click)="forward($event)">
+        <mat-icon>forward_5</mat-icon>
+      </button>
+      <button matIconButton (click)="next($event)">
+        <mat-icon>skip_next</mat-icon>
+      </button>
+    </div>
+    <div class="settings right">
 
-    <button matIconButton aria-label="Playback settings" [matMenuTriggerFor]="playbackSettingsMenu">
-      <mat-icon>settings</mat-icon>
-    </button>
-
-    <mat-menu #playbackSettingsMenu="matMenu" class="playback-settings-menu">
-      <div class="reader-mode-buttons" (click)="$event.stopPropagation()">
-        <mat-button-toggle-group name="readerMode" aria-label="Reader Mode" [value]="showPages()">
-          <mat-button-toggle value="text" (click)="setShowPages('text')">
-            <mat-icon>subject</mat-icon>
-          </mat-button-toggle>
-          <mat-button-toggle value="both" (click)="setShowPages('both')">
-            <mat-icon class="flip-horizontal">vertical_split</mat-icon>
-          </mat-button-toggle>
-        </mat-button-toggle-group>
-      </div>
-
-      <button mat-menu-item>
-        <mat-icon>sync_arrow_down</mat-icon>
-        <span>Auto Scroll</span>
-        <mat-slide-toggle (click)="$event.stopPropagation();toggleSync()" [checked]="syncCurrentSection()"></mat-slide-toggle>
+      <button matIconButton aria-label="Playback settings" [matMenuTriggerFor]="playbackSettingsMenu">
+        <mat-icon>settings</mat-icon>
       </button>
 
-      <button mat-menu-item class="font-size">
-        <mat-icon>format_size</mat-icon>
-        <button matIconButton (click)="$event.stopPropagation();setFontSizePx(fontSizePx() - 1)">
-          <mat-icon>remove</mat-icon>
-        </button>
-        <span class="value">{{ fontSizePx() }}px</span>
-        <button matIconButton (click)="$event.stopPropagation();setFontSizePx(fontSizePx() + 1)">
-          <mat-icon>add</mat-icon>
-        </button>
-      </button>
+      <mat-menu #playbackSettingsMenu="matMenu" class="playback-settings-menu">
+        <div class="reader-mode-buttons" (click)="$event.stopPropagation()">
+          <mat-button-toggle-group name="readerMode" aria-label="Reader Mode" [value]="showPages()">
+            <mat-button-toggle value="text" (click)="setShowPages('text')">
+              <mat-icon>subject</mat-icon>
+            </mat-button-toggle>
+            <mat-button-toggle value="both" (click)="setShowPages('both')">
+              <mat-icon class="flip-horizontal">vertical_split</mat-icon>
+            </mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
 
-      <button mat-menu-item class="playback-speed">
-        <mat-icon>speed</mat-icon>
-        <button matIconButton (click)="$event.stopPropagation();adjustPlaybackRate(-0.05)">
-          <mat-icon>remove</mat-icon>
+        <button mat-menu-item>
+          <mat-icon>sync_arrow_down</mat-icon>
+          <span>Auto Scroll</span>
+          <mat-slide-toggle (click)="$event.stopPropagation();toggleSync()"
+                            [checked]="syncCurrentSection()"></mat-slide-toggle>
         </button>
-        <span class="value">x{{ ($playbackRate | async | number : '1.1-2') }}</span>
-        <button matIconButton (click)="$event.stopPropagation();adjustPlaybackRate(+0.05)">
-          <mat-icon>add</mat-icon>
-        </button>
-      </button>
 
-    </mat-menu>
+        <button mat-menu-item class="font-size">
+          <mat-icon>format_size</mat-icon>
+          <button matIconButton (click)="$event.stopPropagation();setFontSizePx(fontSizePx() - 1)">
+            <mat-icon>remove</mat-icon>
+          </button>
+          <span class="value">{{ fontSizePx() }}px</span>
+          <button matIconButton (click)="$event.stopPropagation();setFontSizePx(fontSizePx() + 1)">
+            <mat-icon>add</mat-icon>
+          </button>
+        </button>
+
+        <button mat-menu-item class="playback-speed">
+          <mat-icon>speed</mat-icon>
+          <button matIconButton (click)="$event.stopPropagation();adjustPlaybackRate(-0.05)">
+            <mat-icon>remove</mat-icon>
+          </button>
+          <span class="value">x{{ ($playbackRate | async | number : '1.1-2') }}</span>
+          <button matIconButton (click)="$event.stopPropagation();adjustPlaybackRate(+0.05)">
+            <mat-icon>add</mat-icon>
+          </button>
+        </button>
+
+      </mat-menu>
+    </div>
+
   </div>
 
-</div>
-
-<div class="progress">
-  <div class="slider">
-    <div class="now"
-         (mousedown)="onSliderClick($event)"
-         (touchstart)="onSliderClick($event)"
-         [style]="{ width: ($nowPercent | async) + '%' }"></div>
-    <div class="available"
-         #slider
-         (mousedown)="onSliderClick($event)"
-         (touchstart)="onSliderClick($event)"
-         [style]="{ width: ($availablePercent | async) + '%' }"></div>
-    <div class="unavailable" [style]="{ width: ($unavailablePercent | async) + '%' }"></div>
-    <div class="drag-handle"
-         [style]="{ left: ($nowPercent | async) + '%' }"
-         (mousedown)="onDragStart($event)"
-         (touchstart)="onDragStart($event)"></div>
-  </div>
-  <div class="times">
-    <div class="current-progress">{{ $nowTime | async }}</div>
-    <div class="remaining-progress">{{ $remainingTime | async }}</div>
+  <div class="progress">
+    <div class="slider">
+      <div class="now"
+           (mousedown)="onSliderClick($event)"
+           (touchstart)="onSliderClick($event)"
+           [style]="{ width: ($nowPercent | async) + '%' }"></div>
+      <div class="available"
+           #slider
+           (mousedown)="onSliderClick($event)"
+           (touchstart)="onSliderClick($event)"
+           [style]="{ width: ($availablePercent | async) + '%' }"></div>
+      <div class="unavailable" [style]="{ width: ($unavailablePercent | async) + '%' }"></div>
+      <div class="drag-handle"
+           [style]="{ left: ($nowPercent | async) + '%' }"
+           (mousedown)="onDragStart($event)"
+           (touchstart)="onDragStart($event)"></div>
+    </div>
+    <div class="times">
+      <div class="current-progress">{{ $nowTime | async }}</div>
+      <div class="remaining-progress">{{ $remainingTime | async }}</div>
+    </div>
   </div>
 </div>

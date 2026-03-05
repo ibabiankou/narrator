@@ -2,7 +2,7 @@
 
 // .playback-settings-menu styles defined in styles.scss
 
-:host {
+.player-container {
   position: fixed;
   bottom: 0;
 
@@ -27,8 +27,17 @@
   }
 }
 
-:host.hidden {
+:host.hidden .player-container {
   transform: translateY(100%);
+}
+
+:host.hidden .content-spacer {
+  height: 0;
+  transition: height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.content-spacer {
+  height: 115px
 }
 
 div#controls {
