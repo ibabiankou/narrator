@@ -364,7 +364,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
 
   toggleSync() {
     const newValue = !this.syncCurrentSection();
-    if (newValue) {
+    if (!newValue) {
       this.sectionPlayed.emit(0);
     } else {
       this.audioPlayer.$sectionId.pipe(take(1))
