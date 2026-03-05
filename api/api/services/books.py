@@ -169,7 +169,7 @@ class BookService(Service):
 
     def get_stats(self, book_id: uuid.UUID) -> dict:
         query = """
-                select coalesce(sum(length(s.content)), 0) as length, 'total' as type
+                select count(s.id) as length, 'total' as type
                 from sections s
                 where s.book_id = :book_id
                 union
@@ -177,10 +177,9 @@ class BookService(Service):
                 from audio_tracks a
                 where a.book_id = :book_id
                 union
-                select coalesce(sum(length(s.content)), 0) as length, 'available' as type
-                from sections s
-                         join audio_tracks a on s.id = a.section_id
-                where s.book_id = :book_id
+                select count(a.id) as length, 'available' as type
+                from audio_tracks a 
+                where a.book_id = :book_id
                   and a.status = 'ready'
                 union 
                 select coalesce(sum(a.bytes), 0) as length, 'total_size_bytes' as type
