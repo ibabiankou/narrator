@@ -2,6 +2,10 @@
   @defer (when blobData) {
     @if (isVisible | async) {
       <object [data]="blobData" type="application/pdf"></object>
+    } @else {
+      <div class="page-placeholder"></div>
     }
+  } @placeholder {
+    <div class="page-placeholder"></div>
   }
 </div>
