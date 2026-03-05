@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
-import { DomSanitizer } from '@angular/platform-browser';
 import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
 
@@ -17,7 +16,6 @@ export class BooksService {
   private booksCache: IndexDBCache<BookWithContent>;
 
   constructor(private http: HttpClient,
-              private sanitizer: DomSanitizer,
               private connectionService: ConnectionService) {
     this.playbackInfoCache = new IndexDBCache(
       this.connectionService,
@@ -42,8 +40,7 @@ export class BooksService {
           bookMaybe ? of(bookMaybe) : throwError(() => new Error('Unable to load the book'))),
         tap(bookWithContent => {
           bookWithContent.pages.forEach(page => {
-            const url = `${environment.api_base_url}/files/${bookId}/pages/${page.file_name}#toolbar=0&navpanes=0&scrollbar=0`
-            page.file_url = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+            page.file_url = `${environment.api_base_url}/files/${bookId}/pages/${page.file_name}`
           });
         }));
   }

@@ -42,7 +42,7 @@ export interface BookPage {
   // File name of the page. It can be used to download the page.
   file_name: string;
 
-  file_url: SafeResourceUrl;
+  file_url: string;
 
   // Sections of the book starting on this page.
   sections: Section[];

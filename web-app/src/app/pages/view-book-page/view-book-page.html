@@ -50,12 +50,8 @@
     @for (page of pages(); track page.file_name) {
       <div [class]="{'sections-only': !isShowingPages(), 'page-with-sections': isShowingPages()}">
         @if (isShowingPages()) {
-          <div class="raw-page">
-            @defer (on viewport) {
-              <object [data]="page.file_url" type="application/pdf"></object>
-            } @placeholder {
-              <div class="page-placeholder"></div>
-            }
+          <div class="raw-page" observeVisibility (visible)="pdfPage.setVisibility($event)")>
+            <app-book-page [fileUrl]="page.file_url" #pdfPage></app-book-page>
           </div>
         }
         <div class="sections">

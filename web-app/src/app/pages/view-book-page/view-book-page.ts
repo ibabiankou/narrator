@@ -41,6 +41,8 @@ import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-
 import { ThemeService } from '../../core/services/theme.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { HideIdleDirective } from '../../core/hideIdleDirective';
+import { BookPage } from '../../components/book-page/book-page';
+import { VisibilityDirective } from '../../core/visibilityDirective';
 
 @Component({
   selector: 'app-view-book-page',
@@ -65,6 +67,8 @@ import { HideIdleDirective } from '../../core/hideIdleDirective';
     MatButtonToggleGroup,
     MatButtonToggle,
     HideIdleDirective,
+    BookPage,
+    VisibilityDirective,
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',

@@ -1,0 +1,7 @@
+<div class="container">
+  @defer (when blobData) {
+    @if (isVisible | async) {
+      <object [data]="blobData" type="application/pdf"></object>
+    }
+  }
+</div>
