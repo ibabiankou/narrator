@@ -1,5 +1,6 @@
 import asyncio
 import os
+import typing
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ from api.books import books_router
 from api.debug import debug_router
 from api.files import files_router
 from api.maintenance import maintenance_router
+from api.models.auth import User, UserDep
 from api.sections import sections_router
 from api.services.audiotracks import AudioTrackService
 from api.services.books import BookService
@@ -32,7 +34,6 @@ load_dotenv()
 EndpointFilter.add_filter("/api/")
 
 CORS_REGEX = "(https://)?(\w+\.)*ggnt\.eu(:\d+)?"
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -68,16 +69,24 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # Set up Keycloak
+
+async def map_user(userinfo: typing.Dict[str, typing.Any]) -> User:
+    return User(id=userinfo["sub"],email=userinfo["email"])
+
 keycloak_config = KeycloakConfiguration(
     url="https://iam.nnarrator.eu/",
     realm="nnarrator",
     client_id=os.getenv("KC_CLIENT_ID"),
     client_secret=os.getenv("KC_CLIENT_SECRET"),
+    swagger_client_id="nnarrator-webapp",
 )
 setup_keycloak_middleware(
     app,
     keycloak_configuration=keycloak_config,
+    user_mapper=map_user,
     exclude_patterns=["^\/api\/?$", "/docs", "/openapi.json"],
+    add_swagger_auth=True,
+    swagger_auth_pkce=True,
 )
 
 app.add_middleware(
@@ -97,6 +106,10 @@ base_url_router = APIRouter(prefix="/api")
 @base_url_router.get("/", tags=["System API"])
 def health_check():
     return {"status": "ok"}
+
+@base_url_router.get("/user")
+def get_current_user(user: UserDep):
+    return user
 
 
 base_url_router.include_router(files_router, prefix="/files")
