@@ -1,21 +1,12 @@
-import { Component, inject, model, OnInit } from '@angular/core';
-import { MatFabButton, MatIconButton } from '@angular/material/button';
+import { Component, inject, OnInit } from '@angular/core';
+import { MatFabButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
-import { BookOverview } from '../../core/models/books.dto';
-import { MatToolbar } from '@angular/material/toolbar';
 import { Title } from '@angular/platform-browser';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { BooksService } from '../../core/services/books.service';
 import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
-import {
-  ActionButtonContentDirective,
-  BreadcrumbContentDirective,
-  ToolbarComponent
-} from '../../components/toolbar/toolbar.component';
-import { HideIdleDirective } from '../../core/hideIdleDirective';
-import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
-import { MatMenu, MatMenuItem } from '@angular/material/menu';
+import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 
 @Component({
   selector: 'app-books-page',
@@ -23,16 +14,7 @@ import { MatMenu, MatMenuItem } from '@angular/material/menu';
     MatIcon,
     MatFabButton,
     RouterLink,
-    MatToolbar,
     SkeletonComponent,
-    ActionButtonContentDirective,
-    BreadcrumbContentDirective,
-    HideIdleDirective,
-    MatButtonToggle,
-    MatButtonToggleGroup,
-    MatIconButton,
-    MatMenu,
-    MatMenuItem,
     ToolbarComponent,
   ],
   templateUrl: './books-page.html',

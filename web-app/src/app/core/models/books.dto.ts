@@ -4,6 +4,7 @@ export interface CreateBookRequest {
   id: string;
   title: string;
   pdf_temp_file_id: string;
+  shared: boolean;
 }
 
 export enum BookStatus {
@@ -17,6 +18,7 @@ export interface BookOverview {
   pdf_file_name: string;
   number_of_pages: number;
   status: string;
+  shared: boolean;
 }
 
 export interface BookStats {

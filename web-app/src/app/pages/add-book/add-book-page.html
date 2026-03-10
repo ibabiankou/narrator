@@ -11,17 +11,17 @@
     </mat-card-header>
 
     <mat-card-content>
-      <mat-form-field>
-        <mat-label>Title</mat-label>
-        <input matInput
-               [(ngModel)]="title">
-      </mat-form-field>
       <mat-form-field class="file-input">
         <mat-label>Book PDF</mat-label>
         <!-- TODO: Only allow pdf files; -->
         <input matInput readonly="true" (click)="fileInput.click()" [(ngModel)]="fileName">
         <input hidden (change)="onFileSelected($event)" #fileInput type="file" id="file">
       </mat-form-field>
+      <mat-form-field>
+        <mat-label>Title</mat-label>
+        <input matInput [(ngModel)]="title" (keyup.enter)="addBook()">
+      </mat-form-field>
+      <mat-slide-toggle [(ngModel)]="shared">Share with the community.</mat-slide-toggle>
     </mat-card-content>
 
     <mat-card-actions>
