@@ -37,7 +37,7 @@ def create_book(book: api.CreateBookRequest,
 @books_router.get("/")
 def list_books(session: SessionDep) -> list[api.BookOverview]:
     # Read books from DB ordered by the date they added.
-    stmt = select(db.Book).order_by(db.Book.created_time.desc(), db.Book.title)
+    stmt = select(db.Book).where(db.Book.shared == True).order_by(db.Book.created_time.desc(), db.Book.title)
     books = session.execute(stmt).scalars().all()
 
     resp = []
