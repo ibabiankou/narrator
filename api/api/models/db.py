@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import Optional
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, ForeignKey, inspect
+from sqlalchemy import create_engine, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker
 
@@ -52,6 +52,7 @@ class Book(Base):
     number_of_pages: Mapped[Optional[int]]
     created_time: Mapped[datetime.datetime]
     status: Mapped[str]
+    shared: Mapped[bool]
 
 
 class Section(Base):

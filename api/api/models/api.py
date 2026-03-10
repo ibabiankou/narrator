@@ -15,6 +15,7 @@ class CreateBookRequest(BaseModel):
     id: uuid.UUID
     title: str
     pdf_temp_file_id: uuid.UUID
+    shared: bool
 
 
 class BookOverview(BaseModel):
@@ -23,6 +24,7 @@ class BookOverview(BaseModel):
     pdf_file_name: str
     number_of_pages: Optional[int] = None
     status: str
+    shared: bool
 
 
 class BookStats(BaseModel):

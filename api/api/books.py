@@ -24,6 +24,7 @@ def create_book(book: api.CreateBookRequest,
     try:
         book = book_service.create_book(book)
     except IntegrityError:
+        LOG.error("Error creating book", exc_info=True)
         raise HTTPException(status_code=409, detail="Book with this title already exists")
 
     # Process the book in the background
@@ -45,7 +46,8 @@ def list_books(session: SessionDep) -> list[api.BookOverview]:
                                      title=book.title,
                                      pdf_file_name=book.file_name,
                                      number_of_pages=book.number_of_pages,
-                                     status=book.status))
+                                     status=book.status,
+                                     shared=book.shared))
 
     return resp
 
@@ -85,7 +87,8 @@ def get_book_with_content(book_id: uuid.UUID,
                                     title=book.title,
                                     pdf_file_name=book.file_name,
                                     number_of_pages=book.number_of_pages,
-                                    status=book.status)
+                                    status=book.status,
+                                    shared=book.shared)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
