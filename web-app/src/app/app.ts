@@ -6,6 +6,7 @@ import { SettingsService } from './core/services/settings.service';
 import { ThemeService } from './core/services/theme.service';
 import { of, retry, switchMap, take, throwError, timer } from 'rxjs';
 import { VERSION } from '../environments/version';
+import { AuthHeartbeatService } from './core/services/authService';
 
 @Component({
   selector: 'app-root',
@@ -17,7 +18,8 @@ export class App implements OnInit {
   constructor(iconRegistry: MatIconRegistry,
               injector: Injector,
               settingsService: SettingsService,
-              themeService: ThemeService) {
+              themeService: ThemeService,
+              authHeartbeat: AuthHeartbeatService) {
     iconRegistry.setDefaultFontSetClass('material-symbols-outlined');
     ServiceLocator.injector = injector;
 

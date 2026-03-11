@@ -1,5 +1,6 @@
 import {
-  ApplicationConfig, ErrorHandler,
+  ApplicationConfig,
+  ErrorHandler,
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection
 } from '@angular/core';
@@ -11,12 +12,11 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { timeoutInterceptor } from './core/httpInterceptors';
 import { GlobalErrorHandler } from './core/errorHandler';
 import {
-  AutoRefreshTokenService,
-  createInterceptorCondition, INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG, IncludeBearerTokenCondition,
+  createInterceptorCondition,
+  INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
+  IncludeBearerTokenCondition,
   includeBearerTokenInterceptor,
-  provideKeycloak,
-  UserActivityService,
-  withAutoRefreshToken
+  provideKeycloak
 } from 'keycloak-angular';
 import { environment } from '../environments/environment';
 
@@ -43,19 +43,7 @@ export const appConfig: ApplicationConfig = {
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri: window.location.origin + '/app/sso/silent-check.html',
         pkceMethod: 'S256'
-      },
-      features: [
-        withAutoRefreshToken({
-          onInactivityTimeout: "login",
-          loginOptions: {
-            prompt: "none",
-          }
-        })
-      ],
-      providers: [
-        AutoRefreshTokenService,
-        UserActivityService
-      ]
+      }
     }),
     {
       provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
