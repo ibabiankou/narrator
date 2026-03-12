@@ -52,6 +52,26 @@ def list_books(session: SessionDep) -> list[api.BookOverview]:
 
     return resp
 
+@books_router.get("/search")
+def search_books(
+        query: str,
+        session: SessionDep) -> list[api.BookOverview]:
+
+    search_filter = f"%{query}%"
+    stmt = select(db.Book).where(db.Book.title.ilike(search_filter)).where(db.Book.shared == True).order_by(db.Book.created_time.desc(), db.Book.title)
+    books = session.execute(stmt).scalars().all()
+
+    resp = []
+    for book in books:
+        resp.append(api.BookOverview(id=book.id,
+                                     title=book.title,
+                                     pdf_file_name=book.file_name,
+                                     number_of_pages=book.number_of_pages,
+                                     status=book.status,
+                                     shared=book.shared))
+
+    return resp
+
 
 def get_book_pages(book: db.Book, section_svc: SectionServiceDep) -> list[api.BookPage]:
     if book.status != db.BookStatus.ready or book.number_of_pages is None:
