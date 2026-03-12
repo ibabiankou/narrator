@@ -109,6 +109,7 @@ class Settings(Base):
     __tablename__ = "settings"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column()
     # One of: system, user_preferences
     kind: Mapped[str]
 

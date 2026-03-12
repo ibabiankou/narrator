@@ -1,3 +1,4 @@
+import uuid
 from typing import Annotated, Optional
 
 from sqlalchemy import select, update
@@ -11,30 +12,32 @@ LOG = get_logger(__name__)
 
 
 class SettingsService(Service):
-    def get_settings(self, kind: str) -> dict:
-        settings = self._load_settings(kind)
+    def get_settings(self, user_id: uuid.UUID, kind: str) -> dict:
+        settings = self._load_settings(user_id, kind)
         return settings.data if settings is not None else default_settings(kind)
 
-    def _load_settings(self, kind: str) -> Optional[db.Settings]:
+    def _load_settings(self, user_id: uuid.UUID, kind: str) -> Optional[db.Settings]:
         with DbSession() as session:
-            return session.scalar(select(db.Settings).where(db.Settings.kind == kind))
+            stmt = select(db.Settings).where(db.Settings.user_id == user_id).where(db.Settings.kind == kind)
+            return session.scalar(stmt)
 
-    def _add_settings(self, kind: str, data: dict):
+    def _add_settings(self, user_id: uuid.UUID, kind: str, data: dict):
         with DbSession() as session:
-            session.add(db.Settings(kind=kind, data=data))
+            session.add(db.Settings(user_id=user_id, kind=kind, data=data))
             session.commit()
 
-    def _update_settings(self, kind: str, data: dict):
+    def _update_settings(self, user_id: uuid.UUID, kind: str, data: dict):
         with DbSession() as session:
-            session.execute(update(db.Settings).where(db.Settings.kind == kind).values(data=data))
+            stmt = update(db.Settings).where(db.Settings.user_id == user_id).where(db.Settings.kind == kind).values(data=data)
+            session.execute(stmt)
             session.commit()
 
-    def patch_settings(self, kind: str, data: dict):
-        current = self._load_settings(kind)
+    def patch_settings(self, user_id: uuid.UUID, kind: str, data: dict):
+        current = self._load_settings(user_id, kind)
         if current is None:
-            self._add_settings(kind, recursive_patch(default_settings(kind), data))
+            self._add_settings(user_id, kind, recursive_patch(default_settings(kind), data))
         else:
-            self._update_settings(kind, recursive_patch(current.data, data))
+            self._update_settings(user_id, kind, recursive_patch(current.data, data))
 
 
 def default_settings(kind: str):
