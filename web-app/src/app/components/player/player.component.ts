@@ -57,6 +57,7 @@ import { secondsToTimeFormat } from '../../core/utils';
 })
 export class PlayerComponent implements OnDestroy, AfterViewInit {
   @ViewChild('slider', {static: true}) slider!: ElementRef<HTMLDivElement>;
+  @ViewChild('playbackSettingsMenuTrigger') trigger!: MatMenuTrigger;
 
   private $destroy = new Subject<boolean>();
 
@@ -176,6 +177,15 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     this.sliderRect = this.slider.nativeElement.getBoundingClientRect();
+  }
+
+  @HostListener('document:keyup.s', ['$event'])
+  handleKeyboardEvent(event: Event) {
+    if (this.trigger.menuOpen) {
+      this.trigger.closeMenu();
+    } else {
+      this.trigger.openMenu();
+    }
   }
 
   @HostListener("document:keydown.shift.arrowleft", ["$event"])

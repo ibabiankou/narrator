@@ -24,7 +24,9 @@
     </div>
     <div class="settings right">
 
-      <button matIconButton aria-label="Playback settings" [matMenuTriggerFor]="playbackSettingsMenu">
+      <button matIconButton aria-label="Playback settings"
+              [matMenuTriggerFor]="playbackSettingsMenu"
+              #playbackSettingsMenuTrigger="matMenuTrigger">
         <mat-icon>settings</mat-icon>
       </button>
 
