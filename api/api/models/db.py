@@ -99,7 +99,8 @@ class PlaybackProgress(Base):
     __tablename__ = "playback_progress"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"), unique=True)
+    user_id: Mapped[uuid.UUID] = mapped_column()
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"))
 
     data: Mapped[dict] = mapped_column(type_=JSONB)
 

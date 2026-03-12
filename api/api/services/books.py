@@ -158,10 +158,10 @@ class BookService(Service):
         with DbSession() as session:
             return session.get_one(db.Book, book_id)
 
-    def delete_book(self, book_id: uuid.UUID):
+    def delete_book(self, user_id: uuid.UUID, book_id: uuid.UUID):
         book = self.get_book(book_id)
 
-        self.playback_progress_service.delete(book_id=book_id)
+        self.playback_progress_service.delete(user_id=user_id, book_id=book_id)
         self.sections_service.delete_sections(book_id=book_id)
         self.files_service.delete_book_files(book_id=book_id)
 

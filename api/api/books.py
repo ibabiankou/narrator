@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from api import SessionDep, get_logger
 from api.models import db, api
+from api.models.auth import UserDep
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
 from api.services.progress import PlaybackProgressServiceDep
@@ -103,9 +104,11 @@ def get_book_with_content(book_id: uuid.UUID,
 
 
 @books_router.delete("/{book_id}", status_code=204)
-def delete_book(book_id: uuid.UUID, book_service: BookServiceDep):
+def delete_book(book_id: uuid.UUID,
+                user: UserDep,
+                book_service: BookServiceDep):
     try:
-        book_service.delete_book(book_id)
+        book_service.delete_book(user.id, book_id)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
@@ -149,7 +152,6 @@ def book_playlist(book_id: uuid.UUID,
 
 
 def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
-
     playlist = m3u8.M3U8()
 
     playlist.version = "4"
@@ -176,14 +178,17 @@ def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
 
 
 @books_router.get("/{book_id}/playback_info")
-def get_playback_info(book_id: uuid.UUID, progress_service: PlaybackProgressServiceDep) -> api.PlaybackInfo:
-    playback_info = progress_service.get_playback_info(book_id)
+def get_playback_info(book_id: uuid.UUID,
+                      user: UserDep,
+                      progress_service: PlaybackProgressServiceDep) -> api.PlaybackInfo:
+    playback_info = progress_service.get_playback_info(user.id, book_id)
     return api.PlaybackInfo(book_id=book_id, data=playback_info.data if playback_info else {})
 
 
 @books_router.post("/{book_id}/playback_info")
 def update_playback_info(request: api.PlaybackInfo,
                          book_id: uuid.UUID,
+                         user: UserDep,
                          progress_service: PlaybackProgressServiceDep):
-    progress_service.upsert_progress(db.PlaybackProgress(book_id=request.book_id, data=request.data))
+    progress_service.upsert_progress(db.PlaybackProgress(user_id=user.id, book_id=request.book_id, data=request.data))
     return Response(status_code=201)
