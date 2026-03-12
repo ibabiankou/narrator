@@ -1,4 +1,10 @@
-<app-toolbar></app-toolbar>
+<app-toolbar>
+  <div actionButton>
+    <mat-form-field class="search-field" appearance="outline" subscriptSizing="dynamic">
+      <input matInput type="text" placeholder="Search" (keyup.enter)="search($event)">
+    </mat-form-field>
+  </div>
+</app-toolbar>
 
 <div class="main-container">
   <div class="book-grid">

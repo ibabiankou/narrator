@@ -1,9 +1,12 @@
+$toolbarHeight: 75px;
 mat-toolbar {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
+
+  height: $toolbarHeight;
 
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
@@ -18,7 +21,7 @@ mat-toolbar {
 }
 
 .content-spacer {
-  height: 65px
+  height: $toolbarHeight;
 }
 
 .toolbar-spacer {

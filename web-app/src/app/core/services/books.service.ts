@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
@@ -55,6 +55,12 @@ export class BooksService {
     );
 
     return this.connectionService.isOnline() ? loadFromApi : loadFromCache;
+  }
+
+  searchBooks(query: string): Observable<BookOverview[]> {
+    var params = new HttpParams();
+    params = params.append('query', query);
+    return this.http.get<BookOverview[]>(`${this.apiUrl}/search`, {params: params});
   }
 
   delete(id: string) {

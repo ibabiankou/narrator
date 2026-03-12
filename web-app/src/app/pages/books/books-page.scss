@@ -1,3 +1,15 @@
+.search-field {
+  padding-right: 16px;
+
+  ::ng-deep .mat-mdc-form-field-infix {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  ::ng-deep .mat-mdc-text-field-wrapper {
+    height: 40px;
+  }
+}
+
 button[mat-fab] {
   position: fixed;
   bottom: 20px;
