@@ -10,13 +10,9 @@ export class AuthHeartbeatService {
     const heartbeatInterval = 55_000;
     interval(heartbeatInterval*2).subscribe(async () => {
       try {
-        const kc = this.keycloak;
         await this.keycloak.updateToken(heartbeatInterval*1.5).then(function(refreshed) {
           if (refreshed) {
             console.debug('Token was successfully refreshed');
-            console.debug(kc.tokenParsed);
-          } else {
-            console.debug('Token is still valid');
           }
         }).catch(function() {
           console.error('Failed to refresh the token, or the session has expired');
