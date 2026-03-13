@@ -83,21 +83,22 @@ export class ViewBookPage implements AfterViewInit {
 
   bookId = input.required<string>();
 
-  private bookWithContent$ = toObservable(this.bookId).pipe(
-    switchMap(id =>
-      this.booksService.getBookWithContent(id)
-        .pipe(
-          repeat({
-            count: 25,
-            delay: (count) => timer(2 ^ count * 300 * (0.75 + 0.5 * Math.random()))
-          }),
-          filter((book) => book.overview.status == BookStatus.ready),
-          take(1),
-        )
-    ),
-    tap(book => this.titleService.setTitle(`${book.overview.title} - NNarrator`)),
-  );
-  bookWithContent = computed(() => toSignal(this.bookWithContent$)()!);
+  private _bookWithContent = toSignal(
+    toObservable(this.bookId).pipe(
+      switchMap(id =>
+        this.booksService.getBookWithContent(id)
+          .pipe(
+            repeat({
+              count: 25,
+              delay: (count) => timer(2 ^ count * 300 * (0.75 + 0.5 * Math.random()))
+            }),
+            filter((book) => book.overview.status == BookStatus.ready),
+            take(1),
+          )
+      ),
+      tap(book => this.titleService.setTitle(`${book.overview.title} - NNarrator`)),
+    ));
+  bookWithContent = computed(() => this._bookWithContent()!);
   pages = computed(() => this.bookWithContent().pages);
 
   downloadInfo: WritableSignal<DownloadInfo | undefined> = signal(undefined);
