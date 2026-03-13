@@ -5,16 +5,18 @@ import {
   ElementRef,
   inject,
   input,
+  model,
   QueryList,
+  Signal,
   signal,
   TemplateRef,
   viewChild,
   ViewChildren,
   WritableSignal
 } from '@angular/core';
-import { BookStatus, DownloadInfo } from '../../core/models/books.dto';
+import { BookPage, BookStatus, BookWithContent, DownloadInfo } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
-import { filter, interval, repeat, Subscription, switchMap, take, tap, timer } from 'rxjs';
+import { BehaviorSubject, filter, interval, Observable, repeat, Subscription, switchMap, take, tap, timer } from 'rxjs';
 import { MatIcon } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
@@ -43,6 +45,7 @@ import { SettingsService } from '../../core/services/settings.service';
 import { HideIdleDirective } from '../../core/hideIdleDirective';
 import { PdfPage } from '../../components/pdf-page/pdf-page';
 import { VisibilityDirective } from '../../core/visibilityDirective';
+import { binarySearch } from '../../core/utils';
 
 @Component({
   selector: 'app-view-book-page',
@@ -83,23 +86,10 @@ export class ViewBookPage implements AfterViewInit {
 
   bookId = input.required<string>();
 
-  private _bookWithContent = toSignal(
-    toObservable(this.bookId).pipe(
-      switchMap(id =>
-        this.booksService.getBookWithContent(id)
-          .pipe(
-            repeat({
-              count: 25,
-              delay: (count) => timer(2 ^ count * 300 * (0.75 + 0.5 * Math.random()))
-            }),
-            filter((book) => book.overview.status == BookStatus.ready),
-            take(1),
-          )
-      ),
-      tap(book => this.titleService.setTitle(`${book.overview.title} - NNarrator`)),
-    ));
-  bookWithContent = computed(() => this._bookWithContent()!);
-  pages = computed(() => this.bookWithContent().pages);
+  private $bookWithContent: Observable<BookWithContent>;
+  bookWithContent: Signal<BookWithContent>;
+  pages: Signal<BookPage[]>;
+  pagesWindow = model<BookPage[]>([]);
 
   downloadInfo: WritableSignal<DownloadInfo | undefined> = signal(undefined);
   isDownloaded = computed(() => this.downloadInfo() != undefined);
@@ -118,11 +108,44 @@ export class ViewBookPage implements AfterViewInit {
   isShowingPages = computed(() => this.settings()!["viewer_mode"] === "both");
 
   protected currentSectionId = 0;
+  private $currentSectionId = new BehaviorSubject(0);
 
   readonly storageInfoTemplate = viewChild.required('storageInfoTemplate', {read: TemplateRef});
   @ViewChildren("section", {"read": ElementRef}) sectionElements!: QueryList<ElementRef>;
 
   constructor() {
+    this.$bookWithContent = toObservable(this.bookId).pipe(
+      switchMap(id =>
+        this.booksService.getBookWithContent(id)
+          .pipe(
+            repeat({
+              count: 25,
+              delay: (count) => timer(2 ^ count * 300 * (0.75 + 0.5 * Math.random()))
+            }),
+            filter((book) => book.overview.status == BookStatus.ready),
+            take(1),
+            tap(book => this.titleService.setTitle(`${book.overview.title} - NNarrator`)),
+          )
+      )
+    );
+    const bookWithContentSignal = toSignal(this.$bookWithContent);
+    this.bookWithContent = computed(() => bookWithContentSignal()!);
+    this.pages = computed(() => this.bookWithContent()?.pages);
+
+    this.$currentSectionId
+      .subscribe((sectionId => {
+          if (this.pages() == undefined) {
+            return
+          }
+          const sections = this.pages().flatMap(p => p.sections);
+          const sectionIndex = binarySearch(sections, s => s.id, sectionId);
+          const currentPageIndex = sections[sectionIndex].page_index;
+          const startPageIndex = Math.max(0, currentPageIndex - 2);
+          const endPageIndex = Math.min(sections.length, currentPageIndex + 2);
+          this.pagesWindow.set(this.pages().slice(startPageIndex, endPageIndex));
+        })
+      );
+
     // Continue download if it's not completed.
     this.downloadSubscription = toObservable(this.downloadInfo)
       .pipe(
@@ -158,7 +181,8 @@ export class ViewBookPage implements AfterViewInit {
   }
 
   protected setCurrentSectionId(sectionId: number) {
-    this.currentSectionId = sectionId
+    this.currentSectionId = sectionId;
+    this.$currentSectionId.next(sectionId);
     this.scrollToSection(sectionId);
   }
 
