@@ -23,6 +23,10 @@
             </mat-button-toggle>
           </mat-button-toggle-group>
         </div>
+        <button mat-menu-item aria-label="Edit book" routerLink="/books/{{ bookId() }}/edit">
+          <mat-icon>edit</mat-icon>
+          <span>Edit book</span>
+        </button>
 
         @if (isDownloaded()) {
           <button mat-menu-item aria-label="Show storage info" (click)="storageInfoDialog(storageInfoTemplate)">
@@ -35,11 +39,6 @@
             <span>Download</span>
           </button>
         }
-        <button mat-menu-item class="delete-button" aria-label="Delete this book"
-                (click)="deleteBookDialog(deleteBookTemplate)">
-          <mat-icon>delete_forever</mat-icon>
-          <span>Delete</span>
-        </button>
       </mat-menu>
     }
   </div>
@@ -50,7 +49,7 @@
     @for (page of pages(); track page.file_name) {
       <div [class]="{'sections-only': !isShowingPages(), 'page-with-sections': isShowingPages()}">
         @if (isShowingPages()) {
-          <div class="raw-page" observeVisibility (visible)="pdfPage.setVisibility($event)")>
+          <div class="raw-page" observeVisibility (visible)="pdfPage.setVisibility($event)">
             <app-book-page [fileUrl]="page.file_url" #pdfPage></app-book-page>
           </div>
         }
@@ -81,17 +80,6 @@
               [handleKeyBindings]="!isEditingSection()"
   ></app-player>
 }
-
-<ng-template #deleteBookTemplate>
-  <h2 mat-dialog-title>Delete "{{ bookWithContent().overview.title }}"?</h2>
-  <mat-dialog-content>
-    <p>You are about to delete this book. If you proceed, all associated data will be lost.</p>
-  </mat-dialog-content>
-  <mat-dialog-actions align="end">
-    <button mat-button mat-dialog-close>Keep it</button>
-    <button mat-button class="delete-button" [mat-dialog-close]="true">Delete permanently</button>
-  </mat-dialog-actions>
-</ng-template>
 
 <ng-template #downloadBookTemplate>
   <h2 mat-dialog-title>Download "{{ bookWithContent().overview.title }}"?</h2>

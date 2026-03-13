@@ -6,16 +6,18 @@ import {
   inject,
   input,
   model,
-  QueryList, signal,
+  QueryList,
+  signal,
   TemplateRef,
   viewChild,
-  ViewChildren, WritableSignal
+  ViewChildren,
+  WritableSignal
 } from '@angular/core';
 import { BookStatus, DownloadInfo, Section } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
 import { BehaviorSubject, filter, interval, repeat, Subscription, switchMap, take, tap, timer } from 'rxjs';
 import { MatIcon } from '@angular/material/icon';
-import { Router } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
 import { PlayerComponent } from '../../components/player/player.component';
 import { AsyncPipe } from '@angular/common';
@@ -69,6 +71,7 @@ import { VisibilityDirective } from '../../core/visibilityDirective';
     HideIdleDirective,
     BookPage,
     VisibilityDirective,
+    RouterLink,
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
@@ -78,7 +81,6 @@ export class ViewBookPage implements AfterViewInit {
   private downloadService = inject(DownloadService);
   private titleService = inject(Title);
   private dialog = inject(MatDialog);
-  private router: Router = inject(Router);
   private settingsService: SettingsService = inject(SettingsService);
   private themeService: ThemeService = inject(ThemeService);
 
@@ -172,24 +174,6 @@ export class ViewBookPage implements AfterViewInit {
   protected setCurrentSectionId(sectionId: number) {
     this.$currentSectionId.next(sectionId);
     this.scrollToSection(sectionId);
-  }
-
-  protected deleteBookDialog(templateRef: TemplateRef<any>) {
-    const dialogRef = this.dialog.open(templateRef);
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.deleteBook();
-      }
-    });
-  }
-
-  private deleteBook() {
-    this.booksService.delete(this.bookId()).subscribe(
-      () => {
-        this.router.navigate(['/books']);
-      }
-    );
   }
 
   protected downloadBookDialog(templateRef: TemplateRef<any>) {

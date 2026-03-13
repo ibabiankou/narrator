@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, inject, input, output, Renderer2, signal } from '@angular/core';
+import { Component, computed, ElementRef, HostListener, inject, input, output, Renderer2, signal } from '@angular/core';
 import { Section } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
@@ -25,7 +25,9 @@ export class SectionComponent {
   private themeService: ThemeService = inject(ThemeService);
 
   section = input.required<Section>();
+  paragraphs = computed(() => this.section().content.split('\n'));
   sectionDeleted = output();
+  editable = input<boolean>(false);
   isEditing = signal(false)
   current = input.required<boolean>();
 
@@ -42,10 +44,6 @@ export class SectionComponent {
           this.renderer.addClass(this.el.nativeElement, isDark ? 'current-dark' : 'current-light');
         }
       });
-  }
-
-  getParagraphs() {
-    return this.section().content.split('\n');
   }
 
   deleteSection() {

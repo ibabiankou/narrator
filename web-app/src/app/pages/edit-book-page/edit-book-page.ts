@@ -6,18 +6,16 @@ import {
   inject,
   input,
   model,
-  QueryList, signal,
+  QueryList,
   TemplateRef,
-  viewChild,
-  ViewChildren, WritableSignal
+  ViewChildren,
 } from '@angular/core';
-import { BookStatus, DownloadInfo, Section } from '../../core/models/books.dto';
+import { BookStatus, Section } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
-import { BehaviorSubject, filter, interval, repeat, Subscription, switchMap, take, tap, timer } from 'rxjs';
+import { BehaviorSubject, filter, repeat, switchMap, take, tap, timer } from 'rxjs';
 import { MatIcon } from '@angular/material/icon';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
-import { PlayerComponent } from '../../components/player/player.component';
 import { AsyncPipe } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -35,12 +33,10 @@ import {
   BreadcrumbContentDirective,
   ToolbarComponent
 } from '../../components/toolbar/toolbar.component';
-import { DownloadService } from '../../core/services/download.service';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { ThemeService } from '../../core/services/theme.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { HideIdleDirective } from '../../core/hideIdleDirective';
 import { BookPage } from '../../components/book-page/book-page';
 import { VisibilityDirective } from '../../core/visibilityDirective';
 
@@ -49,7 +45,6 @@ import { VisibilityDirective } from '../../core/visibilityDirective';
   imports: [
     MatIcon,
     SectionComponent,
-    PlayerComponent,
     AsyncPipe,
     SkeletonComponent,
     MatIconButton,
@@ -66,16 +61,15 @@ import { VisibilityDirective } from '../../core/visibilityDirective';
     MatMenuItem,
     MatButtonToggleGroup,
     MatButtonToggle,
-    HideIdleDirective,
     BookPage,
     VisibilityDirective,
+    RouterLink,
   ],
   templateUrl: './edit-book-page.html',
   styleUrl: './edit-book-page.scss',
 })
 export class EditBookPage implements AfterViewInit {
   private booksService = inject(BooksService);
-  private downloadService = inject(DownloadService);
   private titleService = inject(Title);
   private dialog = inject(MatDialog);
   private router: Router = inject(Router);
@@ -102,44 +96,14 @@ export class EditBookPage implements AfterViewInit {
   bookWithContent = computed(() => this._bookWithContent()!);
   pages = computed(() => this.bookWithContent().pages);
 
-  downloadInfo: WritableSignal<DownloadInfo | undefined> = signal(undefined);
-  isDownloaded = computed(() => this.downloadInfo() != undefined);
-  isDownloading = computed(() => {
-    const info = this.downloadInfo();
-    if (!info) {
-      return false;
-    }
-    return !(info.fragments_total > 0 && info.fragments_downloaded == info.fragments_total);
-  });
-
   settings = toSignal(this.settingsService.userPreferences$);
-
-  private downloadSubscription: Subscription | null = null;
 
   isEditingSection = model(false);
   isShowingPages = computed(() => this.settings()!["viewer_mode"] === "both");
 
   $currentSectionId = new BehaviorSubject<number>(0);
 
-  readonly storageInfoTemplate = viewChild.required('storageInfoTemplate', {read: TemplateRef});
   @ViewChildren("section", {"read": ElementRef}) sectionElements!: QueryList<ElementRef>;
-
-  constructor() {
-    // Continue download if it's not completed.
-    this.downloadSubscription = toObservable(this.downloadInfo)
-      .pipe(
-        take(1),
-        filter(info => !!info),
-        filter(info => info && (info.fragments_total == 0 || info.fragments_total > info.fragments_downloaded)),
-        switchMap(() => this.downloadService.downloadBook(this.bookId())),
-      )
-      .subscribe({
-        complete: () => {
-          this.downloadSubscription = null;
-          this.reloadDownloadInfo();
-        }
-      });
-  }
 
   ngAfterViewInit() {
     this.scrollToSection(this.$currentSectionId.value);
@@ -169,11 +133,6 @@ export class EditBookPage implements AfterViewInit {
     this.isEditingSection.set(isEditing);
   }
 
-  protected setCurrentSectionId(sectionId: number) {
-    this.$currentSectionId.next(sectionId);
-    this.scrollToSection(sectionId);
-  }
-
   protected deleteBookDialog(templateRef: TemplateRef<any>) {
     const dialogRef = this.dialog.open(templateRef);
 
@@ -190,58 +149,6 @@ export class EditBookPage implements AfterViewInit {
         this.router.navigate(['/books']);
       }
     );
-  }
-
-  protected downloadBookDialog(templateRef: TemplateRef<any>) {
-    const dialogRef = this.dialog.open(templateRef);
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.downloadSubscription = this.downloadService.downloadBook(this.bookId()).subscribe();
-        this.reloadDownloadInfo();
-        this.storageInfoDialog(this.storageInfoTemplate());
-      }
-    });
-  }
-
-  protected storageInfoDialog(templateRef: TemplateRef<any>) {
-    const dialogRef = this.dialog.open(templateRef);
-
-    const reloadInterval = interval(500).subscribe(() => this.reloadDownloadInfo());
-    dialogRef.afterClosed().subscribe(result => {
-      reloadInterval.unsubscribe();
-      if (result) {
-        if (this.downloadSubscription) {
-          this.downloadSubscription.unsubscribe();
-          this.downloadSubscription = null;
-        }
-        this.downloadService.deleteBookData(this.bookId());
-        this.reloadDownloadInfo();
-      }
-    });
-  }
-
-  private formatter = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
-  });
-
-  protected totalSizeMb() {
-    return `${this.formatter.format(this.bookWithContent().stats.total_size_bytes / 1024 / 1024)}`;
-  }
-
-  protected downloadProgressPercent(): string {
-    const info = this.downloadInfo();
-    if (!info || info.fragments_total == 0) {
-      return "0";
-    } else {
-      return `${this.formatter.format(info.fragments_downloaded / info.fragments_total * 100)}`;
-    }
-  }
-
-  private reloadDownloadInfo() {
-    this.downloadService.getDownloadInfo(this.bookId())
-      .subscribe(val => this.downloadInfo.set(val));
   }
 
   protected setTheme(theme: string) {
