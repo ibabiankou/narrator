@@ -1,0 +1,74 @@
+:host {
+  --book-font-size: 16px;
+}
+
+.title {
+  width: 75%;
+}
+.title h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.theme-button {
+  padding-bottom: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.delete-button, .delete-button mat-icon {
+  color: darkred !important;
+}
+
+$maxWidth: 1280px;
+.main-container {
+  max-width: $maxWidth;
+  margin: 0 auto;
+
+  font-size: var(--book-font-size);
+  line-height: 1.4;
+
+  .page-number {
+    text-align: center;
+    font-style: italic;
+    color: gray;
+  }
+
+  .content-skeleton {
+    max-width: calc($maxWidth * 0.55);
+    aspect-ratio: 8.5/11;
+    margin: 0 auto;
+    padding: 0 15px;
+  }
+}
+
+.page-with-sections {
+  display: flex;
+  flex-direction: row;
+  padding: 0 5px;
+
+  .raw-page {
+    width: 45%;
+    padding: 0 10px;
+  }
+
+  .sections {
+    width: 55%;
+    padding: 0 10px;
+    app-section {
+      margin-bottom: 5px;
+    }
+  }
+}
+
+.sections-only {
+  padding: 0 15px;
+
+  .sections {
+    max-width: $maxWidth;
+    margin: 0 auto;
+    app-section {
+      margin-bottom: 5px;
+    }
+  }
+}
