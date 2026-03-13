@@ -6,13 +6,13 @@ import { AsyncPipe } from '@angular/common';
 
 @Component({
   selector: 'app-book-page',
-  templateUrl: './book-page.html',
-  styleUrl: './book-page.scss',
+  templateUrl: './pdf-page.html',
+  styleUrl: './pdf-page.scss',
   imports: [
     AsyncPipe
   ]
 })
-export class BookPage implements OnDestroy {
+export class PdfPage implements OnDestroy {
   private fileService: FilesService = inject(FilesService);
   private sanitizer: DomSanitizer = inject(DomSanitizer);
 

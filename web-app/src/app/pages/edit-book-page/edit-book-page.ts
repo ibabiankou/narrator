@@ -25,7 +25,7 @@ import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { ThemeService } from '../../core/services/theme.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { BookPage } from '../../components/book-page/book-page';
+import { PdfPage } from '../../components/pdf-page/pdf-page';
 import { VisibilityDirective } from '../../core/visibilityDirective';
 
 @Component({
@@ -48,7 +48,7 @@ import { VisibilityDirective } from '../../core/visibilityDirective';
     MatMenuItem,
     MatButtonToggleGroup,
     MatButtonToggle,
-    BookPage,
+    PdfPage,
     VisibilityDirective,
     RouterLink,
   ],
