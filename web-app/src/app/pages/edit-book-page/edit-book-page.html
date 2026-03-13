@@ -49,7 +49,6 @@
           @for (section of page.sections; track section.section_index) {
             <app-section id="section-{{section.id}}" #section
                          [editable]="true"
-                         [current]="section.id == ($currentSectionId | async)"
                          [section]="section"
                          (sectionDeleted)="deleteSection(section)"
                          (editingModeChanged)="setEditingSection($event)"></app-section>

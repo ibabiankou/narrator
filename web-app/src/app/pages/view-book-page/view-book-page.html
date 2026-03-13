@@ -54,12 +54,10 @@
           </div>
         }
         <div class="sections">
-          @for (section of page.sections; track section.section_index) {
+          @for (section of page.sections; track section.id) {
             <app-section id="section-{{section.id}}" #section
-                         [current]="section.id == ($currentSectionId | async)"
-                         [section]="section"
-                         (sectionDeleted)="deleteSection(section)"
-                         (editingModeChanged)="setEditingSection($event)"></app-section>
+                         [current]="section.id == currentSectionId"
+                         [section]="section"></app-section>
           }
         </div>
       </div>
@@ -77,7 +75,6 @@
   <app-player appHideIdle
               [bookWithContent]="bookWithContent()"
               (sectionPlayed)="setCurrentSectionId($event)"
-              [handleKeyBindings]="!isEditingSection()"
   ></app-player>
 }
 

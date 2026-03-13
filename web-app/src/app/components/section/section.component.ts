@@ -29,7 +29,7 @@ export class SectionComponent {
   sectionDeleted = output();
   editable = input<boolean>(false);
   isEditing = signal(false)
-  current = input.required<boolean>();
+  current = input<boolean>(false);
 
   editingModeChanged = output<boolean>();
 

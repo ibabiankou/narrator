@@ -1,22 +1,10 @@
-import {
-  AfterViewInit,
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  input,
-  model,
-  QueryList,
-  TemplateRef,
-  ViewChildren,
-} from '@angular/core';
+import { Component, computed, inject, input, model, TemplateRef, } from '@angular/core';
 import { BookStatus, Section } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
-import { BehaviorSubject, filter, repeat, switchMap, take, tap, timer } from 'rxjs';
+import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
-import { AsyncPipe } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
@@ -45,7 +33,6 @@ import { VisibilityDirective } from '../../core/visibilityDirective';
   imports: [
     MatIcon,
     SectionComponent,
-    AsyncPipe,
     SkeletonComponent,
     MatIconButton,
     MatDialogTitle,
@@ -68,7 +55,7 @@ import { VisibilityDirective } from '../../core/visibilityDirective';
   templateUrl: './edit-book-page.html',
   styleUrl: './edit-book-page.scss',
 })
-export class EditBookPage implements AfterViewInit {
+export class EditBookPage {
   private booksService = inject(BooksService);
   private titleService = inject(Title);
   private dialog = inject(MatDialog);
@@ -100,28 +87,6 @@ export class EditBookPage implements AfterViewInit {
 
   isEditingSection = model(false);
   isShowingPages = computed(() => this.settings()!["viewer_mode"] === "both");
-
-  $currentSectionId = new BehaviorSubject<number>(0);
-
-  @ViewChildren("section", {"read": ElementRef}) sectionElements!: QueryList<ElementRef>;
-
-  ngAfterViewInit() {
-    this.scrollToSection(this.$currentSectionId.value);
-    this.sectionElements.changes.subscribe(() => {
-      this.scrollToSection(this.$currentSectionId.value);
-    })
-  }
-
-  scrollToSection(sectionId: number) {
-    if (sectionId == 0) return;
-    const selector = `section-${sectionId}`;
-    const element = this.sectionElements.find(e => e.nativeElement.id == selector);
-    if (element) {
-      element.nativeElement.scrollIntoView({behavior: "smooth", block: "center"});
-    } else {
-      console.warn("Section that is being played is not found. Section id:", sectionId);
-    }
-  }
 
   deleteSection(section: Section) {
     const pages = this.pages();

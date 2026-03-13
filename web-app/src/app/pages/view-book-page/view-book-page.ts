@@ -5,7 +5,6 @@ import {
   ElementRef,
   inject,
   input,
-  model,
   QueryList,
   signal,
   TemplateRef,
@@ -13,14 +12,13 @@ import {
   ViewChildren,
   WritableSignal
 } from '@angular/core';
-import { BookStatus, DownloadInfo, Section } from '../../core/models/books.dto';
+import { BookStatus, DownloadInfo } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
-import { BehaviorSubject, filter, interval, repeat, Subscription, switchMap, take, tap, timer } from 'rxjs';
+import { filter, interval, repeat, Subscription, switchMap, take, tap, timer } from 'rxjs';
 import { MatIcon } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
 import { PlayerComponent } from '../../components/player/player.component';
-import { AsyncPipe } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
@@ -52,7 +50,6 @@ import { VisibilityDirective } from '../../core/visibilityDirective';
     MatIcon,
     SectionComponent,
     PlayerComponent,
-    AsyncPipe,
     SkeletonComponent,
     MatIconButton,
     MatDialogTitle,
@@ -86,22 +83,21 @@ export class ViewBookPage implements AfterViewInit {
 
   bookId = input.required<string>();
 
-  private _bookWithContent = toSignal(
-    toObservable(this.bookId).pipe(
-      switchMap(id =>
-        this.booksService.getBookWithContent(id)
-          .pipe(
-            repeat({
-              count: 25,
-              delay: (count) => timer(2 ^ count * 300 * (0.75 + 0.5 * Math.random()))
-            }),
-            filter((book) => book.overview.status == BookStatus.ready),
-            take(1),
-          )
-      ),
-      tap(book => this.titleService.setTitle(`${book.overview.title} - NNarrator`)),
-    ));
-  bookWithContent = computed(() => this._bookWithContent()!);
+  private bookWithContent$ = toObservable(this.bookId).pipe(
+    switchMap(id =>
+      this.booksService.getBookWithContent(id)
+        .pipe(
+          repeat({
+            count: 25,
+            delay: (count) => timer(2 ^ count * 300 * (0.75 + 0.5 * Math.random()))
+          }),
+          filter((book) => book.overview.status == BookStatus.ready),
+          take(1),
+        )
+    ),
+    tap(book => this.titleService.setTitle(`${book.overview.title} - NNarrator`)),
+  );
+  bookWithContent = computed(() => toSignal(this.bookWithContent$)()!);
   pages = computed(() => this.bookWithContent().pages);
 
   downloadInfo: WritableSignal<DownloadInfo | undefined> = signal(undefined);
@@ -118,10 +114,9 @@ export class ViewBookPage implements AfterViewInit {
 
   private downloadSubscription: Subscription | null = null;
 
-  isEditingSection = model(false);
   isShowingPages = computed(() => this.settings()!["viewer_mode"] === "both");
 
-  $currentSectionId = new BehaviorSubject<number>(0);
+  protected currentSectionId = 0;
 
   readonly storageInfoTemplate = viewChild.required('storageInfoTemplate', {read: TemplateRef});
   @ViewChildren("section", {"read": ElementRef}) sectionElements!: QueryList<ElementRef>;
@@ -144,9 +139,9 @@ export class ViewBookPage implements AfterViewInit {
   }
 
   ngAfterViewInit() {
-    this.scrollToSection(this.$currentSectionId.value);
+    this.scrollToSection(this.currentSectionId);
     this.sectionElements.changes.subscribe(() => {
-      this.scrollToSection(this.$currentSectionId.value);
+      this.scrollToSection(this.currentSectionId);
     })
   }
 
@@ -161,18 +156,8 @@ export class ViewBookPage implements AfterViewInit {
     }
   }
 
-  deleteSection(section: Section) {
-    const pages = this.pages();
-    const page = pages[section.page_index]
-    page.sections = page.sections.filter(s => s.id != section.id);
-  }
-
-  protected setEditingSection(isEditing: boolean) {
-    this.isEditingSection.set(isEditing);
-  }
-
   protected setCurrentSectionId(sectionId: number) {
-    this.$currentSectionId.next(sectionId);
+    this.currentSectionId = sectionId
     this.scrollToSection(sectionId);
   }
 
@@ -211,7 +196,7 @@ export class ViewBookPage implements AfterViewInit {
   });
 
   protected totalSizeMb() {
-    return `${this.formatter.format(this.bookWithContent().stats.total_size_bytes / 1024 / 1024)}`;
+    return this.formatter.format(this.bookWithContent().stats.total_size_bytes / 1024 / 1024);
   }
 
   protected downloadProgressPercent(): string {
@@ -219,7 +204,7 @@ export class ViewBookPage implements AfterViewInit {
     if (!info || info.fragments_total == 0) {
       return "0";
     } else {
-      return `${this.formatter.format(info.fragments_downloaded / info.fragments_total * 100)}`;
+      return this.formatter.format(info.fragments_downloaded / info.fragments_total * 100);
     }
   }
 
