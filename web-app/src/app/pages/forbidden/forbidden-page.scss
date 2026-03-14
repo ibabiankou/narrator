@@ -1,0 +1,13 @@
+.main-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  text-align: center;
+  min-height: 70vh;
+  padding: 20px;
+
+  font-size: 150%;
+  line-height: 200%;
+}

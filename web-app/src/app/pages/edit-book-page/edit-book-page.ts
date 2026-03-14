@@ -1,5 +1,5 @@
-import { Component, computed, inject, input, model, TemplateRef, } from '@angular/core';
-import { BookStatus, Section } from '../../core/models/books.dto';
+import { Component, computed, inject, input, model, Signal, TemplateRef, } from '@angular/core';
+import { BookPage, BookStatus, BookWithContent, Section } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
 import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
 import { MatIcon } from '@angular/material/icon';
@@ -27,6 +27,7 @@ import { ThemeService } from '../../core/services/theme.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { PdfPage } from '../../components/pdf-page/pdf-page';
 import { VisibilityDirective } from '../../core/visibilityDirective';
+import { AuthService } from '../../core/services/authService';
 
 @Component({
   selector: 'app-view-book-page',
@@ -62,11 +63,20 @@ export class EditBookPage {
   private router: Router = inject(Router);
   private settingsService: SettingsService = inject(SettingsService);
   private themeService: ThemeService = inject(ThemeService);
+  private authService: AuthService = inject(AuthService);
 
   bookId = input.required<string>();
 
-  private _bookWithContent = toSignal(
-    toObservable(this.bookId).pipe(
+  bookWithContent: Signal<BookWithContent>;
+  pages: Signal<BookPage[]>;
+
+  settings = toSignal(this.settingsService.userPreferences$);
+
+  isEditingSection = model(false);
+  isShowingPages = computed(() => this.settings()!["viewer_mode"] === "both");
+
+  constructor() {
+    const bookWithContent$ = toObservable(this.bookId).pipe(
       switchMap(id =>
         this.booksService.getBookWithContent(id)
           .pipe(
@@ -76,17 +86,20 @@ export class EditBookPage {
             }),
             filter((book) => book.overview.status == BookStatus.ready),
             take(1),
+            tap(book => this.titleService.setTitle(`${book.overview.title} - NNarrator`)),
+            tap(book => {
+              if (!this.authService.isOwner(book.overview.owner_id)) {
+                this.router.navigate(['/forbidden']);
+              }
+            })
           )
       ),
-      tap(book => this.titleService.setTitle(`${book.overview.title} - NNarrator`)),
-    ));
-  bookWithContent = computed(() => this._bookWithContent()!);
-  pages = computed(() => this.bookWithContent().pages);
+    );
+    const bookWithContentSignal = toSignal(bookWithContent$);
+    this.bookWithContent = computed(() => bookWithContentSignal()!);
+    this.pages = computed(() => this.bookWithContent().pages);
+  }
 
-  settings = toSignal(this.settingsService.userPreferences$);
-
-  isEditingSection = model(false);
-  isShowingPages = computed(() => this.settings()!["viewer_mode"] === "both");
 
   deleteSection(section: Section) {
     const pages = this.pages();
