@@ -8,6 +8,7 @@ from pydantic import BaseModel
 class User(BaseModel):
     id: uuid.UUID
     email: str
+    realm_roles: list[str]
 
 def get_current_user(request: Request):
     if "user" not in request.scope:

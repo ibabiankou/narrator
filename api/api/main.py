@@ -71,13 +71,18 @@ app = FastAPI(lifespan=lifespan)
 # Set up Keycloak
 
 async def map_user(userinfo: typing.Dict[str, typing.Any]) -> User:
-    return User(id=userinfo["sub"],email=userinfo["email"])
+    return User(
+        id=userinfo["sub"],
+        email=userinfo["email"],
+        realm_roles=userinfo["realm_access"]["roles"]
+    )
 
 keycloak_config = KeycloakConfiguration(
     url="https://iam.nnarrator.eu/",
     realm="nnarrator",
     client_id=os.getenv("KC_CLIENT_ID"),
     client_secret=os.getenv("KC_CLIENT_SECRET"),
+    claims=["sub", "email", "realm_access"],
     swagger_client_id="nnarrator-webapp",
 )
 setup_keycloak_middleware(
