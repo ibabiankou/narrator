@@ -1,8 +1,14 @@
 <app-toolbar>
   <div actionButton>
-    <mat-form-field class="search-field" appearance="outline" subscriptSizing="dynamic">
-      <input matInput type="text" placeholder="Search" (keyup.enter)="search($event)">
-    </mat-form-field>
+    <form (ngSubmit)="search(searchInput.value)">
+      <mat-form-field class="search-field" appearance="outline" subscriptSizing="dynamic">
+        <input matInput
+               #searchInput
+               type="search"
+               enterkeyhint="search"
+               placeholder="Search" >
+      </mat-form-field>
+    </form>
   </div>
 </app-toolbar>
 

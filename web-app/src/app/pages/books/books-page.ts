@@ -10,6 +10,7 @@ import { ActionButtonContentDirective, ToolbarComponent } from '../../components
 import { MatFormField, MatInput } from '@angular/material/input';
 import { BehaviorSubject, take } from 'rxjs';
 import { BookOverview } from '../../core/models/books.dto';
+  import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-books-page',
@@ -22,6 +23,7 @@ import { BookOverview } from '../../core/models/books.dto';
     ActionButtonContentDirective,
     MatFormField,
     MatInput,
+    FormsModule,
   ],
   templateUrl: './books-page.html',
   styleUrl: './books-page.scss',
@@ -48,8 +50,8 @@ export class BooksPage implements OnInit {
     this.router.navigate(['/add-book']);
   }
 
-  protected search($event: any) {
-    this.bookService.searchBooks($event.target.value).pipe(take(1)).subscribe(books => {
+  protected search(value: any) {
+    this.bookService.searchBooks(value).pipe(take(1)).subscribe(books => {
       this.$books.next(books);
     });
   }
