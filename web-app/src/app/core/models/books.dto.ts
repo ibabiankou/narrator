@@ -14,6 +14,7 @@ export enum BookStatus {
 
 export interface BookOverview {
   id: string;
+  owner_id: string;
   title: string;
   pdf_file_name: string;
   number_of_pages: number;

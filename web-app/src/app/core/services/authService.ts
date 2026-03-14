@@ -3,7 +3,7 @@ import { interval } from 'rxjs';
 import Keycloak from 'keycloak-js';
 
 @Injectable({ providedIn: 'root' })
-export class AuthHeartbeatService {
+export class AuthService {
   private keycloak = inject(Keycloak);
 
   constructor() {
@@ -21,5 +21,12 @@ export class AuthHeartbeatService {
         console.error('Failed to refresh token during heartbeat', error);
       }
     });
+  }
+
+  isOwner(ownerId: string): boolean {
+    if (this.keycloak.tokenParsed) {
+      return this.keycloak.tokenParsed.sub === ownerId;
+    }
+    return false;
   }
 }

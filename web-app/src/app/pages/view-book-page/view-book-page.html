@@ -23,7 +23,10 @@
             </mat-button-toggle>
           </mat-button-toggle-group>
         </div>
-        <button mat-menu-item aria-label="Edit book" routerLink="/books/{{ bookId() }}/edit">
+        <button mat-menu-item
+                *appOwner="bookWithContent().overview.owner_id"
+                aria-label="Edit book"
+                routerLink="/books/{{ bookId() }}/edit">
           <mat-icon>edit</mat-icon>
           <span>Edit book</span>
         </button>

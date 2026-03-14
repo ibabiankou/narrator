@@ -46,6 +46,7 @@ import { HideIdleDirective } from '../../core/hideIdleDirective';
 import { PdfPage } from '../../components/pdf-page/pdf-page';
 import { VisibilityDirective } from '../../core/visibilityDirective';
 import { binarySearch } from '../../core/utils';
+import { OwnerDirective } from '../../core/ownerDirective';
 
 @Component({
   selector: 'app-view-book-page',
@@ -72,6 +73,7 @@ import { binarySearch } from '../../core/utils';
     PdfPage,
     VisibilityDirective,
     RouterLink,
+    OwnerDirective,
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
