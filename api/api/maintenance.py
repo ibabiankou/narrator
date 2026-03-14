@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from sqlalchemy.exc import NoResultFound
 
 from api.models import db
+from api.models.auth import AdminUser
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
 from api.services.files import FilesServiceDep
@@ -17,6 +18,7 @@ LOG = logging.getLogger(__name__)
 
 @maintenance_router.post("/check-audio-tracks")
 def check_audio_tracks(
+        user: AdminUser,
         audio_tracks_service: AudioTrackServiceDep,
         files_service: FilesServiceDep,
         book_id: uuid.UUID = None,
@@ -41,6 +43,7 @@ def check_audio_tracks(
 
 @maintenance_router.post("/check-orphan-files")
 def check_orphan_files(
+        user: AdminUser,
         audio_tracks_service: AudioTrackServiceDep,
         book_service: BookServiceDep,
         files_service: FilesServiceDep,

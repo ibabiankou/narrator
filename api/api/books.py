@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 
 from api import SessionDep, get_logger
 from api.models import db, api
-from api.models.auth import UserDep
+from api.models.auth import UserDep, AdminUser
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
 from api.services.progress import PlaybackProgressServiceDep
@@ -135,6 +135,7 @@ def delete_book(book_id: uuid.UUID,
 
 @books_router.post("/{book_id}/reprocess")
 def reprocess_book(book_id: uuid.UUID,
+                   user: AdminUser,
                    session: SessionDep,
                    background_tasks: BackgroundTasks,
                    book_service: BookServiceDep,

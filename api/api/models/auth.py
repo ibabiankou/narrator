@@ -10,6 +10,9 @@ class User(BaseModel):
     email: str
     realm_roles: list[str]
 
+    def has_any_role(self, roles: list[str]) -> bool:
+        return any(role in self.realm_roles for role in roles)
+
 def get_current_user(request: Request):
     if "user" not in request.scope:
         raise HTTPException(
@@ -19,3 +22,15 @@ def get_current_user(request: Request):
     return request.scope["user"]
 
 UserDep = Annotated[User, Depends(get_current_user)]
+
+def user_with_roles(allowed_roles: list):
+    def role_checker(user: UserDep):
+        if not user.has_any_role(allowed_roles):
+            raise HTTPException(
+                status_code=403,
+                detail="Insufficient permissions"
+            )
+        return user
+    return role_checker
+
+AdminUser = Annotated[User, Depends(user_with_roles(["admin"]))]

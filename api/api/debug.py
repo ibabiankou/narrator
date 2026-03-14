@@ -7,6 +7,7 @@ from starlette.responses import Response
 
 from api import SessionDep
 from api.models import db
+from api.models.auth import AdminUser
 from api.services.books import BookServiceDep
 
 debug_router = APIRouter(tags=["Debug API"])
@@ -14,11 +15,12 @@ debug_router = APIRouter(tags=["Debug API"])
 
 @debug_router.get("/{book_id}/text")
 def text(book_id: uuid.UUID,
-             session: SessionDep,
-             book_service: BookServiceDep,
-             first_page: Annotated[Optional[int], Query()] = None,
-             last_page: Annotated[Optional[int], Query()] = None,
-             raw: bool = False):
+         session: SessionDep,
+         book_service: BookServiceDep,
+         user: AdminUser,
+         first_page: Annotated[Optional[int], Query()] = None,
+         last_page: Annotated[Optional[int], Query()] = None,
+         raw: bool = False):
     book = session.get(db.Book, book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -26,12 +28,14 @@ def text(book_id: uuid.UUID,
     return Response(content=book_service.get_text(book, first_page, last_page, raw),
                     media_type="text/plain")
 
+
 @debug_router.get("/{book_id}/paragraphs")
 def paragraphs(book_id: uuid.UUID,
-             session: SessionDep,
-             book_service: BookServiceDep,
-             first_page: Annotated[Optional[int], Query()] = None,
-             last_page: Annotated[Optional[int], Query()] = None):
+               session: SessionDep,
+               book_service: BookServiceDep,
+               user: AdminUser,
+               first_page: Annotated[Optional[int], Query()] = None,
+               last_page: Annotated[Optional[int], Query()] = None):
     book = session.get(db.Book, book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
