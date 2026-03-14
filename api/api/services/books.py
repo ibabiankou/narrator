@@ -31,7 +31,7 @@ class BookService(Service):
         self.sections_service = sections_service
         self.playback_progress_service = playback_progress_service
 
-    def create_book(self, book: api.CreateBookRequest) -> api.BookOverview:
+    def create_book(self, book: api.CreateBookRequest, user_id: uuid.UUID) -> api.BookOverview:
         # Upload the book file to the object store
         try:
             book_file_name = self.files_service.store_book_file(book.id, book.pdf_temp_file_id)
@@ -41,6 +41,7 @@ class BookService(Service):
 
         # Store book metadata in DB
         book = db.Book(id=book.id,
+                       owner_id=user_id,
                        title=book.title,
                        file_name=book_file_name,
                        created_time=datetime.now(UTC),
@@ -54,6 +55,7 @@ class BookService(Service):
                 session.rollback()
                 raise e
             return api.BookOverview(id=book.id,
+                                    owner_id=book.owner_id,
                                     title=book.title,
                                     pdf_file_name=book.file_name,
                                     status=book.status,
@@ -195,6 +197,11 @@ class BookService(Service):
             for length, stat_type in rs:
                 book_stats[stat_type] = length
         return book_stats
+
+    def is_owner(self, user_id: uuid.UUID, book_id: uuid.UUID) -> bool:
+        query = "select owner_id = :owner_id from books where id = :book_id"
+        with DbSession() as session:
+            return session.execute(text(query), {"owner_id": user_id, "book_id": book_id}).scalar()
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

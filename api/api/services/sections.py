@@ -132,5 +132,10 @@ class SectionService(Service):
             if len(db_sections):
                 self.audiotracks_service.generate_speech(db_sections)
 
+    def is_owner(self, user_id: uuid.UUID, section_id: int) -> bool:
+        query = "select owner_id = :owner_id from books where id = (select book_id from sections where id = :section_id)"
+        with DbSession() as session:
+            return session.execute(text(query), {"owner_id": user_id, "section_id": section_id}).scalar()
+
 
 SectionServiceDep = Annotated[SectionService, SectionService.dep()]

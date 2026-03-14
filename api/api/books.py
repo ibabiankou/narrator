@@ -20,10 +20,11 @@ books_router = APIRouter(tags=["Books API"])
 
 @books_router.post("/")
 def create_book(book: api.CreateBookRequest,
+                user: UserDep,
                 background_tasks: BackgroundTasks,
                 book_service: BookServiceDep) -> api.BookOverview:
     try:
-        book = book_service.create_book(book)
+        book = book_service.create_book(book, user.id)
     except IntegrityError:
         LOG.error("Error creating book", exc_info=True)
         raise HTTPException(status_code=409, detail="Book with this title already exists")
@@ -44,6 +45,7 @@ def list_books(session: SessionDep) -> list[api.BookOverview]:
     resp = []
     for book in books:
         resp.append(api.BookOverview(id=book.id,
+                                     owner_id=book.owner_id,
                                      title=book.title,
                                      pdf_file_name=book.file_name,
                                      number_of_pages=book.number_of_pages,
@@ -64,6 +66,7 @@ def search_books(
     resp = []
     for book in books:
         resp.append(api.BookOverview(id=book.id,
+                                     owner_id=book.owner_id,
                                      title=book.title,
                                      pdf_file_name=book.file_name,
                                      number_of_pages=book.number_of_pages,
@@ -105,6 +108,7 @@ def get_book_with_content(book_id: uuid.UUID,
     try:
         book = book_service.get_book(book_id)
         overview = api.BookOverview(id=book.id,
+                                    owner_id=book.owner_id,
                                     title=book.title,
                                     pdf_file_name=book.file_name,
                                     number_of_pages=book.number_of_pages,
@@ -127,6 +131,8 @@ def get_book_with_content(book_id: uuid.UUID,
 def delete_book(book_id: uuid.UUID,
                 user: UserDep,
                 book_service: BookServiceDep):
+    if not book_service.is_owner(user.id, book_id) and not user.has_any_role(["admin"]):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
     try:
         book_service.delete_book(user.id, book_id)
     except NoResultFound:

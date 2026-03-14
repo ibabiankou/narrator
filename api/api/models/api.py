@@ -20,6 +20,7 @@ class CreateBookRequest(BaseModel):
 
 class BookOverview(BaseModel):
     id: uuid.UUID
+    owner_id: uuid.UUID
     title: str
     pdf_file_name: str
     number_of_pages: Optional[int] = None

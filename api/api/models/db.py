@@ -47,6 +47,7 @@ class Book(Base):
     __tablename__ = "books"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    owner_id: Mapped[uuid.UUID]
     title: Mapped[str]
     file_name: Mapped[str]
     number_of_pages: Mapped[Optional[int]]
@@ -99,7 +100,7 @@ class PlaybackProgress(Base):
     __tablename__ = "playback_progress"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[uuid.UUID] = mapped_column()
+    user_id: Mapped[uuid.UUID]
     book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"))
 
     data: Mapped[dict] = mapped_column(type_=JSONB)
@@ -109,7 +110,7 @@ class Settings(Base):
     __tablename__ = "settings"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[uuid.UUID] = mapped_column()
+    user_id: Mapped[uuid.UUID]
     # One of: system, user_preferences
     kind: Mapped[str]
 
