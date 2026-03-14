@@ -29,4 +29,17 @@ export class AuthService {
     }
     return false;
   }
+
+  hasAnyRole(roles: string[]) {
+    if (this.keycloak.tokenParsed && this.keycloak.tokenParsed.realm_access) {
+      const userRoles = this.keycloak.tokenParsed.realm_access.roles;
+
+      for (const role of roles) {
+        if (userRoles.includes(role)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 }

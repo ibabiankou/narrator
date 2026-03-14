@@ -1,25 +1,27 @@
-import { Directive, Input, TemplateRef, ViewContainerRef } from '@angular/core';
+import { computed, Directive, effect, inject, input, TemplateRef, ViewContainerRef } from '@angular/core';
 import { AuthService } from './services/authService';
 
-@Directive({ selector: '[appOwner]', standalone: true })
+@Directive({ selector: '[appOwnerOrHasRole]', standalone: true })
 export class OwnerDirective {
-  private hasView = false;
+  private auth = inject(AuthService);
+  private templateRef = inject(TemplateRef);
+  private viewContainer = inject(ViewContainerRef);
 
-  @Input() set appOwner(ownerId: string) {
-    const isOwner = this.auth.isOwner(ownerId);
+  ownerId = input.required<string>({ alias: 'appOwnerOrHasRole' });
+  roles = input<string[]>(['admin'], { alias: 'appOwnerOrHasRoleRoles' });
 
-    if (isOwner && !this.hasView) {
-      this.viewContainer.createEmbeddedView(this.templateRef);
-      this.hasView = true;
-    } else if (!isOwner && this.hasView) {
+  private hasAccess = computed(() => {
+    const isOwner = this.auth.isOwner(this.ownerId());
+    const hasRole = this.auth.hasAnyRole(this.roles());
+    return isOwner || hasRole;
+  });
+
+  constructor() {
+    effect(() => {
       this.viewContainer.clear();
-      this.hasView = false;
-    }
+      if (this.hasAccess()) {
+        this.viewContainer.createEmbeddedView(this.templateRef);
+      }
+    });
   }
-
-  constructor(
-    private templateRef: TemplateRef<any>,
-    private viewContainer: ViewContainerRef,
-    private auth: AuthService
-  ) {}
 }

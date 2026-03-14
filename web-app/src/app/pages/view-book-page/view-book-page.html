@@ -24,7 +24,7 @@
           </mat-button-toggle-group>
         </div>
         <button mat-menu-item
-                *appOwner="bookWithContent().overview.owner_id"
+                *appOwnerOrHasRole="bookWithContent().overview.owner_id; roles: ['admin']"
                 aria-label="Edit book"
                 routerLink="/books/{{ bookId() }}/edit">
           <mat-icon>edit</mat-icon>
