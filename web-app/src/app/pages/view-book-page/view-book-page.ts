@@ -142,22 +142,52 @@ export class ViewBookPage implements AfterViewInit {
 
       this.$currentSectionId
         .subscribe((sectionId => {
-            let pagesWindow = [];
+            let pagesWindow;
             if (sectionId == 0) {
               pagesWindow = pages.slice(0, 10);
             } else {
               const sections = pages.flatMap(p => p.sections);
               const sectionIndex = binarySearch(sections, s => s.id, sectionId);
               const currentPageIndex = sections[sectionIndex].page_index; // cannot read property of undefined
-              const startPageIndex = Math.max(0, currentPageIndex - 2);
-              const endPageIndex = Math.min(sections.length, currentPageIndex + 2);
+
+              // find start index
+              let contextBefore = 2; // number of pages with content before and after the current section;
+              let startIndex = 0;
+              for (let i = currentPageIndex-1; i >= 0; i--) {
+                if (pages[i].sections.length > 0) {
+                  contextBefore--;
+                } else {
+                  continue;
+                }
+                if (contextBefore == 0) {
+                  startIndex = i;
+                  break;
+                }
+              }
+
+              // find end index
+              let contextAfter = 2; // number of pages with content before and after the current section;
+              let endIndex = pages.length - 1;
+              for (let i = currentPageIndex+1; i < pages.length; i++) {
+                if (pages[i].sections.length > 0) {
+                  contextAfter--;
+                } else {
+                  continue;
+                }
+                if (contextAfter == 0) {
+                  endIndex = i;
+                  break;
+                }
+              }
+
+              const startPageIndex = Math.max(0, startIndex);
+              const endPageIndex = Math.min(pages.length, endIndex + 1); // adjust for exclusive end index
               pagesWindow = pages.slice(startPageIndex, endPageIndex);
             }
             this.pagesWindow.set(pagesWindow);
           })
         );
     });
-
 
     // Continue download if it's not completed.
     this.downloadSubscription = toObservable(this.downloadInfo)
