@@ -1,7 +1,7 @@
 import {
   AfterViewInit,
   Component,
-  computed,
+  computed, effect,
   ElementRef,
   inject,
   input,
@@ -134,19 +134,30 @@ export class ViewBookPage implements AfterViewInit {
     this.bookWithContent = computed(() => bookWithContentSignal()!);
     this.pages = computed(() => this.bookWithContent()?.pages);
 
-    this.$currentSectionId
-      .subscribe((sectionId => {
-          if (this.pages() == undefined) {
-            return
-          }
-          const sections = this.pages().flatMap(p => p.sections);
-          const sectionIndex = binarySearch(sections, s => s.id, sectionId);
-          const currentPageIndex = sections[sectionIndex].page_index;
-          const startPageIndex = Math.max(0, currentPageIndex - 2);
-          const endPageIndex = Math.min(sections.length, currentPageIndex + 2);
-          this.pagesWindow.set(this.pages().slice(startPageIndex, endPageIndex));
-        })
-      );
+    effect(() => {
+      const pages = this.pages();
+      if (pages == undefined || pages.length == 0) {
+        return;
+      }
+
+      this.$currentSectionId
+        .subscribe((sectionId => {
+            let pagesWindow = [];
+            if (sectionId == 0) {
+              pagesWindow = pages.slice(0, 10);
+            } else {
+              const sections = pages.flatMap(p => p.sections);
+              const sectionIndex = binarySearch(sections, s => s.id, sectionId);
+              const currentPageIndex = sections[sectionIndex].page_index; // cannot read property of undefined
+              const startPageIndex = Math.max(0, currentPageIndex - 2);
+              const endPageIndex = Math.min(sections.length, currentPageIndex + 2);
+              pagesWindow = pages.slice(startPageIndex, endPageIndex);
+            }
+            this.pagesWindow.set(pagesWindow);
+          })
+        );
+    });
+
 
     // Continue download if it's not completed.
     this.downloadSubscription = toObservable(this.downloadInfo)
@@ -167,6 +178,8 @@ export class ViewBookPage implements AfterViewInit {
   ngAfterViewInit() {
     this.scrollToSection(this.currentSectionId);
     this.sectionElements.changes.subscribe(() => {
+      // TODO: There is race condition between this handler and updating pagesWindow.
+      //  So, sometimes it scrolls in the wrong direction.
       this.scrollToSection(this.currentSectionId);
     })
   }
