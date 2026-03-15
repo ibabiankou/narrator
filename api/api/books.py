@@ -4,6 +4,7 @@ import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.sql.operators import or_
 
 from api import SessionDep, get_logger
 from api.models import db, api
@@ -37,9 +38,13 @@ def create_book(book: api.CreateBookRequest,
 
 
 @books_router.get("/")
-def list_books(session: SessionDep) -> list[api.BookOverview]:
+def list_books(user: UserDep, session: SessionDep) -> list[api.BookOverview]:
     # Read books from DB ordered by the date they added.
-    stmt = select(db.Book).where(db.Book.shared == True).order_by(db.Book.created_time.desc(), db.Book.title)
+    stmt = (
+        select(db.Book)
+        .where(or_(db.Book.shared == True, db.Book.owner_id == user.id))
+        .order_by(db.Book.created_time.desc(), db.Book.title)
+    )
     books = session.execute(stmt).scalars().all()
 
     resp = []
@@ -54,13 +59,19 @@ def list_books(session: SessionDep) -> list[api.BookOverview]:
 
     return resp
 
+
 @books_router.get("/search")
 def search_books(
         query: str,
+        user: UserDep,
         session: SessionDep) -> list[api.BookOverview]:
-
     search_filter = f"%{query}%"
-    stmt = select(db.Book).where(db.Book.title.ilike(search_filter)).where(db.Book.shared == True).order_by(db.Book.created_time.desc(), db.Book.title)
+    stmt = (
+        select(db.Book)
+        .where(db.Book.title.ilike(search_filter))
+        .where(or_(db.Book.shared == True, db.Book.owner_id == user.id))
+        .order_by(db.Book.created_time.desc(), db.Book.title)
+    )
     books = session.execute(stmt).scalars().all()
 
     resp = []
