@@ -1,10 +1,5 @@
-/* Change the background */
-.login-pf body {
-    background: #f0f2f5;
+:root {
+    --keycloak-logo-url: url('../img/logo.png');
+    --keycloak-logo-height: 256px;
+    --keycloak-logo-width: 256px;
 }
-
-/*!* Update the brand logo *!*/
-/*#kc-logo-wrapper {*/
-/*    background-image: url('../img/logo.png');*/
-/*    background-size: contain;*/
-/*}*/
