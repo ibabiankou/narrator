@@ -1,8 +1,7 @@
 :root {
-    --keycloak-logo-url: url('../img/keycloak-logo-text.svg');
-    --keycloak-bg-logo-url: url("../img/keycloak-bg-darken.svg");
-    --keycloak-logo-height: 63px;
-    --keycloak-logo-width: 300px;
+    --keycloak-logo-url: url('../img/logo.png');
+    --keycloak-logo-height: 500px;
+    --keycloak-logo-width: 500px;
     --keycloak-card-top-color: var(--pf-v5-global--palette--blue-400);
 }
 
@@ -27,8 +26,7 @@
 /* Info section */
 
 .login-pf body {
-    background: var(--keycloak-bg-logo-url) no-repeat center center fixed;
-    background-size: cover;
+    background-color: #0b0f2a;
     height: 100%;
 }
 
@@ -39,10 +37,22 @@ div.kc-logo-text {
     background-repeat: no-repeat;
     background-size: contain;
     margin: 0 auto;
+
+    display: inline-block;
+    position: relative;
+    border-radius: 50%;
+    overflow: hidden;
 }
 
-div.kc-logo-text span {
-    display: none;
+div.kc-logo-text::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-shadow: inset 0 0 25px 25px #0b0f2a;
 }
 
 .kc-login-tooltip {
