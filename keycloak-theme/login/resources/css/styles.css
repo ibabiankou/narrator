@@ -1,0 +1,10 @@
+/* Change the background */
+.login-pf body {
+    background: #f0f2f5;
+}
+
+/*!* Update the brand logo *!*/
+/*#kc-logo-wrapper {*/
+/*    background-image: url('../img/logo.png');*/
+/*    background-size: contain;*/
+/*}*/
