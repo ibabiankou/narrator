@@ -27,11 +27,10 @@ jobs:
           mkdir dist
           cd dist
           mkdir nnarrator
-          cd ..
           
-          cp -r keycloak-theme/* dist/nnarrator/
+          cp -r ../keycloak-theme/* nnarrator/
           
-          zip -r nnarrator-theme.zip dist/nnarrator/
+          zip -r nnarrator-theme.zip nnarrator/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
