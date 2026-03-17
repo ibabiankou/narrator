@@ -1,0 +1,40 @@
+name: Keycloak Theme
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'keycloak-theme/**'
+      - '.github/workflows/keycloak-theme.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: "ubuntu-24.04"
+            arch: "amd64"
+            image_repo: "ibabiankou/home-lab"
+            python-version: "3.13"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Archive Theme
+        run: |
+          mkdir dist
+          cd dist
+          mkdir nnarrator
+          cd ..
+          
+          cp -r keycloak-theme/* dist/nnarrator/
+          
+          zip -r nnarrator-theme.zip dist/nnarrator/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: keycloak-theme
+          path: nnarrator-theme.zip
