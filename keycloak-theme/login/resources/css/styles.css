@@ -1,12 +1,10 @@
 :root {
     --keycloak-logo-url: url('../img/logo.png');
-    --keycloak-logo-height: 500px;
-    --keycloak-logo-width: 500px;
     --keycloak-card-top-color: var(--pf-v5-global--palette--blue-400);
 }
 
 .pf-v5-c-login {
-    min-width: 450px;
+    min-width: 300px;
 }
 
 .pf-v5-c-login__container {
@@ -36,8 +34,8 @@
 
 div.kc-logo-text {
     background-image: var(--keycloak-logo-url);
-    height: var(--keycloak-logo-height);
-    width: var(--keycloak-logo-width);
+    height: 100%;
+    width: 100%;
     background-repeat: no-repeat;
     background-size: contain;
     margin: 0 auto;
@@ -114,7 +112,10 @@ div.kc-logo-text::after {
 }
 
 #kc-header {
+    width: 100%;
+    aspect-ratio: 1;
     margin: 0;
+    padding: 0;
 }
 
 #kc-header-wrapper {
@@ -126,6 +127,8 @@ div.kc-logo-text::after {
     color: var(--pf-v5-global--Color--light-100) !important;
     text-align: center;
     margin: 0;
+    width: 100%;
+    height: 100%;
 }
 
 hr {
@@ -150,12 +153,5 @@ hr {
 @media (min-width: 768px) {
     div.pf-v5-c-login__main-header {
         grid-template-columns: 70% 30%;
-    }
-}
-
-@media (max-width: 768px) {
-    div.kc-logo-text {
-        height: 350px;
-        width: 350px;
     }
 }
