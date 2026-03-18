@@ -22,18 +22,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Archive Theme
-        run: |
-          mkdir dist
-          cd dist
-          mkdir nnarrator
-          
-          cp -r ../keycloak-theme/* nnarrator/
-          
-          zip -r nnarrator-theme.zip nnarrator/
-
       - name: Upload Artifact
         uses: actions/upload-artifact@v7
         with:
           name: keycloak-theme
-          path: dist/nnarrator-theme.zip
+          path: keycloak-theme/**
