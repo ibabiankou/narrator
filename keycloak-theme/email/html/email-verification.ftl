@@ -3,7 +3,6 @@
 <html lang="en">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preload" as="image" href="${url.resourcesPath}/images/6637dc81782aa28f357a61b607a0fcce.png">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
     <meta name="x-apple-disable-message-reformatting">
@@ -17,11 +16,8 @@
                 </o:OfficeDocumentSettings>
             </xml>
         </noscript>
-    </div>
-    <![endif]-->
-    <!--[if !mso]><!-->
-    <style>
-        @media (max-width: 200px) {
+    </div><![endif]--><!--[if !mso]><!-->
+    <style>@media (max-width: 200px) {
             .layout-0 {
                 display: none !important;
             }
@@ -30,11 +26,8 @@
             .layout-0-under-200 {
                 display: table !important;
             }
-        }
-    </style>
-    <!--<![endif]--><!--[if !mso]><!-->
-    <style>
-        @media (max-width: 450px) {
+        }</style><!--<![endif]--><!--[if !mso]><!-->
+    <style>@media (max-width: 450px) {
             .layout-1 {
                 display: none !important;
             }
@@ -43,22 +36,17 @@
             .layout-1-under-450 {
                 display: table !important;
             }
-        }
-    </style>
-    <!--<![endif]-->
-</head>
+        }</style><!--<![endif]--></head>
 <body style="width:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%;background-color:#f0f1f5;margin:0;padding:0">
 <table width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#f0f1f5" style="background-color:#f0f1f5">
     <tbody>
     <tr>
-        <td style="background-color:#f0f1f5">
-            <!--[if mso]>
+        <td style="background-color:#f0f1f5"><!--[if mso]>
             <center>
                 <table align="center" border="0" cellpadding="0" cellspacing="0" width="600">
                     <tbody>
                     <tr>
-                        <td>
-            <![endif]-->
+                        <td><![endif]-->
             <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
                    style="max-width:600px;min-height:600px;margin:0 auto;background-color:#ffffff">
                 <tbody>
@@ -85,8 +73,8 @@
                                                                    style="border-spacing:0px;border-collapse:separate;width:100%;max-width:560px;table-layout:fixed;margin:0 auto">
                                                                 <tbody>
                                                                 <tr>
-                                                                    <td width="37.86%"
-                                                                        style="width:37.86%;box-sizing:border-box;vertical-align:middle">
+                                                                    <td width="100.00%"
+                                                                        style="width:100.00%;box-sizing:border-box;vertical-align:bottom">
                                                                         <table border="0" cellpadding="0"
                                                                                cellspacing="0"
                                                                                style="border-spacing:0px;border-collapse:separate;width:100%;table-layout:fixed">
@@ -100,32 +88,7 @@
                                                                                            style="color:#000;font-style:normal;font-weight:normal;font-size:16px;line-height:1.4;letter-spacing:0;text-align:left;direction:ltr;border-collapse:collapse;font-family:Arial, Helvetica, sans-serif;white-space:normal;word-wrap:break-word;word-break:break-word">
                                                                                         <tbody>
                                                                                         <tr>
-                                                                                            <td dir="ltr"
-                                                                                                style="color:#0e1b10;font-size:16px;white-space:pre-wrap;text-align:center">
-                                                                                                <br></td>
-                                                                                        </tr>
-                                                                                        </tbody>
-                                                                                    </table>
-                                                                                </td>
-                                                                            </tr>
-                                                                            </tbody>
-                                                                        </table>
-                                                                    </td>
-                                                                    <td width="0"
-                                                                        style="width:0;box-sizing:border-box;font-size:0">
-                                                                        &nbsp;
-                                                                    </td>
-                                                                    <td width="62.14%" style="width:62.14%;box-sizing:border-box;vertical-align:bottom">
-                                                                        <table border="0" cellpadding="0" cellspacing="0"
-                                                                               style="border-spacing:0px;border-collapse:separate;width:100%;table-layout:fixed">
-                                                                            <tbody>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
-                                                                                           style="color:#000;font-style:normal;font-weight:normal;font-size:16px;line-height:1.4;letter-spacing:0;text-align:left;direction:ltr;border-collapse:collapse;font-family:Arial, Helvetica, sans-serif;white-space:normal;word-wrap:break-word;word-break:break-word">
-                                                                                        <tbody>
-                                                                                        <tr>
-                                                                                            <td dir="ltr" style="color:#0e1b10;font-size:29.333px;font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap;line-height:1;text-align:left">NNarrator<br></td>
+                                                                                            <td dir="ltr" style="color:#0e1b10;font-size:29.333px;font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap;line-height:1;text-align:center">Welcome to NNarrator!<br></td>
                                                                                         </tr>
                                                                                         </tbody>
                                                                                     </table>
@@ -140,8 +103,7 @@
                                                         </td>
                                                     </tr>
                                                     </tbody>
-                                                </table>
-                                                <!--[if !mso]><!-->
+                                                </table><!--[if !mso]><!-->
                                                 <table border="0" cellpadding="0" cellspacing="0" class="layout-0-under-200" align="center"
                                                        style="display:none;border-spacing:0px;border-collapse:separate;width:100%;max-width:100%;table-layout:fixed;margin:0 auto">
                                                     <tbody>
@@ -150,30 +112,6 @@
                                                             <table border="0" cellpadding="0" cellspacing="0"
                                                                    style="border-spacing:0px;border-collapse:separate;width:100%;max-width:200px;table-layout:fixed;margin:0 auto">
                                                                 <tbody>
-                                                                <tr>
-                                                                    <td width="100.00%" style="width:100.00%;box-sizing:border-box;vertical-align:middle">
-                                                                        <table border="0" cellpadding="0" cellspacing="0"
-                                                                               style="border-spacing:0px;border-collapse:separate;width:100%;table-layout:fixed">
-                                                                            <tbody>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
-                                                                                           style="color:#000;font-style:normal;font-weight:normal;font-size:16px;line-height:1.4;letter-spacing:0;text-align:left;direction:ltr;border-collapse:collapse;font-family:Arial, Helvetica, sans-serif;white-space:normal;word-wrap:break-word;word-break:break-word">
-                                                                                        <tbody>
-                                                                                        <tr>
-                                                                                            <td dir="ltr" style="color:#0e1b10;font-size:16px;white-space:pre-wrap;text-align:center"><br></td>
-                                                                                        </tr>
-                                                                                        </tbody>
-                                                                                    </table>
-                                                                                </td>
-                                                                            </tr>
-                                                                            </tbody>
-                                                                        </table>
-                                                                    </td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td style="font-size:0;height:16px" height="16">&nbsp;</td>
-                                                                </tr>
                                                                 <tr>
                                                                     <td width="100.00%" style="width:100.00%;box-sizing:border-box;vertical-align:bottom">
                                                                         <table border="0" cellpadding="0" cellspacing="0"
@@ -185,8 +123,7 @@
                                                                                            style="color:#000;font-style:normal;font-weight:normal;font-size:16px;line-height:1.4;letter-spacing:0;text-align:left;direction:ltr;border-collapse:collapse;font-family:Arial, Helvetica, sans-serif;white-space:normal;word-wrap:break-word;word-break:break-word">
                                                                                         <tbody>
                                                                                         <tr>
-                                                                                            <td dir="ltr"
-                                                                                                style="color:#0e1b10;font-size:29.333px;font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap;line-height:1;text-align:left">NNarrator<br></td>
+                                                                                            <td dir="ltr" style="color:#0e1b10;font-size:29.333px;font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap;line-height:1;text-align:center">Welcome to NNarrator!<br></td>
                                                                                         </tr>
                                                                                         </tbody>
                                                                                     </table>
@@ -201,9 +138,7 @@
                                                         </td>
                                                     </tr>
                                                     </tbody>
-                                                </table>
-                                                <!--<![endif]-->
-                                            </td>
+                                                </table><!--<![endif]--></td>
                                         </tr>
                                         <tr>
                                             <td style="font-size:0;height:16px" height="16">&nbsp;</td>
@@ -216,58 +151,6 @@
                                                         <td align="center">
                                                             <table cellpadding="0" cellspacing="0" border="0"
                                                                    style="width:100%;max-width:560px">
-                                                                <tbody>
-                                                                <tr>
-                                                                    <td style="width:100%;padding:0"><img
-                                                                                src="${url.resourcesPath}/images/6637dc81782aa28f357a61b607a0fcce.png"
-                                                                                width="560" height="250"
-                                                                                style="display:block;width:100%;height:auto;max-width:100%">
-                                                                    </td>
-                                                                </tr>
-                                                                </tbody>
-                                                            </table>
-                                                        </td>
-                                                    </tr>
-                                                    </tbody>
-                                                </table>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-size:0;height:16px" height="16">&nbsp;</td>
-                                        </tr>
-                                        <tr>
-                                            <td dir="ltr"
-                                                style="color:#0e1b10;font-size:18.6667px;line-height:1.2;text-align:center;padding:0px 20px">
-                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">Narrate </span>
-                                                <span style="letter-spacing:-0.04em;white-space:pre-wrap">and</span>
-                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap"> listen </span>
-                                                <span style="letter-spacing:-0.04em;white-space:pre-wrap">your favorite books</span>
-                                                <span style="letter-spacing:-0.03em;white-space:pre-wrap">.</span>
-                                                <span style="letter-spacing:-0.03em;white-space:pre-wrap"><br></span>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-size:0;height:16px" height="16">&nbsp;</td>
-                                        </tr>
-                                        <tr>
-                                            <td dir="ltr"
-                                                style="color:#0e1b10;font-size:18.6667px;line-height:1.2;text-align:center;padding:0px 20px">
-                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">Explore</span><span
-                                                        style="letter-spacing:-0.04em;white-space:pre-wrap"> books shared by others</span><span
-                                                        style="letter-spacing:-0.03em;white-space:pre-wrap">.</span><span
-                                                        style="letter-spacing:-0.03em;white-space:pre-wrap"><br></span>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td style="font-size:0;height:16px" height="16">&nbsp;</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding:0px 20px">
-                                                <table cellpadding="0" cellspacing="0" border="0" style="width:100%">
-                                                    <tbody>
-                                                    <tr>
-                                                        <td align="center">
-                                                            <table cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px">
                                                                 <tbody>
                                                                 <tr>
                                                                     <td height="1px"
@@ -287,8 +170,7 @@
                                             <td style="font-size:0;height:16px" height="16">&nbsp;</td>
                                         </tr>
                                         <tr>
-                                            <td dir="ltr"
-                                                style="color:#0e1b10;font-size:29.3333px;font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap;line-height:1;text-align:center;padding:0px 20px">You are almost there<br></td>
+                                            <td dir="ltr" style="color:#0e1b10;font-size:29.3333px;font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap;line-height:1;text-align:center;padding:0px 20px">You are almost there<br></td>
                                         </tr>
                                         <tr>
                                             <td style="font-size:0;height:16px" height="16">&nbsp;</td>
@@ -374,9 +256,6 @@
                                                 </table><!--<![endif]--></td>
                                         </tr>
                                         <tr>
-                                            <td style="font-size:0;height:16px" height="16">&nbsp;</td>
-                                        </tr>
-                                        <tr>
                                             <td style="padding:0px 20px">
                                                 <table cellpadding="0" cellspacing="0" border="0" style="width:100%">
                                                     <tbody>
@@ -421,6 +300,56 @@
                                                 </table>
                                             </td>
                                         </tr>
+                                        <tr>
+                                            <td style="font-size:0;height:16px" height="16">&nbsp;</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:0px 20px">
+                                                <table cellpadding="0" cellspacing="0" border="0" style="width:100%">
+                                                    <tbody>
+                                                    <tr>
+                                                        <td align="center">
+                                                            <table cellpadding="0" cellspacing="0" border="0"
+                                                                   style="width:100%;max-width:560px">
+                                                                <tbody>
+                                                                <tr>
+                                                                    <td height="1px"
+                                                                        style="height:1px;border-radius:999px;line-height:1px;font-size:0;background-color:#bfc3c8">
+                                                                        &nbsp;
+                                                                    </td>
+                                                                </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-size:0;height:16px" height="16">&nbsp;</td>
+                                        </tr>
+                                        <tr>
+                                            <td dir="ltr"
+                                                style="color:#0e1b10;font-size:18.6667px;line-height:1.2;text-align:center;padding:0px 20px">
+                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">Narrate </span>
+                                                <span style="letter-spacing:-0.04em;white-space:pre-wrap">and </span>
+                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">listen </span>
+                                                <span style="letter-spacing:-0.04em;white-space:pre-wrap">your favorite books.</span>
+                                                <span style="letter-spacing:-0.03em;white-space:pre-wrap"><br></span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="font-size:0;height:16px" height="16">&nbsp;</td>
+                                        </tr>
+                                        <tr>
+                                            <td dir="ltr"
+                                                style="color:#0e1b10;font-size:18.6667px;line-height:1.2;text-align:center;padding:0px 20px">
+                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">Explore </span>
+                                                <span style="letter-spacing:-0.04em;white-space:pre-wrap">books shared by others.</span>
+                                                <span style="letter-spacing:-0.03em;white-space:pre-wrap"><br></span>
+                                            </td>
+                                        </tr>
                                         </tbody>
                                     </table>
                                 </td>
@@ -434,8 +363,7 @@
                 </tr>
                 </tbody>
             </table>
-            <!--[if mso]>
-            </td>
+            <!--[if mso]></td>
             </tr>
             </tbody>
             </table>
