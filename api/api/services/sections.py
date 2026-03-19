@@ -110,23 +110,30 @@ class SectionService(Service):
 
         # Find a few sections per book and trigger generation for them.
         # noinspection SqlDialectInspection
-        query_text = """WITH MissingAudio AS (SELECT s.id,
-                                                     s.book_id,
-                                                     s.section_index,
-                                                     -- Generate a rank for each section within its own book group
-                                                     ROW_NUMBER() OVER (
-                                                         PARTITION BY s.book_id
-                                                         ORDER BY s.section_index ASC
-                                                     ) as rank_in_book
-                                              FROM sections s
-                                                       LEFT JOIN audio_tracks a ON s.id = a.section_id
-                                              WHERE a.id IS NULL)
-                        SELECT *
-                        FROM sections
-                        WHERE id in (SELECT id 
-                                     FROM MissingAudio 
-                                     WHERE rank_in_book <= 5 
-                                     ORDER BY book_id, section_index)"""
+        query_text = """WITH BooksToNarrate as (select distinct b.id, b.created_time
+                                                from books b
+                                                         join sections s on b.id = s.book_id
+                                                         left join audio_tracks t on s.id = t.section_id
+                                                where t.id is null
+                                                order by b.created_time
+                                                limit 3), 
+                            MissingAudio AS (SELECT s.id, s.book_id, s.section_index,
+                                                -- Generate a rank for each section within its own book group
+                                                ROW_NUMBER() OVER (
+                                                    PARTITION BY s.book_id
+                                                    ORDER BY s.section_index ASC
+                                                ) as rank_in_book
+                                             FROM sections s
+                                                 LEFT JOIN audio_tracks a
+                                             ON s.id = a.section_id
+                                             WHERE s.book_id in (select id from BooksToNarrate)
+                                               and a.id IS NULL)
+        SELECT *
+        FROM sections
+        WHERE id in (SELECT id
+                     FROM MissingAudio
+                     WHERE rank_in_book <= 5
+                     ORDER BY book_id, section_index)"""
         with DbSession() as session:
             db_sections = session.scalars(select(db.Section).from_statement(text(query_text))).all()
             if len(db_sections):
