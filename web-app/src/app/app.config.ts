@@ -42,7 +42,8 @@ export const appConfig: ApplicationConfig = {
       initOptions: {
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri: window.location.origin + '/app/sso/silent-check.html',
-        pkceMethod: 'S256'
+        pkceMethod: 'S256',
+        checkLoginIframe: false,
       }
     }),
     {
