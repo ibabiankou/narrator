@@ -8,6 +8,11 @@ const isAccessAllowed = async (
 ): Promise<boolean | UrlTree> => {
   const { authenticated, grantedRoles } = authData;
 
+  // Always allow offline mode.
+  if (!navigator.onLine) {
+    return true;
+  }
+
   if (!authenticated) {
     await authData.keycloak.login();
     return false;
