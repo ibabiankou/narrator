@@ -261,9 +261,9 @@
                                         <tr>
                                             <td dir="ltr"
                                                 style="color:#0e1b10;font-size:18.6667px;line-height:1.2;text-align:center;padding:0px 20px">
-                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">Narrate </span>
-                                                <span style="letter-spacing:-0.04em;white-space:pre-wrap">and </span>
-                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">Listen </span>
+                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">Narrate</span>
+                                                <span style="letter-spacing:-0.04em;white-space:pre-wrap">and</span>
+                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">Listen</span>
                                                 <span style="letter-spacing:-0.04em;white-space:pre-wrap">your favorite books.</span>
                                                 <span style="letter-spacing:-0.03em;white-space:pre-wrap"><br></span>
                                             </td>
@@ -274,7 +274,7 @@
                                         <tr>
                                             <td dir="ltr"
                                                 style="color:#0e1b10;font-size:18.6667px;line-height:1.2;text-align:center;padding:0px 20px">
-                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">Explore </span>
+                                                <span style="font-weight:700;letter-spacing:-0.04em;white-space:pre-wrap">Explore</span>
                                                 <span style="letter-spacing:-0.04em;white-space:pre-wrap">books shared by others.</span>
                                                 <span style="letter-spacing:-0.03em;white-space:pre-wrap"><br></span>
                                             </td>
