@@ -22,8 +22,6 @@ import {
   ToolbarComponent
 } from '../../components/toolbar/toolbar.component';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
-import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
-import { ThemeService } from '../../core/services/theme.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { PdfPage } from '../../components/pdf-page/pdf-page';
 import { VisibilityDirective } from '../../core/visibilityDirective';
@@ -47,8 +45,6 @@ import { AuthService } from '../../core/services/authService';
     MatMenuTrigger,
     MatMenu,
     MatMenuItem,
-    MatButtonToggleGroup,
-    MatButtonToggle,
     PdfPage,
     VisibilityDirective,
     RouterLink,
@@ -62,7 +58,6 @@ export class EditBookPage {
   private dialog = inject(MatDialog);
   private router: Router = inject(Router);
   private settingsService: SettingsService = inject(SettingsService);
-  private themeService: ThemeService = inject(ThemeService);
   private authService: AuthService = inject(AuthService);
 
   bookId = input.required<string>();
@@ -100,7 +95,6 @@ export class EditBookPage {
     this.pages = computed(() => this.bookWithContent().pages);
   }
 
-
   deleteSection(section: Section) {
     const pages = this.pages();
     const page = pages[section.page_index]
@@ -127,10 +121,5 @@ export class EditBookPage {
         this.router.navigate(['/books']);
       }
     );
-  }
-
-  protected setTheme(theme: string) {
-    this.themeService.setTheme(theme);
-    this.settingsService.patch("user_preferences", {theme: theme}).subscribe();
   }
 }

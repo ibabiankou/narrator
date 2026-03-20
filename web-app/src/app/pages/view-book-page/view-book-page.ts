@@ -1,7 +1,8 @@
 import {
   AfterViewInit,
   Component,
-  computed, effect,
+  computed,
+  effect,
   ElementRef,
   inject,
   input,
@@ -39,8 +40,6 @@ import {
 } from '../../components/toolbar/toolbar.component';
 import { DownloadService } from '../../core/services/download.service';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
-import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
-import { ThemeService } from '../../core/services/theme.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { HideIdleDirective } from '../../core/hideIdleDirective';
 import { PdfPage } from '../../components/pdf-page/pdf-page';
@@ -67,8 +66,6 @@ import { OwnerDirective } from '../../core/ownerDirective';
     MatMenuTrigger,
     MatMenu,
     MatMenuItem,
-    MatButtonToggleGroup,
-    MatButtonToggle,
     HideIdleDirective,
     PdfPage,
     VisibilityDirective,
@@ -84,7 +81,6 @@ export class ViewBookPage implements AfterViewInit {
   private titleService = inject(Title);
   private dialog = inject(MatDialog);
   private settingsService: SettingsService = inject(SettingsService);
-  private themeService: ThemeService = inject(ThemeService);
 
   bookId = input.required<string>();
 
@@ -281,10 +277,5 @@ export class ViewBookPage implements AfterViewInit {
   private reloadDownloadInfo() {
     this.downloadService.getDownloadInfo(this.bookId())
       .subscribe(val => this.downloadInfo.set(val));
-  }
-
-  protected setTheme(theme: string) {
-    this.themeService.setTheme(theme);
-    this.settingsService.patch("user_preferences", {theme: theme}).subscribe();
   }
 }
