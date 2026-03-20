@@ -1,4 +1,15 @@
-import { Component, computed, ElementRef, HostListener, inject, input, output, Renderer2, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  ElementRef,
+  HostListener,
+  inject,
+  input,
+  model,
+  output,
+  Renderer2,
+  signal
+} from '@angular/core';
 import { Section } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
@@ -24,7 +35,7 @@ export class SectionComponent {
   private sectionsService: SectionsService = inject(SectionsService);
   private themeService: ThemeService = inject(ThemeService);
 
-  section = input.required<Section>();
+  section = model.required<Section>();
   paragraphs = computed(() => this.section().content.split('\n'));
   sectionDeleted = output();
   editable = input<boolean>(false);
@@ -61,7 +72,10 @@ export class SectionComponent {
   }
 
   saveSection(value: string) {
-    this.section().content = value;
+    this.section.set({
+      ...this.section(),
+      content: value
+    });
     this.sectionsService.updateSection(this.section()).subscribe({
       next: () => {
         this.cancelEditing();
