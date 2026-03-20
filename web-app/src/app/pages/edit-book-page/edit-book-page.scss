@@ -6,16 +6,6 @@
   text-overflow: ellipsis;
 }
 
-.theme-button {
-  padding-bottom: 8px;
-  display: flex;
-  justify-content: center;
-}
-
-.delete-button, .delete-button mat-icon {
-  color: darkred !important;
-}
-
 $maxWidth: 1280px;
 .main-container {
   max-width: $maxWidth;

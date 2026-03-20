@@ -31,17 +31,6 @@
       </button>
 
       <mat-menu #playbackSettingsMenu="matMenu" class="playback-settings-menu">
-        <div class="reader-mode-buttons" (click)="$event.stopPropagation()">
-          <mat-button-toggle-group name="readerMode" aria-label="Reader Mode" [value]="showPages()">
-            <mat-button-toggle value="text" (click)="setShowPages('text')">
-              <mat-icon>subject</mat-icon>
-            </mat-button-toggle>
-            <mat-button-toggle value="both" (click)="setShowPages('both')">
-              <mat-icon class="flip-horizontal">vertical_split</mat-icon>
-            </mat-button-toggle>
-          </mat-button-toggle-group>
-        </div>
-
         <button mat-menu-item>
           <mat-icon>sync_arrow_down</mat-icon>
           <span>Auto Scroll</span>

@@ -6,6 +6,7 @@ import { BehaviorSubject, filter, switchMap, tap } from 'rxjs';
 import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
 import { mergeDeep } from '../utils';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Injectable({providedIn: 'root'})
 export class SettingsService {
@@ -15,6 +16,7 @@ export class SettingsService {
 
   private _userPreferences$ = new BehaviorSubject<Settings | undefined>(undefined);
   readonly userPreferences$ = this._userPreferences$.asObservable().pipe(filter(value => value !== undefined));
+  readonly userPreferences = toSignal(this.userPreferences$);
 
   constructor(private http: HttpClient, private connectionService: ConnectionService) {
     this.settingsCache = new IndexDBCache(
@@ -27,7 +29,11 @@ export class SettingsService {
         return this.http.patch<Settings>(url, payload);
       });
 
-    this.get('user_preferences').subscribe(preferences => this._userPreferences$.next(preferences));
+    this.get('user_preferences').subscribe();
+  }
+
+  patchUserPreferences(patch: Partial<Settings>) {
+    this.patch("user_preferences", patch).subscribe();
   }
 
   get(kind: string) {

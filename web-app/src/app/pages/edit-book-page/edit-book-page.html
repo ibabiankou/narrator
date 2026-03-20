@@ -10,17 +10,7 @@
   </div>
   <div actionButton>
     @defer (when bookWithContent()) {
-      <button matIconButton aria-label="Book menu" [matMenuTriggerFor]="menu">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-
-      <mat-menu #menu="matMenu">
-        <button mat-menu-item class="delete-button" aria-label="Delete this book"
-                (click)="deleteBookDialog(deleteBookTemplate)">
-          <mat-icon>delete_forever</mat-icon>
-          <span>Delete</span>
-        </button>
-      </mat-menu>
+      <app-book-menu [bookId]="bookId()"></app-book-menu>
     }
   </div>
 </app-toolbar>
@@ -54,14 +44,3 @@
     <app-skeleton class="content-skeleton"/>
   }
 </div>
-
-<ng-template #deleteBookTemplate>
-  <h2 mat-dialog-title>Delete "{{ bookWithContent().overview.title }}"?</h2>
-  <mat-dialog-content>
-    <p>You are about to delete this book. If you proceed, all associated data will be lost.</p>
-  </mat-dialog-content>
-  <mat-dialog-actions align="end">
-    <button mat-button mat-dialog-close>Keep it</button>
-    <button mat-button class="delete-button" [mat-dialog-close]="true">Delete permanently</button>
-  </mat-dialog-actions>
-</ng-template>

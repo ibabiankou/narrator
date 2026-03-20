@@ -1,0 +1,33 @@
+<button matIconButton aria-label="Book menu" [matMenuTriggerFor]="menu">
+  <mat-icon>more_vert</mat-icon>
+</button>
+
+<mat-menu #menu="matMenu">
+  <div class="reader-mode-buttons" (click)="$event.stopPropagation()">
+    <mat-button-toggle-group name="readerMode" aria-label="Reader Mode" [value]="showPages()">
+      <mat-button-toggle value="text" (click)="setShowPages('text')">
+        <mat-icon>subject</mat-icon>
+      </mat-button-toggle>
+      <mat-button-toggle value="both" (click)="setShowPages('both')">
+        <mat-icon class="flip-horizontal">vertical_split</mat-icon>
+      </mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+
+  <button mat-menu-item class="delete-button" aria-label="Delete this book"
+          (click)="deleteBookDialog(deleteBookTemplate)">
+    <mat-icon>delete_forever</mat-icon>
+    <span>Delete</span>
+  </button>
+</mat-menu>
+
+<ng-template #deleteBookTemplate>
+  <h2 mat-dialog-title>Delete book?</h2>
+  <mat-dialog-content>
+    <p>You are about to delete this book. If you proceed, all associated data will be lost.</p>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Keep it</button>
+    <button mat-button class="delete-button" [mat-dialog-close]="true">Delete permanently</button>
+  </mat-dialog-actions>
+</ng-template>

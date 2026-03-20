@@ -1,53 +1,35 @@
-import { Component, computed, inject, input, model, Signal, TemplateRef, } from '@angular/core';
+import { Component, computed, inject, input, model, Signal, } from '@angular/core';
 import { BookPage, BookStatus, BookWithContent, Section } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
 import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
-import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
-import { MatButton, MatIconButton } from '@angular/material/button';
-import {
-  MatDialog,
-  MatDialogActions,
-  MatDialogClose,
-  MatDialogContent,
-  MatDialogTitle
-} from '@angular/material/dialog';
 import {
   ActionButtonContentDirective,
   BreadcrumbContentDirective,
   ToolbarComponent
 } from '../../components/toolbar/toolbar.component';
-import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { SettingsService } from '../../core/services/settings.service';
 import { PdfPage } from '../../components/pdf-page/pdf-page';
 import { VisibilityDirective } from '../../core/visibilityDirective';
 import { AuthService } from '../../core/services/authService';
+import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
 
 @Component({
   selector: 'app-view-book-page',
   imports: [
-    MatIcon,
     SectionComponent,
     SkeletonComponent,
-    MatIconButton,
-    MatDialogTitle,
-    MatDialogContent,
-    MatDialogActions,
-    MatButton,
-    MatDialogClose,
     ToolbarComponent,
     BreadcrumbContentDirective,
     ActionButtonContentDirective,
-    MatMenuTrigger,
-    MatMenu,
-    MatMenuItem,
     PdfPage,
     VisibilityDirective,
     RouterLink,
+    BookMenu,
   ],
   templateUrl: './edit-book-page.html',
   styleUrl: './edit-book-page.scss',
@@ -55,7 +37,6 @@ import { AuthService } from '../../core/services/authService';
 export class EditBookPage {
   private booksService = inject(BooksService);
   private titleService = inject(Title);
-  private dialog = inject(MatDialog);
   private router: Router = inject(Router);
   private settingsService: SettingsService = inject(SettingsService);
   private authService: AuthService = inject(AuthService);
@@ -103,23 +84,5 @@ export class EditBookPage {
 
   protected setEditingSection(isEditing: boolean) {
     this.isEditingSection.set(isEditing);
-  }
-
-  protected deleteBookDialog(templateRef: TemplateRef<any>) {
-    const dialogRef = this.dialog.open(templateRef);
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.deleteBook();
-      }
-    });
-  }
-
-  private deleteBook() {
-    this.booksService.delete(this.bookId()).subscribe(
-      () => {
-        this.router.navigate(['/books']);
-      }
-    );
   }
 }

@@ -10,7 +10,7 @@ import {
   output,
   ViewChild
 } from '@angular/core';
-import { BookWithContent, PlaybackInfo, Settings } from '../../core/models/books.dto';
+import { BookWithContent, PlaybackInfo } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import {
@@ -32,7 +32,6 @@ import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { AudioPlayer } from './audio.player';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { BooksService } from '../../core/services/books.service';
-import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { SettingsService } from '../../core/services/settings.service';
@@ -45,8 +44,6 @@ import { secondsToTimeFormat } from '../../core/utils';
     MatIconButton,
     AsyncPipe,
     DecimalPipe,
-    MatButtonToggle,
-    MatButtonToggleGroup,
     MatMenu,
     MatMenuItem,
     MatMenuTrigger,
@@ -80,7 +77,6 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   private preferences = toSignal(this.settingsService.userPreferences$);
 
   sectionPlayed = output<number>();
-  showPages = computed(() => <string>this.preferences()!["viewer_mode"]);
   syncCurrentSection = computed(() => !!this.preferences()!["auto_scroll"]);
 
   fontSizePx = computed(() => <number>this.preferences()!["text_size"]);
@@ -368,10 +364,6 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.$destroy.complete();
   }
 
-  patchPreferences(patch: Partial<Settings>) {
-    this.settingsService.patch("user_preferences", patch).subscribe();
-  }
-
   toggleSync() {
     const newValue = !this.syncCurrentSection();
     if (!newValue) {
@@ -380,16 +372,12 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
       this.audioPlayer.$sectionId.pipe(take(1))
         .subscribe(sectionId => this.sectionPlayed.emit(sectionId));
     }
-    this.patchPreferences({auto_scroll: newValue});
-  }
-
-  setShowPages(viewerMode: string) {
-    this.patchPreferences({viewer_mode: viewerMode});
+    this.settingsService.patchUserPreferences({auto_scroll: newValue});
   }
 
   protected setFontSizePx(px: number) {
     this.setFontSizeStyle(px);
-    this.patchPreferences({text_size: px});
+    this.settingsService.patchUserPreferences({text_size: px});
   }
 
   private setFontSizeStyle(px: number) {
