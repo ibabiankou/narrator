@@ -8,31 +8,8 @@
   </div>
   <div actionButton>
     @defer (when bookWithContent()) {
-      <button matIconButton aria-label="Book menu" [matMenuTriggerFor]="menu">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-
-      <mat-menu #menu="matMenu">
-        <button mat-menu-item
-                *appOwnerOrHasRole="bookWithContent().overview.owner_id; roles: ['admin']"
-                aria-label="Edit book"
-                routerLink="/books/{{ bookId() }}/edit">
-          <mat-icon>edit</mat-icon>
-          <span>Edit book</span>
-        </button>
-
-        @if (isDownloaded()) {
-          <button mat-menu-item aria-label="Show storage info" (click)="storageInfoDialog(storageInfoTemplate)">
-            <mat-icon>database</mat-icon>
-            <span>Storage info</span>
-          </button>
-        } @else {
-          <button mat-menu-item aria-label="Download this book" (click)="downloadBookDialog(downloadBookTemplate)">
-            <mat-icon>download</mat-icon>
-            <span>Download</span>
-          </button>
-        }
-      </mat-menu>
+      <app-book-menu [bookOverview]="bookWithContent().overview"
+                     [bookStats]="bookWithContent().stats"></app-book-menu>
     }
   </div>
 </app-toolbar>
@@ -70,32 +47,3 @@
               (sectionPlayed)="setCurrentSectionId($event)"
   ></app-player>
 }
-
-<ng-template #downloadBookTemplate>
-  <h2 mat-dialog-title>Download "{{ bookWithContent().overview.title }}"?</h2>
-  <mat-dialog-content>
-    <p>You are about to download this book for offline listening. Total size
-      is {{ totalSizeMb() }}MB.</p>
-  </mat-dialog-content>
-  <mat-dialog-actions align="end">
-    <button mat-button mat-dialog-close>Cancel</button>
-    <button mat-button [mat-dialog-close]="true">Download</button>
-  </mat-dialog-actions>
-</ng-template>
-
-<ng-template #storageInfoTemplate>
-  @defer (when downloadInfo()) {
-    <mat-dialog-content>
-      <p>Total size: {{ totalSizeMb() }}MB.</p>
-      <p>Downloaded: {{ downloadProgressPercent() }}%</p>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      @if (isDownloading()) {
-        <button mat-button class="delete-button" [mat-dialog-close]="true">Cancel download</button>
-      } @else {
-        <button mat-button class="delete-button" [mat-dialog-close]="true">Delete cached data</button>
-      }
-      <button mat-button mat-dialog-close>Ok</button>
-    </mat-dialog-actions>
-  }
-</ng-template>

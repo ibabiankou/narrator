@@ -14,7 +14,29 @@
     </mat-button-toggle-group>
   </div>
 
-  <button mat-menu-item class="delete-button" aria-label="Delete this book"
+  <button mat-menu-item
+          *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
+          aria-label="Edit book"
+          routerLink="/books/{{ bookOverview().id }}/edit">
+    <mat-icon>edit</mat-icon>
+    <span>Edit book</span>
+  </button>
+
+  @if (isDownloaded()) {
+    <button mat-menu-item aria-label="Show storage info" (click)="storageInfoDialog(storageInfoTemplate)">
+      <mat-icon>database</mat-icon>
+      <span>Storage info</span>
+    </button>
+  } @else {
+    <button mat-menu-item aria-label="Download this book" (click)="downloadBookDialog(downloadBookTemplate)">
+      <mat-icon>download</mat-icon>
+      <span>Download</span>
+    </button>
+  }
+
+  <button mat-menu-item class="delete-button"
+          *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
+          aria-label="Delete this book"
           (click)="deleteBookDialog(deleteBookTemplate)">
     <mat-icon>delete_forever</mat-icon>
     <span>Delete</span>
@@ -22,7 +44,7 @@
 </mat-menu>
 
 <ng-template #deleteBookTemplate>
-  <h2 mat-dialog-title>Delete book?</h2>
+  <h2 mat-dialog-title>Delete "{{ bookOverview().title }}"?</h2>
   <mat-dialog-content>
     <p>You are about to delete this book. If you proceed, all associated data will be lost.</p>
   </mat-dialog-content>
@@ -30,4 +52,33 @@
     <button mat-button mat-dialog-close>Keep it</button>
     <button mat-button class="delete-button" [mat-dialog-close]="true">Delete permanently</button>
   </mat-dialog-actions>
+</ng-template>
+
+<ng-template #downloadBookTemplate>
+  <h2 mat-dialog-title>Download "{{ bookOverview().title }}"?</h2>
+  <mat-dialog-content>
+    <p>You are about to download this book for offline listening. Total size
+      is {{ totalSizeMb() }}MB.</p>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancel</button>
+    <button mat-button [mat-dialog-close]="true">Download</button>
+  </mat-dialog-actions>
+</ng-template>
+
+<ng-template #storageInfoTemplate>
+  @defer (when downloadInfo()) {
+    <mat-dialog-content>
+      <p>Total size: {{ totalSizeMb() }}MB.</p>
+      <p>Downloaded: {{ downloadProgressPercent() }}%</p>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      @if (isDownloading()) {
+        <button mat-button class="delete-button" [mat-dialog-close]="true">Cancel download</button>
+      } @else {
+        <button mat-button class="delete-button" [mat-dialog-close]="true">Delete cached data</button>
+      }
+      <button mat-button mat-dialog-close>Ok</button>
+    </mat-dialog-actions>
+  }
 </ng-template>
