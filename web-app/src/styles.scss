@@ -18,6 +18,10 @@ html {
 
   // Disable automatic font size adjustment
   -webkit-text-size-adjust: 100%;
+
+  // Overrides
+  --mat-sys-surface: light-dark(#faf9fd, #050714);
+  // 0b0f2a
 }
 
 body {
