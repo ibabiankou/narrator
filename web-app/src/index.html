@@ -11,7 +11,49 @@
   <link rel="manifest" href="manifest.webmanifest">
 </head>
 <body>
-  <app-root></app-root>
-  <noscript>Please enable JavaScript to continue using this application.</noscript>
+  <app-root>
+    <div class="logo-wrapper">
+      <div class="logo"></div>
+    </div>
+  </app-root>
+  <style>
+    .logo-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100vw;
+      height: 100vh;
+      background-color: #0b0f2a;
+    }
+
+    .logo {
+      background-image: url('logo.png');
+      background-repeat: no-repeat;
+      background-size: contain;
+
+      margin: 25px;
+      width: 100%;
+      max-width: 500px;
+      min-width: 250px;
+      aspect-ratio: 1;
+
+      display: inline-block;
+      position: relative;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+
+    .logo::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow: inset 0 0 25px 25px #0b0f2a;
+    }
+  </style>
+<noscript>Please enable JavaScript to continue using this application.</noscript>
 </body>
 </html>
