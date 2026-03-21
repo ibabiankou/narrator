@@ -73,7 +73,14 @@
             }
           },
           "options": {
-            "proxyConfig": "proxy.conf.json"
+            "allowedHosts": ["laptop.ggnt.eu"],
+            "proxyConfig": "proxy.conf.json",
+            "servePath": "/app/",
+            "open": true,
+            "host": "0.0.0.0",
+            "ssl": true,
+            "sslKey": "./ssl/tls.key",
+            "sslCert": "./ssl/tls.crt"
           },
           "defaultConfiguration": "development"
         },

@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "dev": "node version.js && ng serve --serve-path /app/ --open --host 0.0.0.0",
-    "start": "npm run build && npx local-web-server --hostname local.ggnt.eu --port 4200 --https --cert ./ssl/tls.crt --key ./ssl/tls.key --directory dist/web-app/browser --rewrite '/api/(.*) -> https://narrator.in.ggnt.eu/api/$1' --rewrite '/app/(.*) -> https://local.ggnt.eu:4200/$1' --spa /index.html",
+    "dev": "node version.js && ng serve",
+    "start": "npm run build && npx local-web-server --hostname laptop.ggnt.eu --port 4200 --https --cert ./ssl/tls.crt --key ./ssl/tls.key --directory dist/web-app/browser --rewrite '/api/(.*) -> https://narrator.in.ggnt.eu/api/$1' --rewrite '/app/(.*) -> https://local.ggnt.eu:4200/$1' --spa /index.html",
     "build": "node version.js && ng build --base-href /app/ --configuration production",
     "build:local": "ng build --base-href /app/",
     "watch": "ng build --watch --configuration development",
