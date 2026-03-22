@@ -35,6 +35,10 @@ class SectionService(Service):
             stmt = select(db.Section).where(db.Section.book_id == book_id).order_by(db.Section.section_index)
             return session.execute(stmt).scalars().all()
 
+    def get_section(self, section_id: int):
+        with DbSession() as session:
+            return session.get(db.Section, section_id)
+
     def delete_sections(self, book_id: uuid.UUID = None, section_ids: list[int] = None):
         if not book_id and not section_ids:
             raise ValueError("Either book_id or section_ids must be provided")
