@@ -14,6 +14,11 @@
       <button class="delete-button" matIconButton aria-label="Delete section" (click)="deleteSection()">
         <mat-icon>delete_forever</mat-icon>
       </button>
+      @if (!isNarrating()) {
+        <button class="refresh-button" matIconButton aria-label="Re-narrate section" (click)="renarrateSection()">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      }
     </div>
     <div class="top-right-controls controls">
       <button matIconButton aria-label="Edit section" (click)="editSection()">

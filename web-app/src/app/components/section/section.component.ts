@@ -39,8 +39,9 @@ export class SectionComponent {
   paragraphs = computed(() => this.section().content.split('\n'));
   sectionDeleted = output();
   editable = input<boolean>(false);
-  isEditing = signal(false)
+  isEditing = signal(false);
   current = input<boolean>(false);
+  isNarrating = signal(false);
 
   editingModeChanged = output<boolean>();
 
@@ -62,6 +63,15 @@ export class SectionComponent {
       .subscribe({
         next: () => {
           this.sectionDeleted.emit();
+        }
+      })
+  }
+
+  protected renarrateSection() {
+    this.sectionsService.renarrateSection(this.section().id)
+      .subscribe({
+        next: () => {
+          this.isNarrating.set(true);
         }
       })
   }

@@ -19,4 +19,8 @@ export class SectionsService {
   deleteSection(sectionId: number) {
     return this.http.delete(`${this.apiUrl}/${sectionId}`);
   }
+
+  renarrateSection(sectionId: number) {
+    return this.http.post(`${this.apiUrl}/${sectionId}/re-narrate`, {});
+  }
 }
