@@ -73,7 +73,7 @@ export class AddBookPage implements OnInit {
       }))
       .subscribe({
         next: bookDetails => {
-          this.router.navigate(['/books', bookDetails.id]);
+          this.router.navigate(['/books', bookDetails.id, 'edit']);
         },
         error: err => {
           // TODO: show the error message.
