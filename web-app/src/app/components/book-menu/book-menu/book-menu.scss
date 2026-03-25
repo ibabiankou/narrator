@@ -5,3 +5,7 @@
 .delete-button, .delete-button mat-icon {
   color: darkred !important;
 }
+
+.flip-horizontal {
+  transform: scaleX(-1);
+}
