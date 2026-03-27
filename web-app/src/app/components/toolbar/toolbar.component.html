@@ -21,7 +21,7 @@
   </button>
 
   <mat-menu #menu="matMenu">
-    <div class="theme-button" (click)="$event.stopPropagation()">
+    <div class="toggle-buttons" (click)="$event.stopPropagation()">
       <mat-button-toggle-group name="themeMode" aria-label="Theme Mode" [value]="settings()!['theme']">
         <mat-button-toggle value="light" (click)="setTheme('light')">
           <mat-icon>light_mode</mat-icon>

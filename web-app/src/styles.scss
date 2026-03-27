@@ -49,6 +49,10 @@ body.light-mode {
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
+.toggle-buttons {
+  padding: 0 8px 8px 8px;
+}
+
 mat-toolbar {
   @include mat.toolbar-overrides((
     standard-height: 48px

@@ -3,7 +3,7 @@
 </button>
 
 <mat-menu #menu="matMenu">
-  <div class="reader-mode-buttons" (click)="$event.stopPropagation()">
+  <div class="toggle-buttons" (click)="$event.stopPropagation()">
     <mat-button-toggle-group name="readerMode" aria-label="Reader Mode" [value]="showPages()">
       <mat-button-toggle value="text" (click)="setShowPages('text')">
         <mat-icon>subject</mat-icon>
