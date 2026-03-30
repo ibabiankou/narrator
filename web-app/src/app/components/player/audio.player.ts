@@ -1,21 +1,10 @@
 import { BookOverview, PlaybackInfo } from '../../core/models/books.dto';
-import {
-  BehaviorSubject,
-  combineLatest,
-  combineLatestWith,
-  distinctUntilChanged,
-  filter,
-  interval,
-  map,
-  switchMap,
-  take,
-} from 'rxjs';
+import { BehaviorSubject, combineLatest, combineLatestWith, filter, interval, map, switchMap, take, } from 'rxjs';
 
 import Hls from 'hls.js';
 import { BooksService } from '../../core/services/books.service';
 import { CachingHlsLoader } from '../../core/services/cachingHlsLoader';
 import { OSBindings } from './os-binding';
-import { binarySearch } from '../../core/utils';
 
 enum PlayerStatus {
   playing = "playing",
@@ -51,15 +40,12 @@ export class AudioPlayer {
   private sectionTimeline: HlsSection[] = [];
   // Currently playing time in seconds.
   $globalProgressSeconds = new BehaviorSubject<number>(0);
+  private timeDrift = -1;
   // An index within sectionTimeline of the currently playing section.
-  private $sectionIndex = this.$globalProgressSeconds.pipe(
-    map(currentTime => binarySearch(this.sectionTimeline, (section) => section.end_time, currentTime) - 1),
-    filter(index => index >= 0),
-    map(i => i + 1),
-    distinctUntilChanged(),
-  );
+  private $sectionIndex = new BehaviorSubject<number>(0);
   // An ID of the section that is being played right now.
   $sectionId = this.$sectionIndex.pipe(
+    filter(i => i > 0),
     map(i => this.sectionTimeline[i].section_id),
   );
 
@@ -113,6 +99,25 @@ export class AudioPlayer {
           }
         });
 
+        // Update time drift each time a new audio track is started.
+        this.hls.on(Hls.Events.FRAG_CHANGED, (_, data) => {
+          if (data.frag) {
+            if (this.timeDrift < 0) {
+              // Skip the first fragment change because of the assumption that most of the time
+              // the first fragment is not started from the beginning of the audio track.
+              this.timeDrift = 0;
+            } else {
+              this.timeDrift = this.audio.currentTime - data.frag.playlistOffset;
+            }
+
+            if (typeof data.frag.sn === "number") {
+              this.$sectionIndex.next(data.frag.sn + 1);
+            }
+          } else {
+            console.warn("Frag changed event data is missing.")
+          }
+        });
+
         this.hls.loadSource(this.bookService.getPlaylistUrl(book?.id));
         this.hls.attachMedia(this.audio);
 
@@ -160,7 +165,7 @@ export class AudioPlayer {
   }
 
   private readProgress() {
-    this.$globalProgressSeconds.next(this.audio.currentTime);
+    this.$globalProgressSeconds.next(this.getCurrentTime());
   }
 
   private updateProgress() {
@@ -176,6 +181,14 @@ export class AudioPlayer {
           });
         })
       ).subscribe();
+  }
+
+  private getCurrentTime() {
+    return this.audio.currentTime - (this.timeDrift > 0 ? this.timeDrift : 0);
+  }
+
+  private setCurrentTime(time: number) {
+    this.audio.currentTime = time + (this.timeDrift > 0 ? this.timeDrift : 0);
   }
 
   play() {
@@ -198,7 +211,7 @@ export class AudioPlayer {
     this.$sectionIndex.pipe(take(1))
       .subscribe(i => {
         // Scrolling to the end time of the current section, effectively starting the next one.
-        this.audio.currentTime = this.sectionTimeline[i].end_time
+        this.setCurrentTime(this.sectionTimeline[i].end_time);
       });
   }
 
@@ -208,11 +221,12 @@ export class AudioPlayer {
         // The end time of the previous section is the start time of the current section, so
         // to play the previous section, we need to go two items back.
         // Add a few extra ms, otherwise it activates the one before previous section for a moment.
-        this.audio.currentTime = this.sectionTimeline[Math.max(i - 2, 0)].end_time + 0.05;
+        this.setCurrentTime(this.sectionTimeline[Math.max(i - 2, 0)].end_time + 0.05)
       });
   }
 
   seek(adjustment: number) {
+    // Since the change is relative to the current time, don't bother with time drift.
     this.audio.currentTime += adjustment;
   }
 
@@ -220,7 +234,8 @@ export class AudioPlayer {
     if (seekTime == undefined) {
       return;
     }
-    this.audio.currentTime = seekTime;
+    this.setCurrentTime(seekTime);
+    this.timeDrift = -1;
   }
 
   setPlaybackRate(playbackRate: number) {
@@ -237,7 +252,7 @@ export class AudioPlayer {
   initPlayer(overview: BookOverview, playbackInfo: PlaybackInfo) {
     this.$bookDetails.next(overview);
     if (playbackInfo.data["progress_seconds"]) {
-      this.audio.currentTime = playbackInfo.data["progress_seconds"]
+      this.setCurrentTime(playbackInfo.data["progress_seconds"]);
     }
   }
 
