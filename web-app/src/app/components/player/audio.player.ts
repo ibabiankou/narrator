@@ -129,7 +129,7 @@ export class AudioPlayer {
         const gainNode = audioContext.createGain();
         source.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        gainNode.gain.value = 2;
+        gainNode.gain.value = 2.5;
       });
 
     this.$playbackRate.subscribe(() => {
