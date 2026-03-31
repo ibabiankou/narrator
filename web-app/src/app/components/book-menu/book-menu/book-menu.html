@@ -3,24 +3,28 @@
 </button>
 
 <mat-menu #menu="matMenu">
-  <div class="toggle-buttons" (click)="$event.stopPropagation()">
-    <mat-button-toggle-group name="readerMode" aria-label="Reader Mode" [value]="showPages()">
-      <mat-button-toggle value="text" (click)="setShowPages('text')">
-        <mat-icon>subject</mat-icon>
-      </mat-button-toggle>
-      <mat-button-toggle value="both" (click)="setShowPages('both')">
-        <mat-icon class="flip-horizontal">vertical_split</mat-icon>
-      </mat-button-toggle>
-    </mat-button-toggle-group>
-  </div>
+  @if (editMode()) {
+    <div class="toggle-buttons" (click)="$event.stopPropagation()">
+      <mat-button-toggle-group name="readerMode" aria-label="Reader Mode" [value]="showPages()">
+        <mat-button-toggle value="text" (click)="setShowPages('text')">
+          <mat-icon>subject</mat-icon>
+        </mat-button-toggle>
+        <mat-button-toggle value="both" (click)="setShowPages('both')">
+          <mat-icon class="flip-horizontal">vertical_split</mat-icon>
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+  }
 
-  <button mat-menu-item
-          *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
-          aria-label="Edit book"
-          routerLink="/books/{{ bookOverview().id }}/edit">
-    <mat-icon>edit</mat-icon>
-    <span>Edit book</span>
-  </button>
+  @if (!editMode()) {
+    <button mat-menu-item
+            *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
+            aria-label="Edit book"
+            routerLink="/books/{{ bookOverview().id }}/edit">
+      <mat-icon>edit</mat-icon>
+      <span>Edit book</span>
+    </button>
+  }
 
   @if (isDownloaded()) {
     <button mat-menu-item aria-label="Show storage info" (click)="storageInfoDialog(storageInfoTemplate)">

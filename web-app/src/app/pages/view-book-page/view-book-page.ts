@@ -24,10 +24,7 @@ import {
   BreadcrumbContentDirective,
   ToolbarComponent
 } from '../../components/toolbar/toolbar.component';
-import { SettingsService } from '../../core/services/settings.service';
 import { HideIdleDirective } from '../../core/hideIdleDirective';
-import { PdfPage } from '../../components/pdf-page/pdf-page';
-import { VisibilityDirective } from '../../core/visibilityDirective';
 import { binarySearch } from '../../core/utils';
 import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
 
@@ -41,8 +38,6 @@ import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
     BreadcrumbContentDirective,
     ActionButtonContentDirective,
     HideIdleDirective,
-    PdfPage,
-    VisibilityDirective,
     BookMenu,
 
   ],
@@ -52,7 +47,6 @@ import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
 export class ViewBookPage implements AfterViewInit {
   private booksService = inject(BooksService);
   private titleService = inject(Title);
-  private settingsService: SettingsService = inject(SettingsService);
 
   bookId = input.required<string>();
 
@@ -60,10 +54,6 @@ export class ViewBookPage implements AfterViewInit {
   bookWithContent: Signal<BookWithContent>;
   pages: Signal<BookPage[]>;
   pagesWindow = model<BookPage[]>([]);
-
-  settings = toSignal(this.settingsService.userPreferences$);
-
-  isShowingPages = computed(() => this.settings()!["viewer_mode"] === "both");
 
   protected currentSectionId = 0;
   private $currentSectionId = new BehaviorSubject(0);

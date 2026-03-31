@@ -17,12 +17,7 @@
 <div class="main-container">
   @defer (when pagesWindow()) {
     @for (page of pagesWindow(); track page.file_name) {
-      <div [class]="{'sections-only': !isShowingPages(), 'page-with-sections': isShowingPages()}">
-        @if (isShowingPages()) {
-          <div class="raw-page" observeVisibility (visible)="pdfPage.setVisibility($event)">
-            <app-book-page [fileUrl]="page.file_url" #pdfPage></app-book-page>
-          </div>
-        }
+      <div class="sections-only">
         <div class="sections">
           @for (section of page.sections; track section.id) {
             <app-section id="section-{{section.id}}" #section
@@ -31,7 +26,7 @@
           }
         </div>
       </div>
-      @if (page.sections.length > 0 || isShowingPages()) {
+      @if (page.sections.length > 0) {
         <div class="page-number">{{ page.index + 1 }}</div>
       }
     } @empty {

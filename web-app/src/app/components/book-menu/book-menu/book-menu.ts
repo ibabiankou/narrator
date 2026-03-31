@@ -51,6 +51,7 @@ export class BookMenu {
 
   bookOverview = input.required<BookOverview>();
   bookStats = input.required<BookStats>();
+  editMode = input<boolean>(false);
   showPages = computed(() => <string>this.settingsService.userPreferences()!["viewer_mode"]);
 
   downloadInfo: WritableSignal<DownloadInfo | undefined> = signal(undefined);

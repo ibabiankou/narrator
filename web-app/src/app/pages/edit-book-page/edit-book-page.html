@@ -11,7 +11,9 @@
   <div actionButton>
     @defer (when bookWithContent()) {
       <app-book-menu [bookOverview]="bookWithContent().overview"
-                     [bookStats]="bookWithContent().stats"></app-book-menu>
+                     [bookStats]="bookWithContent().stats"
+                     [editMode]="true">
+      </app-book-menu>
     }
   </div>
 </app-toolbar>
