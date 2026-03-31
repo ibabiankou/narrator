@@ -42,7 +42,7 @@ def list_books(user: UserDep, session: SessionDep) -> list[api.BookOverview]:
     # Read books from DB ordered by the date they added.
     stmt = (
         select(db.Book)
-        .where(or_(db.Book.shared == True, db.Book.owner_id == user.id))
+        .where(db.Book.owner_id == user.id)
         .order_by(db.Book.created_time.desc(), db.Book.title)
     )
     books = session.execute(stmt).scalars().all()
@@ -54,8 +54,7 @@ def list_books(user: UserDep, session: SessionDep) -> list[api.BookOverview]:
                                      title=book.title,
                                      pdf_file_name=book.file_name,
                                      number_of_pages=book.number_of_pages,
-                                     status=book.status,
-                                     shared=book.shared))
+                                     status=book.status))
 
     return resp
 
@@ -69,7 +68,7 @@ def search_books(
     stmt = (
         select(db.Book)
         .where(db.Book.title.ilike(search_filter))
-        .where(or_(db.Book.shared == True, db.Book.owner_id == user.id))
+        .where(db.Book.owner_id == user.id)
         .order_by(db.Book.created_time.desc(), db.Book.title)
     )
     books = session.execute(stmt).scalars().all()
@@ -81,8 +80,7 @@ def search_books(
                                      title=book.title,
                                      pdf_file_name=book.file_name,
                                      number_of_pages=book.number_of_pages,
-                                     status=book.status,
-                                     shared=book.shared))
+                                     status=book.status))
 
     return resp
 
@@ -123,8 +121,7 @@ def get_book_with_content(book_id: uuid.UUID,
                                     title=book.title,
                                     pdf_file_name=book.file_name,
                                     number_of_pages=book.number_of_pages,
-                                    status=book.status,
-                                    shared=book.shared)
+                                    status=book.status)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 

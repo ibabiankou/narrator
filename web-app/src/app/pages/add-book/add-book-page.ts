@@ -11,7 +11,6 @@ import { BooksService } from '../../core/services/books.service';
 import { v4 as uuidv4 } from 'uuid';
 import { Title } from '@angular/platform-browser';
 import { BreadcrumbContentDirective, ToolbarComponent } from '../../components/toolbar/toolbar.component';
-import { MatSlideToggle } from '@angular/material/slide-toggle';
 
 @Component({
   selector: 'app-add-book-page',
@@ -27,8 +26,7 @@ import { MatSlideToggle } from '@angular/material/slide-toggle';
     MatCardContent,
     MatCardActions,
     ToolbarComponent,
-    BreadcrumbContentDirective,
-    MatSlideToggle
+    BreadcrumbContentDirective
   ],
   templateUrl: './add-book-page.html',
   styleUrl: './add-book-page.scss',
@@ -37,7 +35,6 @@ export class AddBookPage implements OnInit {
   title: string = '';
   file: File | null = null;
   fileName = '';
-  shared = true;
 
   constructor(private router: Router,
               private filesService: FilesService,
@@ -67,8 +64,7 @@ export class AddBookPage implements OnInit {
         return this.booksService.createBook({
           "id": uuidv4(),
           "title": this.title,
-          "pdf_temp_file_id": tempFile.id,
-          "shared": this.shared
+          "pdf_temp_file_id": tempFile.id
         });
       }))
       .subscribe({

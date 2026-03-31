@@ -45,8 +45,7 @@ class BookService(Service):
                        title=book.title,
                        file_name=book_file_name,
                        created_time=datetime.now(UTC),
-                       status=db.BookStatus.processing,
-                       shared=book.shared)
+                       status=db.BookStatus.processing)
         with DbSession() as session:
             try:
                 session.add(book)
@@ -58,8 +57,7 @@ class BookService(Service):
                                     owner_id=book.owner_id,
                                     title=book.title,
                                     pdf_file_name=book.file_name,
-                                    status=book.status,
-                                    shared=book.shared)
+                                    status=book.status)
 
     def split_pages(self, book_id: uuid.UUID, book_file_name: str):
         LOG.debug(f"Splitting book {book_id} into pages.")
