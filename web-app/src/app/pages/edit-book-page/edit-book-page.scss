@@ -1,3 +1,9 @@
+app-toolbar {
+  ::ng-deep .small-screen + .title {
+    padding-left: 16px;
+  }
+}
+
 .title {
   width: 75%;
 }

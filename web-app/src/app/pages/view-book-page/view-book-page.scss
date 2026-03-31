@@ -2,6 +2,12 @@
   --book-font-size: 16px;
 }
 
+app-toolbar {
+  ::ng-deep .small-screen + .title {
+    padding-left: 16px;
+  }
+}
+
 .title {
   width: 65%;
 }

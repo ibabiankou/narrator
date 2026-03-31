@@ -1,5 +1,23 @@
+app-toolbar div[center] {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 0 32px;
+
+  form {
+    max-width: 650px;
+    width: 100%;
+  }
+
+  ::ng-deep div.center {
+    width: 100%;
+    max-width: 450px;
+  }
+}
+
 .search-field {
-  padding-right: 16px;
+  width: 100%;
 
   ::ng-deep .mat-mdc-form-field-infix {
     padding-top: 8px;

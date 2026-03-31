@@ -1,19 +1,23 @@
 <mat-toolbar>
-  <div class="toolbar-row-item large-screen">
-    <a [routerLink]="['/books']">My Collection</a>
-    @if (hasBreadcrumbContent) {
-      <mat-icon>chevron_right</mat-icon>
-    }
-  </div>
-
-  <div class="toolbar-row-item small-screen">
-    <button matIconButton class="home-button" aria-label="Home" routerLink="/books">
-      <mat-icon>home</mat-icon>
-    </button>
-  </div>
+  @if (isMobile()) {
+    <div class="toolbar-row-item small-screen">
+      <button matIconButton class="home-button" aria-label="Home" routerLink="/books">
+        <mat-icon>home</mat-icon>
+      </button>
+    </div>
+  } @else {
+    <div class="toolbar-row-item large-screen">
+      <a [routerLink]="['/books']">My Collection</a>
+      @if (hasBreadcrumbContent) {
+        <mat-icon>chevron_right</mat-icon>
+      }
+    </div>
+  }
 
   <ng-content select="[breadcrumb]"></ng-content>
-  <span class="toolbar-spacer"></span>
+  <div class="center">
+    <ng-content select="[center]"></ng-content>
+  </div>
   <ng-content select="[actionButton]"></ng-content>
 
   <button matIconButton aria-label="Account menu" [matMenuTriggerFor]="menu">

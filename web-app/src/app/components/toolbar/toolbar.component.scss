@@ -24,7 +24,7 @@ mat-toolbar {
   height: $toolbarHeight;
 }
 
-.toolbar-spacer {
+.center {
   flex: 1 1 auto;
 }
 
@@ -38,18 +38,5 @@ mat-toolbar {
 }
 
 .small-screen {
-  display: none;
-}
-
-.toolbar-row-item.small-screen {
-  padding-right: 16px;
-}
-
-@media (max-width: 730px) {
-  .large-screen {
-    display: none;
-  }
-  .small-screen {
-    display: flex;
-  }
+  display: flex;
 }

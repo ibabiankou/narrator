@@ -9,12 +9,21 @@ import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SettingsService } from '../../core/services/settings.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { map, tap } from 'rxjs';
 
 @Directive({
   selector: '[breadcrumb]',
   standalone: true
 })
 export class BreadcrumbContentDirective {
+}
+
+@Directive({
+  selector: '[center]',
+  standalone: true
+})
+export class CenterContentDirective {
 }
 
 @Directive({
@@ -46,10 +55,20 @@ export class ToolbarComponent {
   private readonly settingsService = inject(SettingsService);
   private readonly themeService = inject(ThemeService);
 
+  private readonly breakpointObserver = inject(BreakpointObserver);
+
   @ContentChild(BreadcrumbContentDirective) breadcrumbContent?: BreadcrumbContentDirective;
+  @ContentChild(CenterContentDirective) centerContent?: CenterContentDirective;
   @ContentChild(ActionButtonContentDirective) actionButtonContent?: ActionButtonContentDirective;
 
   settings = toSignal(this.settingsService.userPreferences$);
+
+  isMobile = toSignal(
+    this.breakpointObserver
+      .observe([Breakpoints.Handset])
+      .pipe(map(result => result.matches), tap(result => console.log("isMobile", result))),
+    { initialValue: false }
+  );
 
   get hasBreadcrumbContent(): boolean {
     return !!this.breadcrumbContent;
