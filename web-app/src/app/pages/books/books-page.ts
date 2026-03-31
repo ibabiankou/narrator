@@ -6,11 +6,11 @@ import { Title } from '@angular/platform-browser';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { BooksService } from '../../core/services/books.service';
 import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
-import { ActionButtonContentDirective, ToolbarComponent } from '../../components/toolbar/toolbar.component';
+import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { MatFormField, MatInput } from '@angular/material/input';
 import { BehaviorSubject, take } from 'rxjs';
 import { BookOverview } from '../../core/models/books.dto';
-  import { FormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-books-page',
@@ -20,7 +20,6 @@ import { BookOverview } from '../../core/models/books.dto';
     RouterLink,
     SkeletonComponent,
     ToolbarComponent,
-    ActionButtonContentDirective,
     MatFormField,
     MatInput,
     FormsModule,
