@@ -1,5 +1,12 @@
 :host {
   --book-font-size: 16px;
+
+  cursor: auto;
+  transition: cursor 0.4s;
+}
+
+:host:has(.hide-cursor) {
+  cursor: none;
 }
 
 app-toolbar {
