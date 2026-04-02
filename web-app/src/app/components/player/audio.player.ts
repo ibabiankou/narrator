@@ -118,6 +118,11 @@ export class AudioPlayer {
           }
         });
 
+        // Pause once end is reached.
+        this.hls.on(Hls.Events.MEDIA_ENDED, (_, data) => {
+          this.pause();
+        });
+
         this.hls.loadSource(this.bookService.getPlaylistUrl(book?.id));
         this.hls.attachMedia(this.audio);
 
