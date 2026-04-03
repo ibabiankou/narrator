@@ -118,9 +118,9 @@ class SectionService(Service):
                                                 from books b
                                                          join sections s on b.id = s.book_id
                                                          left join audio_tracks t on s.id = t.section_id
-                                                where t.id is null
+                                                where t.id is null and b.status = 'ready'
                                                 order by b.created_time
-                                                limit 2), 
+                                                limit 1), 
                             MissingAudio AS (SELECT s.id, s.book_id, s.section_index,
                                                 -- Generate a rank for each section within its own book group
                                                 ROW_NUMBER() OVER (
