@@ -4,7 +4,6 @@ import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError, NoResultFound
-from sqlalchemy.sql.operators import or_
 
 from api import SessionDep, get_logger
 from api.models import db, api
@@ -163,7 +162,7 @@ def reprocess_book(book_id: uuid.UUID,
 
     section_service.delete_sections(book_id=book.id)
 
-    background_tasks.add_task(book_service.split_pages, book.id, book.pdf_file_name)
+    background_tasks.add_task(book_service.split_pages, book.id, book.file_name)
     background_tasks.add_task(book_service.extract_text, book.id, book.file_name)
 
 
