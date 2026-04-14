@@ -178,7 +178,7 @@ class BookService(Service):
         for page_index, page in enumerate(pdf_reader.pages):
             for image_file_object in page.images:
                 file_name = f"page{page_index}_{image_file_object.name}"
-                file_key = f"/{book_id}/images/{file_name}"
+                file_key = f"{book_id}/images/{file_name}"
 
                 hash_obj = hashlib.md5()
                 hash_obj.update(image_file_object.data)

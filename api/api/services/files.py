@@ -68,12 +68,8 @@ class FilesService(Service):
             self.upload_file(remote_path, page["content"])
 
     def upload_file(self, key: str, body: BytesIO):
-            mime_type, encoding = mimetypes.guess_type(key)
-            self.s3_client.put_object(
-                Body=body,
-                Bucket=self.bucket_name,
-                Key=key,
-                ContentType=mime_type)
+        mime_type, encoding = mimetypes.guess_type(key)
+        self.s3_client.put_object(Body=body, Bucket=self.bucket_name, Key=key, ContentType=mime_type)
 
     def _get_object(self, key: str, if_none_match: Optional[str] = "", range: Optional[str] = "bytes=0-") -> Optional[
         FileData]:

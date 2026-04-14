@@ -15,7 +15,7 @@ def test_extract_images():
     images = books_service._extract_images(book_id, pdf_bytes)
 
     for image in images:
-        file_path = f"/Users/ibabiankou/repos/narrator/out{image['file_name']}"
+        file_path = f"/Users/ibabiankou/repos/narrator/out/{image['file_name']}"
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         with open(file_path, "wb") as fp:
