@@ -11,6 +11,7 @@ from api.models import db, api
 from api.models.auth import UserDep
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
+from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
 from api.services.sections import SectionServiceDep
 
@@ -118,6 +119,11 @@ def get_book_with_content(book_id: uuid.UUID,
     pages = get_book_pages(book, section_svc)
 
     return api.BookWithContent(overview=overview, stats=stats, pages=pages)
+
+
+@books_router.get("/{book_id}/images")
+def list_images(book_id: uuid.UUID, file_service: FilesServiceDep) -> list[str]:
+    return file_service.list_files(f"{book_id}/images")
 
 
 @books_router.delete("/{book_id}", status_code=204)
