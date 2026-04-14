@@ -16,6 +16,7 @@ export interface BookOverview {
   pdf_file_name: string;
   number_of_pages: number;
   status: string;
+  cover?: string;
 }
 
 export interface BookStats {

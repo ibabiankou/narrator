@@ -6,7 +6,7 @@
                #searchInput
                type="search"
                enterkeyhint="search"
-               placeholder="Search" >
+               placeholder="Search">
       </mat-form-field>
     </form>
   </div>
@@ -19,7 +19,11 @@
         <div class="book-card">
           <a [routerLink]="['/books', book.id]">
             <div class="cover-wrapper">
-              <img src="covers/{{$index % 2 === 0 ? 'blue' : 'red'}}.png" alt="{{ book.title }}">
+              @if (book.cover) {
+                <img [src]="`/api/files/${ book.cover }` | fileAsBlob | async " alt="{{ book.title }}">
+              } @else {
+                <img src="covers/{{$index % 2 === 0 ? 'blue' : 'red'}}.png" alt="{{ book.title }}">
+              }
             </div>
             <h3 class="book-title">{{ book.title }}</h3>
           </a>

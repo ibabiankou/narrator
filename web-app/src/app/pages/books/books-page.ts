@@ -11,6 +11,8 @@ import { MatFormField, MatInput } from '@angular/material/input';
 import { BehaviorSubject, take } from 'rxjs';
 import { BookOverview } from '../../core/models/books.dto';
 import { FormsModule } from '@angular/forms';
+import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
+import { AsyncPipe } from '@angular/common';
 
 @Component({
   selector: 'app-books-page',
@@ -23,6 +25,8 @@ import { FormsModule } from '@angular/forms';
     MatFormField,
     MatInput,
     FormsModule,
+    FileAsBlobPipe,
+    AsyncPipe,
   ],
   templateUrl: './books-page.html',
   styleUrl: './books-page.scss',
