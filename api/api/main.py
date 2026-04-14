@@ -15,6 +15,7 @@ from api.books import books_router
 from api.debug import debug_router
 from api.files import files_router
 from api.maintenance import maintenance_router
+from api.metadata import metadata_router
 from api.models.auth import User, UserDep
 from api.processing import processing_router
 from api.sections import sections_router
@@ -120,6 +121,7 @@ def get_current_user(user: UserDep):
 
 base_url_router.include_router(files_router, prefix="/files")
 base_url_router.include_router(books_router, prefix="/books")
+base_url_router.include_router(metadata_router, prefix="/books/{book_id}/metadata")
 base_url_router.include_router(processing_router, prefix="/processing")
 base_url_router.include_router(sections_router, prefix="/sections")
 base_url_router.include_router(settings_router, prefix="/settings")

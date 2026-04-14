@@ -67,3 +67,6 @@ class AudioTrack(BaseModel):
 class PlaybackInfo(BaseModel):
     book_id: uuid.UUID
     data: dict
+
+class SetCover(BaseModel):
+    file_path: str
