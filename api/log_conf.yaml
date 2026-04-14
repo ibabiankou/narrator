@@ -37,6 +37,11 @@ loggers:
     handlers:
       - default
     propagate: no
+  fastapi_keycloak_middleware.middleware:
+    level: WARN
+    handlers:
+      - default
+    propagate: no
   requests.packages.urllib3:
     level: INFO
     handlers:

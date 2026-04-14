@@ -172,22 +172,26 @@ class BookService(Service):
         extracted_images = []
 
         for page_index, page in enumerate(pdf_reader.pages):
-            for image_file_object in page.images:
-                file_name = f"page{page_index}_{image_file_object.name}"
-                file_key = f"{book_id}/images/{file_name}"
+            try:
+                for image_file_object in page.images:
+                    file_name = f"page{page_index}_{image_file_object.name}"
+                    file_key = f"{book_id}/images/{file_name}"
 
-                hash_obj = hashlib.md5()
-                hash_obj.update(image_file_object.data)
+                    hash_obj = hashlib.md5()
+                    hash_obj.update(image_file_object.data)
 
-                file_hash = hash_obj.hexdigest()
-                if file_hash in known_hashes:
-                    LOG.info(f"Skipping duplicate image: {file_name}")
-                    continue
-                else:
-                    LOG.info(f"Extracting image: {file_name}")
-                    known_hashes.add(file_hash)
+                    file_hash = hash_obj.hexdigest()
+                    if file_hash in known_hashes:
+                        LOG.info(f"Skipping duplicate image: {file_name}")
+                        continue
+                    else:
+                        LOG.info(f"Extracting image: {file_name}")
+                        known_hashes.add(file_hash)
 
-                extracted_images.append({"file_name": file_key, "content": BytesIO(image_file_object.data)})
+                    extracted_images.append({"file_name": file_key, "content": BytesIO(image_file_object.data)})
+            except Exception as e:
+                LOG.error("Skipping page %s due to error %s", page_index, e)
+                continue
 
         LOG.info(f"Extracted {len(extracted_images)} images: {[i["file_name"] for i in extracted_images]}")
         return extracted_images
