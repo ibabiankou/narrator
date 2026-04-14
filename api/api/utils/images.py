@@ -17,7 +17,7 @@ def create_thumbnail(image_bytes: BytesIO, size = (300, 400), quality=90):
             # Save to WebP in a memory buffer
             output_buffer = BytesIO()
             img.save(output_buffer, format="WEBP", quality=quality)
-
+            output_buffer.seek(0)
             return output_buffer
 
     except Exception as e:
