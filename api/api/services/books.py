@@ -164,7 +164,7 @@ class BookService(Service):
             self.files_service.upload_file(image['file_name'], image['content'])
 
         if len(images) > 0:
-            thumbnail_path = self.file_service.create_thumbnail(book_id, images[0]['file_name'])
+            thumbnail_path = self.files_service.create_thumbnail(book_id, images[0]['file_name'])
             self.set_cover(book_id, thumbnail_path)
 
     def _extract_images(self, book_id: uuid.UUID, pdf_bytes: BytesIO):
