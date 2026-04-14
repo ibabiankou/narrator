@@ -1,19 +1,20 @@
+import logging
 import uuid
 
 import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
-from api import SessionDep, get_logger
+from api import SessionDep
 from api.models import db, api
-from api.models.auth import UserDep, AdminUser
+from api.models.auth import UserDep
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
 from api.services.progress import PlaybackProgressServiceDep
 from api.services.sections import SectionServiceDep
 
-LOG = get_logger(__name__)
+LOG = logging.getLogger(__name__)
 
 books_router = APIRouter(tags=["Books API"])
 
@@ -144,26 +145,6 @@ def delete_book(book_id: uuid.UUID,
         book_service.delete_book(user.id, book_id)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
-
-
-@books_router.post("/{book_id}/reprocess")
-def reprocess_book(book_id: uuid.UUID,
-                   user: AdminUser,
-                   session: SessionDep,
-                   background_tasks: BackgroundTasks,
-                   book_service: BookServiceDep,
-                   section_service: SectionServiceDep):
-    book = session.get(db.Book, book_id)
-    if book is None:
-        raise HTTPException(status_code=404, detail="Book not found")
-
-    session.execute(update(db.Book).where(db.Book.id == book.id).values(status=db.BookStatus.processing))
-    session.commit()
-
-    section_service.delete_sections(book_id=book.id)
-
-    background_tasks.add_task(book_service.split_pages, book.id, book.file_name)
-    background_tasks.add_task(book_service.extract_text, book.id, book.file_name)
 
 
 @books_router.get("/{book_id}/m3u8")

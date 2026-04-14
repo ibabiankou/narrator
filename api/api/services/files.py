@@ -3,6 +3,7 @@ import mimetypes
 import os
 import uuid
 from dataclasses import dataclass
+from io import BytesIO
 from typing import Annotated, Optional, List
 
 import boto3
@@ -64,12 +65,14 @@ class FilesService(Service):
             page_file_name = page["file_name"]
             remote_path = f"{pages_dir_path}/{page_file_name}"
             LOG.info(f"Uploading {remote_path}")
+            self.upload_file(remote_path, page["content"])
 
-            mime_type, encoding = mimetypes.guess_type(remote_path)
+    def upload_file(self, key: str, body: BytesIO):
+            mime_type, encoding = mimetypes.guess_type(key)
             self.s3_client.put_object(
-                Body=page["content"],
+                Body=body,
                 Bucket=self.bucket_name,
-                Key=remote_path,
+                Key=key,
                 ContentType=mime_type)
 
     def _get_object(self, key: str, if_none_match: Optional[str] = "", range: Optional[str] = "bytes=0-") -> Optional[

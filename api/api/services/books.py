@@ -1,3 +1,4 @@
+import hashlib
 import io
 import uuid
 from datetime import datetime, UTC
@@ -71,6 +72,24 @@ class BookService(Service):
         # Upload page files to the object store
         self.files_service.upload_book_pages(book_id, pdf_pages)
 
+    def _split_into_pages(self, pdf_file: BytesIO):
+        pdf_file.seek(0)
+        pdf_reader = PdfReader(pdf_file)
+
+        page_num = len(pdf_reader.pages)
+        LOG.info("Number of pages: %s", page_num)
+
+        pages = []
+        for i in range(page_num):
+            pdf_writer = PdfWriter()
+            pdf_writer.add_page(pdf_reader.pages[i])
+            current_page = {"file_name": f"{i}.pdf", "content": BytesIO()}
+            pdf_writer.write(current_page["content"])
+            current_page["content"].seek(0)
+            pages.append(current_page)
+
+        return pages
+
     def get_text(self, book: db.Book, first_page: int = None, last_page: int = None, raw: bool = False):
         pdf_bytes = self.files_service.get_book_file(book)
         doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
@@ -136,23 +155,46 @@ class BookService(Service):
                                                                     number_of_pages=page_num))
             session.commit()
 
-    def _split_into_pages(self, pdf_file: BytesIO):
-        pdf_file.seek(0)
-        pdf_reader = PdfReader(pdf_file)
+    def extract_and_store_images(self, book_id: uuid.UUID, book_file_name: str):
+        LOG.info(f"Extracting images of the book {book_id}")
 
-        page_num = len(pdf_reader.pages)
-        LOG.info("Number of pages: %s", page_num)
+        pdf_file_key = f"{book_id}/{book_file_name}"
+        pdf_file_data = self.files_service._get_object(pdf_file_key)
+        pdf_bytes = io.BytesIO(pdf_file_data.body)
 
-        pages = []
-        for i in range(page_num):
-            pdf_writer = PdfWriter()
-            pdf_writer.add_page(pdf_reader.pages[i])
-            current_page = {"file_name": f"{i}.pdf", "content": BytesIO()}
-            pdf_writer.write(current_page["content"])
-            current_page["content"].seek(0)
-            pages.append(current_page)
+        images = self._extract_images(book_id, pdf_bytes)
 
-        return pages
+        for image in images:
+            self.files_service.upload_file(image['file_name'], image['content'])
+
+    def _extract_images(self, book_id: uuid.UUID, pdf_bytes: BytesIO):
+        pdf_bytes.seek(0)
+        pdf_reader = PdfReader(pdf_bytes)
+
+        # Deduplicate images by hashing them.
+        known_hashes = set()
+        extracted_images = []
+
+        for page_index, page in enumerate(pdf_reader.pages):
+            for image_file_object in page.images:
+                file_name = f"page{page_index}_{image_file_object.name}"
+                file_key = f"/{book_id}/images/{file_name}"
+
+                hash_obj = hashlib.md5()
+                hash_obj.update(image_file_object.data)
+
+                file_hash = hash_obj.hexdigest()
+                if file_hash in known_hashes:
+                    LOG.info(f"Skipping duplicate image: {file_name}")
+                    continue
+                else:
+                    LOG.info(f"Extracting image: {file_name}")
+                    known_hashes.add(file_hash)
+
+                extracted_images.append({"file_name": file_key, "content": BytesIO(image_file_object.data)})
+
+        LOG.info(f"Extracted {len(extracted_images)} images: {[i["file_name"] for i in extracted_images]}")
+        return extracted_images
 
     def get_book(self, book_id: uuid.UUID) -> db.Book:
         with DbSession() as session:
@@ -180,10 +222,10 @@ class BookService(Service):
                 where a.book_id = :book_id
                 union
                 select count(a.id) as length, 'available' as type
-                from audio_tracks a 
+                from audio_tracks a
                 where a.book_id = :book_id
                   and a.status = 'ready'
-                union 
+                union
                 select coalesce(sum(a.bytes), 0) as length, 'total_size_bytes' as type
                 from audio_tracks a
                 where a.book_id = :book_id
