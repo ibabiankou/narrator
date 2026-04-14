@@ -12,6 +12,7 @@ from botocore.exceptions import ClientError
 from api import get_logger
 from api.models import db
 from api.models.db import DbSession
+from api.utils.images import create_thumbnail
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
@@ -66,6 +67,13 @@ class FilesService(Service):
             remote_path = f"{pages_dir_path}/{page_file_name}"
             LOG.info(f"Uploading {remote_path}")
             self.upload_file(remote_path, page["content"])
+
+    def create_thumbnail(self, book_id: uuid.UUID, image_key: str) -> str:
+        file_data = self._get_object(image_key)
+        thumbnail_buffer = create_thumbnail(BytesIO(file_data.body))
+        thumbnail_path = f"{book_id}/images/cover.webp"
+        self.upload_file(thumbnail_path, thumbnail_buffer)
+        return thumbnail_path
 
     def upload_file(self, key: str, body: BytesIO):
         mime_type, encoding = mimetypes.guess_type(key)

@@ -34,6 +34,7 @@ def create_book(book: api.CreateBookRequest,
     # Process the book in the background
     background_tasks.add_task(book_service.split_pages, book.id, book.pdf_file_name)
     background_tasks.add_task(book_service.extract_text, book.id, book.pdf_file_name)
+    background_tasks.add_task(book_service.extract_and_store_images, book.id, book.pdf_file_name)
 
     return book
 

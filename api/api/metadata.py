@@ -28,9 +28,5 @@ def set_book_cover(book_id: uuid.UUID,
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     # Create and store cover thumbnail.
-    file_data = file_service._get_object(request.file_path)
-    thumbnail_buffer = create_thumbnail(BytesIO(file_data.body))
-    thumbnail_path = f"{book_id}/images/cover.webp"
-    file_service.upload_file(thumbnail_path, thumbnail_buffer)
-
+    thumbnail_path = file_service.create_thumbnail(book_id, request.file_path)
     book_service.set_cover(book_id, thumbnail_path)
