@@ -54,11 +54,7 @@ class BookService(Service):
             except IntegrityError as e:
                 session.rollback()
                 raise e
-            return api.BookOverview(id=book.id,
-                                    owner_id=book.owner_id,
-                                    title=book.title,
-                                    pdf_file_name=book.file_name,
-                                    status=book.status)
+            return api.BookOverview.from_orm(book)
 
     def split_pages(self, book_id: uuid.UUID, book_file_name: str):
         LOG.debug(f"Splitting book {book_id} into pages.")
@@ -195,6 +191,11 @@ class BookService(Service):
 
         LOG.info(f"Extracted {len(extracted_images)} images: {[i["file_name"] for i in extracted_images]}")
         return extracted_images
+
+    def set_cover(self, book_id: uuid.UUID, cover_file_name: str):
+        with DbSession() as session:
+            session.execute(update(db.Book).where(db.Book.id == book_id).values(cover=cover_file_name))
+            session.commit()
 
     def get_book(self, book_id: uuid.UUID) -> db.Book:
         with DbSession() as session:

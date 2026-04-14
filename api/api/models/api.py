@@ -4,6 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from api.models import db
+
 
 class TempFile(BaseModel):
     id: uuid.UUID
@@ -24,6 +26,17 @@ class BookOverview(BaseModel):
     pdf_file_name: str
     number_of_pages: Optional[int] = None
     status: str
+    cover: Optional[str] = None
+
+    @classmethod
+    def from_orm(cls, book: db.Book):
+        return BookOverview(id=book.id,
+                            owner_id=book.owner_id,
+                            title=book.title,
+                            pdf_file_name=book.file_name,
+                            number_of_pages=book.number_of_pages,
+                            status=book.status,
+                            cover=book.cover)
 
 
 class BookStats(BaseModel):

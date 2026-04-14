@@ -49,12 +49,7 @@ def list_books(user: UserDep, session: SessionDep) -> list[api.BookOverview]:
 
     resp = []
     for book in books:
-        resp.append(api.BookOverview(id=book.id,
-                                     owner_id=book.owner_id,
-                                     title=book.title,
-                                     pdf_file_name=book.file_name,
-                                     number_of_pages=book.number_of_pages,
-                                     status=book.status))
+        resp.append(api.BookOverview.from_orm(book))
 
     return resp
 
@@ -75,12 +70,7 @@ def search_books(
 
     resp = []
     for book in books:
-        resp.append(api.BookOverview(id=book.id,
-                                     owner_id=book.owner_id,
-                                     title=book.title,
-                                     pdf_file_name=book.file_name,
-                                     number_of_pages=book.number_of_pages,
-                                     status=book.status))
+        resp.append(api.BookOverview.from_orm(book))
 
     return resp
 
@@ -116,12 +106,7 @@ def get_book_with_content(book_id: uuid.UUID,
                           ) -> api.BookWithContent:
     try:
         book = book_service.get_book(book_id)
-        overview = api.BookOverview(id=book.id,
-                                    owner_id=book.owner_id,
-                                    title=book.title,
-                                    pdf_file_name=book.file_name,
-                                    number_of_pages=book.number_of_pages,
-                                    status=book.status)
+        overview = api.BookOverview.from_orm(book)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 

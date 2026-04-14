@@ -30,7 +30,7 @@ def set_book_cover(book_id: uuid.UUID,
     # Create and store cover thumbnail.
     file_data = file_service._get_object(request.file_path)
     thumbnail_buffer = create_thumbnail(BytesIO(file_data.body))
-    file_service.upload_file(f"{book_id}/images/cover.webp", thumbnail_buffer)
+    thumbnail_path = f"{book_id}/images/cover.webp"
+    file_service.upload_file(thumbnail_path, thumbnail_buffer)
 
-    # TODO: Update metadata.
-    # Update cover field in the database.
+    book_service.set_cover(book_id, thumbnail_path)

@@ -53,6 +53,7 @@ class Book(Base):
     number_of_pages: Mapped[Optional[int]]
     created_time: Mapped[datetime.datetime]
     status: Mapped[str]
+    cover: Mapped[Optional[str]]
 
 
 class Section(Base):
