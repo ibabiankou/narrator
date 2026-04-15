@@ -5,11 +5,20 @@ app-toolbar {
 }
 
 .title {
-  width: 75%;
-}
-.title h1 {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+
+  a {
+    min-width: 0;
+  }
+
+  h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 $maxWidth: 1280px;

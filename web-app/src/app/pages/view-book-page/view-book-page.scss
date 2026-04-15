@@ -16,11 +16,20 @@ app-toolbar {
 }
 
 .title {
-  width: 65%;
-}
-.title h1 {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+
+  a {
+    min-width: 0;
+  }
+
+  h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .delete-button, .delete-button mat-icon {
@@ -62,6 +71,7 @@ $maxWidth: 1280px;
   .sections {
     width: 55%;
     padding: 0 10px;
+
     app-section {
       margin-bottom: 5px;
     }
@@ -74,6 +84,7 @@ $maxWidth: 1280px;
   .sections {
     max-width: $maxWidth;
     margin: 0 auto;
+
     app-section {
       margin-bottom: 5px;
     }

@@ -28,6 +28,9 @@ import { HideIdleDirective } from '../../core/hideIdleDirective';
 import { binarySearch } from '../../core/utils';
 import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
 import { RouterLink } from '@angular/router';
+import { MatIcon } from '@angular/material/icon';
+import { MatIconButton } from '@angular/material/button';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-view-book-page',
@@ -41,7 +44,9 @@ import { RouterLink } from '@angular/router';
     HideIdleDirective,
     BookMenu,
     RouterLink,
-
+    MatIcon,
+    MatIconButton,
+    MatTooltip,
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
@@ -161,5 +166,9 @@ export class ViewBookPage implements AfterViewInit {
     this.currentSectionId = sectionId;
     this.$currentSectionId.next(sectionId);
     this.scrollToSection(sectionId);
+  }
+
+  protected copyBookTitle() {
+    navigator.clipboard.writeText(this.bookWithContent()?.overview.title ?? "");
   }
 }

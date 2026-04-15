@@ -17,6 +17,9 @@ import { PdfPage } from '../../components/pdf-page/pdf-page';
 import { VisibilityDirective } from '../../core/visibilityDirective';
 import { AuthService } from '../../core/services/authService';
 import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
+import { MatIcon } from '@angular/material/icon';
+import { MatIconButton } from '@angular/material/button';
+import { MatTooltip } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-view-book-page',
@@ -30,6 +33,9 @@ import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
     VisibilityDirective,
     RouterLink,
     BookMenu,
+    MatIcon,
+    MatIconButton,
+    MatTooltip,
   ],
   templateUrl: './edit-book-page.html',
   styleUrl: './edit-book-page.scss',
@@ -84,5 +90,9 @@ export class EditBookPage {
 
   protected setEditingSection(isEditing: boolean) {
     this.isEditingSection.set(isEditing);
+  }
+
+  protected copyBookTitle() {
+    navigator.clipboard.writeText(this.bookWithContent()?.overview.title ?? "");
   }
 }

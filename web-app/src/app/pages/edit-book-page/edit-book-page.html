@@ -4,6 +4,16 @@
       <a routerLink="/books/{{ bookId() }}">
         <h1>{{ bookWithContent().overview.title }}</h1>
       </a>
+      <button matIconButton
+              aria-label="Copy book title"
+              (click)="copyBookTitle(); tooltip.show(10);"
+              #tooltip="matTooltip"
+              matTooltip="Copied!"
+              matTooltipPosition="right"
+              matTooltipShowDelay="10000"
+              matTooltipHideDelay="2000">
+        <mat-icon>content_copy</mat-icon>
+      </button>
     } @placeholder (minimum 250ms) {
       <app-skeleton height="1.5rem"/>
     }
