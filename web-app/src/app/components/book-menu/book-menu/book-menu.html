@@ -17,13 +17,13 @@
   }
 
   @if (!editMode()) {
-    <button mat-menu-item
+    <a mat-menu-item
             *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
             aria-label="Edit book"
             routerLink="/books/{{ bookOverview().id }}/edit">
       <mat-icon>edit</mat-icon>
       <span>Edit book</span>
-    </button>
+    </a>
   }
 
   @if (isDownloaded()) {
