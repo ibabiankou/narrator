@@ -27,6 +27,7 @@ import {
 import { HideIdleDirective } from '../../core/hideIdleDirective';
 import { binarySearch } from '../../core/utils';
 import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-view-book-page',
@@ -39,6 +40,7 @@ import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
     ActionButtonContentDirective,
     HideIdleDirective,
     BookMenu,
+    RouterLink,
 
   ],
   templateUrl: './view-book-page.html',
