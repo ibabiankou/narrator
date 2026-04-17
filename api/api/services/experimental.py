@@ -1,11 +1,12 @@
 import os
 from google import genai
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
+
 
 class BookMetadata(BaseModel):
-    title: str = Field(description="The full title of the book.")
-    series: str = Field(description="The name of the series.")
+    title: Optional[str] = Field(description="The full title of the book.")
+    series: Optional[str] = Field(description="The name of the series.")
     authors: List[str] = Field(description="A list of authors of the book.")
     isbn: List[str] = Field(description="The 10 or 13-digit ISBN(s) if found in the text.")
 
