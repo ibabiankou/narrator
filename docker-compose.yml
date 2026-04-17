@@ -18,6 +18,7 @@ services:
       SPEECH_GENERATION_INTERVAL_SEC: 5
       KC_CLIENT_ID: ${KC_CLIENT_ID}
       KC_CLIENT_SECRET: ${KC_CLIENT_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     depends_on:
       pg:
         condition: service_healthy

@@ -1,8 +1,6 @@
 import re
 from typing import Protocol
 
-from pypdf import PdfReader
-
 from api import get_logger
 
 LOG = get_logger(__name__)

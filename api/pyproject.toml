@@ -24,6 +24,7 @@ pymupdf = "^1.26.7"
 m3u8 = "^6.0.0"
 fastapi-keycloak-middleware = "^1.6.0"
 pillow = "^12.2.0"
+google-genai = "^1.73.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

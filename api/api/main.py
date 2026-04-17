@@ -1,4 +1,3 @@
-import asyncio
 import os
 import typing
 from contextlib import asynccontextmanager
@@ -12,7 +11,7 @@ from pika.exchange_type import ExchangeType
 from starlette.middleware.gzip import GZipMiddleware
 
 from api.books import books_router
-from api.debug import debug_router
+from api.experimental import experimental_router
 from api.files import files_router
 from api.maintenance import maintenance_router
 from api.metadata import metadata_router
@@ -49,7 +48,7 @@ async def lifespan(app: FastAPI):
     rmq_client = RMQClient(Topology.default_exchange)
     audiotrack_svc = AudioTrackService(files_svc, rmq_client)
     section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client)
-    speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
+    # speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
     books_svc = BookService(files_svc, section_svc, progress_svc)
 
     def configure(channel: BlockingChannel):
@@ -64,7 +63,7 @@ async def lifespan(app: FastAPI):
     rmq_client.set_queue_message_handler(Topology.api_queue, rmq.SpeechResponse, audiotrack_svc.handle_speech_msg)
     rmq_client.start_consuming()
     yield
-    speech_gen_task.cancel()
+    # speech_gen_task.cancel()
     RMQClient.instance.close()
 
 
@@ -126,5 +125,5 @@ base_url_router.include_router(processing_router, prefix="/processing")
 base_url_router.include_router(sections_router, prefix="/sections")
 base_url_router.include_router(settings_router, prefix="/settings")
 base_url_router.include_router(maintenance_router, prefix="/maintenance")
-base_url_router.include_router(debug_router, prefix="/debug")
+base_url_router.include_router(experimental_router, prefix="/experimental")
 app.include_router(base_url_router)
