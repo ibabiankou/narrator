@@ -10,7 +10,7 @@ from api import SessionDep
 from api.models import db
 from api.models.auth import AdminUser
 from api.services.books import BookServiceDep
-from api.services.gemini import identify_book
+from api.services.experimental import identify_book
 
 experimental_router = APIRouter(tags=["Experimental API"])
 
