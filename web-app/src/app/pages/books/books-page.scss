@@ -41,10 +41,14 @@ button[mat-fab] {
 
 .book-grid {
   display: grid;
-  /* Creates as many columns as fit, at least 150px wide each */
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
   padding: 20px;
+
+  @media screen and (max-width: 599.98px) and (orientation: portrait) {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
 }
 
 .book-card {
