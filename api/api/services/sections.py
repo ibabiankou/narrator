@@ -10,6 +10,7 @@ from api.models import db, api
 from api.models.db import DbSession
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.progress import PlaybackProgressServiceDep
+from api.services.settings import SettingsServiceDep
 from common_lib import RMQClientDep
 from common_lib.models import rmq
 from common_lib.rmq import Topology
@@ -22,10 +23,12 @@ class SectionService(Service):
     def __init__(self,
                  audiotracks_service: AudioTrackServiceDep,
                  progress_service: PlaybackProgressServiceDep,
-                 rmq_client: RMQClientDep):
+                 rmq_client: RMQClientDep,
+                 settings_service: SettingsServiceDep):
         self.audiotracks_service = audiotracks_service
         self.progress_service = progress_service
         self.rmq_client = rmq_client
+        self.settings_service = settings_service
 
         self._speech_generation_interval_sec = int(os.getenv("SPEECH_GENERATION_INTERVAL_SEC", 30))
         self._speech_generation_queue_size_threshold = int(os.getenv("SPEECH_GENERATION_QUEUE_SIZE_THRESHOLD", 10))
@@ -105,6 +108,11 @@ class SectionService(Service):
             await asyncio.sleep(self._speech_generation_interval_sec)
 
     async def _do_generate_speech_maybe(self):
+        system_settings = self.settings_service.get_system_settings()
+        if not system_settings.speech_generation_enabled:
+            LOG.info("Speech generation is disabled. Doing nothing.")
+            return
+
         message_num = 0
         message_num += await self.rmq_client.get_queue_size(Topology.phonemization_queue)
         message_num += await self.rmq_client.get_queue_size(Topology.speech_gen_queue)

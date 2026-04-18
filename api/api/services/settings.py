@@ -1,4 +1,5 @@
 import uuid
+from dataclasses import dataclass
 from typing import Annotated, Optional
 
 from sqlalchemy import select, update
@@ -10,11 +11,21 @@ from common_lib.service import Service
 
 LOG = get_logger(__name__)
 
+@dataclass
+class SystemSettings:
+    speech_generation_enabled: bool = False
 
 class SettingsService(Service):
+    def __init__(self):
+        self.system_user_id = uuid.UUID("7e8fdd19-af4f-41b1-a43a-e00b8bdeefb4")
+
     def get_settings(self, user_id: uuid.UUID, kind: str) -> dict:
         settings = self._load_settings(user_id, kind)
         return settings.data if settings is not None else default_settings(kind)
+
+    def get_system_settings(self) -> SystemSettings:
+        data_dict = self.get_settings(self.system_user_id, "system")
+        return SystemSettings(**data_dict)
 
     def _load_settings(self, user_id: uuid.UUID, kind: str) -> Optional[db.Settings]:
         with DbSession() as session:

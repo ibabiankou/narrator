@@ -1,3 +1,4 @@
+import asyncio
 import os
 import typing
 from contextlib import asynccontextmanager
@@ -47,8 +48,8 @@ async def lifespan(app: FastAPI):
 
     rmq_client = RMQClient(Topology.default_exchange)
     audiotrack_svc = AudioTrackService(files_svc, rmq_client)
-    section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client)
-    # speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
+    section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc)
+    speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
     books_svc = BookService(files_svc, section_svc, progress_svc)
 
     def configure(channel: BlockingChannel):
@@ -63,7 +64,7 @@ async def lifespan(app: FastAPI):
     rmq_client.set_queue_message_handler(Topology.api_queue, rmq.SpeechResponse, audiotrack_svc.handle_speech_msg)
     rmq_client.start_consuming()
     yield
-    # speech_gen_task.cancel()
+    speech_gen_task.cancel()
     RMQClient.instance.close()
 
 
