@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
 import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
+import { PageResponse, toPageResponse } from '../models/pagination.dto';
 
 @Injectable({
   providedIn: 'root'
@@ -45,22 +46,31 @@ export class BooksService {
         }));
   }
 
-  listBooks(): Observable<BookOverview[]> {
+  listBooks(page: number = 1, size: number = 10): Observable<PageResponse<BookOverview>> {
     const loadFromCache =
-      this.booksCache.getAll().pipe(map(bwc => bwc.map(bwc => bwc.overview)));
+      this.booksCache.getAll().pipe(
+        map(bwc => bwc.map(bwc => bwc.overview)),
+        map(overviews => toPageResponse(overviews, page, size)),
+      );
 
-    const loadFromApi = this.http.get<BookOverview[]>(`${this.apiUrl}/`).pipe(
-      // Fall back to cache in case of error? Might be frustrating, if its a genuine API error...
-      catchError((err, caught) => loadFromCache)
-    );
+    var params = new HttpParams();
+    params = params.append('page', page);
+    params = params.append('size', size);
+    const loadFromApi =
+      this.http.get<PageResponse<BookOverview>>(`${this.apiUrl}/`, {params: params}).pipe(
+        // Fall back to cache in case of error? Might be frustrating, if its a genuine API error...
+        catchError(() => loadFromCache)
+      );
 
     return this.connectionService.isOnline() ? loadFromApi : loadFromCache;
   }
 
-  searchBooks(query: string): Observable<BookOverview[]> {
+  searchBooks(query: string, page: number = 1, size: number = 10): Observable<PageResponse<BookOverview>> {
     var params = new HttpParams();
     params = params.append('query', query);
-    return this.http.get<BookOverview[]>(`${this.apiUrl}/search`, {params: params});
+    params = params.append('page', page);
+    params = params.append('size', size);
+    return this.http.get<PageResponse<BookOverview>>(`${this.apiUrl}/search`, {params: params});
   }
 
   delete(id: string) {

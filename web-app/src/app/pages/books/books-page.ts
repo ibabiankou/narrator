@@ -8,11 +8,12 @@ import { BooksService } from '../../core/services/books.service';
 import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
 import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { MatFormField, MatInput } from '@angular/material/input';
-import { BehaviorSubject, take } from 'rxjs';
+import { BehaviorSubject, map, take } from 'rxjs';
 import { BookOverview } from '../../core/models/books.dto';
 import { FormsModule } from '@angular/forms';
 import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
 import { AsyncPipe } from '@angular/common';
+import { EMPTY_PAGE_RESPONSE, PageResponse } from '../../core/models/pagination.dto';
 
 @Component({
   selector: 'app-books-page',
@@ -36,12 +37,12 @@ export class BooksPage implements OnInit {
   private router: Router = inject(Router);
   private bookService = inject(BooksService);
 
-  private $books = new BehaviorSubject<BookOverview[]>([]);
-  books = toSignal(this.$books);
+  private $books = new BehaviorSubject<PageResponse<BookOverview>>(EMPTY_PAGE_RESPONSE);
+  books = toSignal(this.$books.pipe(map(page => page.items)), {initialValue: []});
 
   constructor() {
-    this.bookService.listBooks().pipe(take(1)).subscribe(books => {
-      this.$books.next(books);
+    this.bookService.listBooks().pipe(take(1)).subscribe(booksPage => {
+      this.$books.next(booksPage);
     })
   }
 
