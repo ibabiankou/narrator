@@ -1,10 +1,13 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Generic, List, TypeVar
 
+from fastapi import Query
 from pydantic import BaseModel
 
 from api.models import db
+
+T = TypeVar("T")
 
 
 class TempFile(BaseModel):
@@ -17,6 +20,18 @@ class CreateBookRequest(BaseModel):
     id: uuid.UUID
     title: str
     pdf_temp_file_id: uuid.UUID
+
+
+class PageRequest(BaseModel):
+    page: int = Query(1, ge=1, description="Page number")
+    size: int = Query(2, ge=1, le=100, description="Items per page")
+
+
+class PagedResponse(BaseModel, Generic[T]):
+    items: List[T]
+    total: int
+    page: int
+    size: int
 
 
 class BookOverview(BaseModel):
@@ -80,6 +95,7 @@ class AudioTrack(BaseModel):
 class PlaybackInfo(BaseModel):
     book_id: uuid.UUID
     data: dict
+
 
 class SetCover(BaseModel):
     file_path: str

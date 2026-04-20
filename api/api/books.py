@@ -2,12 +2,14 @@ import logging
 import uuid
 
 import m3u8
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Response
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Depends
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.sql.functions import count
 
 from api import SessionDep
 from api.models import db, api
+from api.models.api import PagedResponse, PageRequest
 from api.models.auth import UserDep
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
@@ -40,33 +42,57 @@ def create_book(book: api.CreateBookRequest,
 
 
 @books_router.get("/")
-def list_books(user: UserDep, session: SessionDep) -> list[api.BookOverview]:
-    # Read books from DB ordered by the date they added.
-    stmt = (
+def list_books(
+        user: UserDep,
+        session: SessionDep,
+        page_request: PageRequest = Depends()
+) -> PagedResponse[api.BookOverview]:
+
+    count_stmt =  (
+        select(count())
+        .where(db.Book.owner_id == user.id)
+    )
+    total = session.execute(count_stmt).scalar()
+
+    items_stmt = (
         select(db.Book)
         .where(db.Book.owner_id == user.id)
         .order_by(db.Book.created_time.desc(), db.Book.title)
+        .offset((page_request.page - 1) * page_request.size)
+        .limit(page_request.size)
     )
-    books = session.execute(stmt).scalars().all()
+    items = session.execute(items_stmt).scalars().all()
 
     resp = []
-    for book in books:
+    for book in items:
         resp.append(api.BookOverview.from_orm(book))
 
-    return resp
+    return PagedResponse(items=resp, total=total, page=page_request.page, size=page_request.size)
 
 
 @books_router.get("/search")
 def search_books(
         query: str,
         user: UserDep,
-        session: SessionDep) -> list[api.BookOverview]:
+        session: SessionDep,
+        page_request: PageRequest = Depends()
+) -> PagedResponse[api.BookOverview]:
     search_filter = f"%{query}%"
+
+    count_stmt =  (
+        select(count())
+        .where(db.Book.title.ilike(search_filter))
+        .where(db.Book.owner_id == user.id)
+    )
+    total = session.execute(count_stmt).scalar()
+
     stmt = (
         select(db.Book)
         .where(db.Book.title.ilike(search_filter))
         .where(db.Book.owner_id == user.id)
         .order_by(db.Book.created_time.desc(), db.Book.title)
+        .offset((page_request.page - 1) * page_request.size)
+        .limit(page_request.size)
     )
     books = session.execute(stmt).scalars().all()
 
@@ -74,7 +100,7 @@ def search_books(
     for book in books:
         resp.append(api.BookOverview.from_orm(book))
 
-    return resp
+    return PagedResponse(items=resp, total=total, page=page_request.page, size=page_request.size)
 
 
 def get_book_pages(book: db.Book, section_svc: SectionServiceDep) -> list[api.BookPage]:
