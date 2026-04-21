@@ -9,7 +9,7 @@ from sqlalchemy.sql.functions import count
 
 from api import SessionDep
 from api.models import db, api
-from api.models.api import PagedResponse, PageRequest
+from api.models.api import PagedResponse, PageRequest, paged_response
 from api.models.auth import UserDep
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
@@ -58,7 +58,7 @@ def list_books(
         select(db.Book)
         .where(db.Book.owner_id == user.id)
         .order_by(db.Book.created_time.desc(), db.Book.title)
-        .offset((page_request.page - 1) * page_request.size)
+        .offset(page_request.page_index * page_request.size)
         .limit(page_request.size)
     )
     items = session.execute(items_stmt).scalars().all()
@@ -67,7 +67,7 @@ def list_books(
     for book in items:
         resp.append(api.BookOverview.from_orm(book))
 
-    return PagedResponse(items=resp, total=total, page=page_request.page, size=page_request.size)
+    return paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
 
 
 @books_router.get("/search")
@@ -91,7 +91,7 @@ def search_books(
         .where(db.Book.title.ilike(search_filter))
         .where(db.Book.owner_id == user.id)
         .order_by(db.Book.created_time.desc(), db.Book.title)
-        .offset((page_request.page - 1) * page_request.size)
+        .offset(page_request.page_index * page_request.size)
         .limit(page_request.size)
     )
     books = session.execute(stmt).scalars().all()
@@ -100,7 +100,7 @@ def search_books(
     for book in books:
         resp.append(api.BookOverview.from_orm(book))
 
-    return PagedResponse(items=resp, total=total, page=page_request.page, size=page_request.size)
+    return paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
 
 
 def get_book_pages(book: db.Book, section_svc: SectionServiceDep) -> list[api.BookPage]:

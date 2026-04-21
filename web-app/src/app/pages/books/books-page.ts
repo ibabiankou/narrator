@@ -1,19 +1,19 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { MatFabButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { BooksService } from '../../core/services/books.service';
 import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
 import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { MatFormField, MatInput } from '@angular/material/input';
-import { BehaviorSubject, map, take } from 'rxjs';
-import { BookOverview } from '../../core/models/books.dto';
+import { combineLatest, switchMap } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
 import { AsyncPipe } from '@angular/common';
-import { EMPTY_PAGE_RESPONSE, PageResponse } from '../../core/models/pagination.dto';
+import { DEFAULT_PAGE_INFO, DEFAULT_PAGE_SIZE } from '../../core/models/pagination.dto';
+import { MatPaginator, PageEvent } from '@angular/material/paginator';
 
 @Component({
   selector: 'app-books-page',
@@ -28,6 +28,7 @@ import { EMPTY_PAGE_RESPONSE, PageResponse } from '../../core/models/pagination.
     FormsModule,
     FileAsBlobPipe,
     AsyncPipe,
+    MatPaginator,
   ],
   templateUrl: './books-page.html',
   styleUrl: './books-page.scss',
@@ -35,16 +36,27 @@ import { EMPTY_PAGE_RESPONSE, PageResponse } from '../../core/models/pagination.
 export class BooksPage implements OnInit {
   private titleService = inject(Title);
   private router: Router = inject(Router);
+  private route = inject(ActivatedRoute);
   private bookService = inject(BooksService);
 
-  private $books = new BehaviorSubject<PageResponse<BookOverview>>(EMPTY_PAGE_RESPONSE);
-  books = toSignal(this.$books.pipe(map(page => page.items)), {initialValue: []});
+  readonly queryParams = toSignal(this.route.queryParams, {initialValue: {} as Params});
+  readonly searchQuery = computed(() => String(this.queryParams()['q'] || ''));
+  readonly pageIndex = computed(() => Number(this.queryParams()['page_index'] || 0));
+  readonly size = computed(() => Number(this.queryParams()['size'] || DEFAULT_PAGE_SIZE));
 
-  constructor() {
-    this.bookService.listBooks().pipe(take(1)).subscribe(booksPage => {
-      this.$books.next(booksPage);
-    })
-  }
+  private $books =
+    combineLatest([toObservable(this.searchQuery), toObservable(this.pageIndex), toObservable(this.size)]).pipe(
+      switchMap(([searchQuery, pageIndex, size]) => {
+        if (searchQuery != undefined && searchQuery.trim().length > 0) {
+          return this.bookService.searchBooks(searchQuery, pageIndex, size);
+        } else {
+          return this.bookService.listBooks(pageIndex, size);
+        }
+      })
+    );
+  private booksPage = toSignal(this.$books);
+  readonly books = computed(() => this.booksPage()?.items || []);
+  readonly pageInfo = computed(() => this.booksPage()?.page_info || DEFAULT_PAGE_INFO);
 
   ngOnInit() {
     this.titleService.setTitle('Books - NNarrator');
@@ -55,8 +67,18 @@ export class BooksPage implements OnInit {
   }
 
   protected search(value: any) {
-    this.bookService.searchBooks(value).pipe(take(1)).subscribe(books => {
-      this.$books.next(books);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {q: value},
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  protected changePage(pageEvent: PageEvent) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {page_index: pageEvent.pageIndex, size: pageEvent.pageSize},
+      queryParamsHandling: 'merge',
     });
   }
 }

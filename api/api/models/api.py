@@ -23,15 +23,23 @@ class CreateBookRequest(BaseModel):
 
 
 class PageRequest(BaseModel):
-    page: int = Query(1, ge=1, description="Page number")
+    page_index: int = Query(0, ge=0, description="Page index")
     size: int = Query(2, ge=1, le=100, description="Items per page")
+
+
+class PageInfo(BaseModel):
+    total: int
+    index: int
+    size: int
 
 
 class PagedResponse(BaseModel, Generic[T]):
     items: List[T]
-    total: int
-    page: int
-    size: int
+    page_info: PageInfo
+
+
+def paged_response(items: List[T], total: int, index: int, size: int) -> PagedResponse[T]:
+    return PagedResponse(items=items, page_info=PageInfo(total=total, index=index, size=size))
 
 
 class BookOverview(BaseModel):

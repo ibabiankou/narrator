@@ -13,6 +13,15 @@
 </app-toolbar>
 
 <div class="main-container">
+  <div class="paginator">
+    <mat-paginator [length]="pageInfo().total"
+                   [pageIndex]="pageIndex()"
+                   [pageSize]="size()"
+                   [hidePageSize]="true"
+                   (page)="changePage($event)"
+                   aria-label="Select page">
+    </mat-paginator>
+  </div>
   <div class="book-grid">
     @defer (when books()) {
       @for (book of books(); track book.id) {

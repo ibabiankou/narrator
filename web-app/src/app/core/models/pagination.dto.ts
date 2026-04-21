@@ -1,14 +1,20 @@
-export const EMPTY_PAGE_RESPONSE = {items: [], total: 0, page: 0, size: 0};
-export interface PageResponse<T> {
-  items: T[];
+export const DEFAULT_PAGE_SIZE = 25;
+export const DEFAULT_PAGE_INFO: PageInfo = {total: 0, index: 0, size: DEFAULT_PAGE_SIZE};
+
+export interface PageInfo {
   total: number;
-  page: number;
+  index: number;
   size: number;
 }
 
-export function toPageResponse<T>(all_items: T[], page: number, size: number): PageResponse<T> {
-  const offset = (page - 1) * size;
+export interface PageResponse<T> {
+  items: T[];
+  page_info: PageInfo;
+}
+
+export function toPageResponse<T>(all_items: T[], page_index: number, size: number): PageResponse<T> {
+  const offset = page_index * size;
   const page_items = all_items.slice(offset + 1, offset + 1 + size);
 
-  return {items: page_items, total: all_items.length, page, size};
+  return {items: page_items, page_info: {total: all_items.length, index: page_index, size}};
 }

@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
 import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
-import { PageResponse, toPageResponse } from '../models/pagination.dto';
+import { DEFAULT_PAGE_SIZE, PageResponse, toPageResponse } from '../models/pagination.dto';
 
 @Injectable({
   providedIn: 'root'
@@ -46,16 +46,20 @@ export class BooksService {
         }));
   }
 
-  listBooks(page: number = 1, size: number = 10): Observable<PageResponse<BookOverview>> {
+  listBooks(pageIndex?: number, size?: number): Observable<PageResponse<BookOverview>> {
     const loadFromCache =
       this.booksCache.getAll().pipe(
         map(bwc => bwc.map(bwc => bwc.overview)),
-        map(overviews => toPageResponse(overviews, page, size)),
+        map(overviews => toPageResponse(overviews, pageIndex || 0, size || DEFAULT_PAGE_SIZE)),
       );
 
-    var params = new HttpParams();
-    params = params.append('page', page);
-    params = params.append('size', size);
+    let params = new HttpParams();
+    if (pageIndex !== undefined) {
+      params = params.append('page_index', pageIndex);
+    }
+    if (size !== undefined) {
+      params = params.append('size', size);
+    }
     const loadFromApi =
       this.http.get<PageResponse<BookOverview>>(`${this.apiUrl}/`, {params: params}).pipe(
         // Fall back to cache in case of error? Might be frustrating, if its a genuine API error...
@@ -65,11 +69,15 @@ export class BooksService {
     return this.connectionService.isOnline() ? loadFromApi : loadFromCache;
   }
 
-  searchBooks(query: string, page: number = 1, size: number = 10): Observable<PageResponse<BookOverview>> {
-    var params = new HttpParams();
+  searchBooks(query: string, pageIndex?: number, size?: number): Observable<PageResponse<BookOverview>> {
+    let params = new HttpParams();
     params = params.append('query', query);
-    params = params.append('page', page);
-    params = params.append('size', size);
+    if (pageIndex !== undefined) {
+      params = params.append('page_index', pageIndex);
+    }
+    if (size !== undefined) {
+      params = params.append('size', size);
+    }
     return this.http.get<PageResponse<BookOverview>>(`${this.apiUrl}/search`, {params: params});
   }
 
