@@ -24,7 +24,7 @@ class CreateBookRequest(BaseModel):
 
 class PageRequest(BaseModel):
     page_index: int = Query(0, ge=0, description="Page index")
-    size: int = Query(2, ge=1, le=100, description="Items per page")
+    size: int = Query(25, ge=1, le=100, description="Items per page")
 
 
 class PageInfo(BaseModel):
