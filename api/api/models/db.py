@@ -2,10 +2,11 @@ import datetime
 import os
 import uuid
 from enum import StrEnum
-from typing import Optional
+from typing import Optional, Type, List
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, ForeignKey
+from pydantic import BaseModel, Field
+from sqlalchemy import create_engine, ForeignKey, TypeDecorator
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker
 
@@ -29,6 +30,25 @@ class Base(DeclarativeBase):
         }
 
 
+class PydanticType(TypeDecorator):
+    """Serializes a single Pydantic model (and its nested data) to JSONB."""
+    impl = JSONB
+
+    def __init__(self, pydantic_type: Type[BaseModel], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pydantic_type = pydantic_type
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return value.model_dump() if isinstance(value, BaseModel) else value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return self.pydantic_type.model_validate(value)
+
+
 class TempFile(Base):
     __tablename__ = "temp_files"
 
@@ -40,7 +60,22 @@ class TempFile(Base):
 
 class BookStatus(StrEnum):
     processing = "processing"
+    ready_for_metadata_review = "ready_for_metadata_review"
     ready = "ready"
+
+
+class MetadataCandidate(BaseModel):
+    source: str = Field(description="The source of the metadata.")
+    title: Optional[str] = Field(description="The full title of the book.")
+    series: Optional[str] = Field(description="The name of the series.")
+    authors: List[str] = Field(description="A list of authors of the book.")
+    isbn: List[str] = Field(description="The 10 or 13-digit ISBN(s) if found in the text.")
+
+
+class MetadataCandidates(BaseModel):
+    candidates: list[MetadataCandidate]
+    preferred_index: int = Field(description="Zero based index of the candidate we think to be the best.")
+    selected_index: Optional[str] = Field(description="Zero based index of the candidate selected by the user.")
 
 
 class Book(Base):
@@ -54,6 +89,11 @@ class Book(Base):
     created_time: Mapped[datetime.datetime]
     status: Mapped[str]
     cover: Mapped[Optional[str]]
+
+    metadata_candidates: Mapped[Optional[MetadataCandidates]] = mapped_column(type_=PydanticType(MetadataCandidates))
+
+    # TODO: Add errors field. JSONB array of dictionaries. Any processing / validation errors encountered
+    #  should be stored there and displayed in UI.
 
 
 class Section(Base):

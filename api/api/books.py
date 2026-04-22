@@ -33,10 +33,9 @@ def create_book(book: api.CreateBookRequest,
         LOG.error("Error creating book", exc_info=True)
         raise HTTPException(status_code=409, detail="Book with this title already exists")
 
-    # Process the book in the background
+    background_tasks.add_task(book_service.extract_metadata, book.id, book.pdf_file_name)
     background_tasks.add_task(book_service.split_pages, book.id, book.pdf_file_name)
     background_tasks.add_task(book_service.extract_text, book.id, book.pdf_file_name)
-    background_tasks.add_task(book_service.extract_and_store_images, book.id, book.pdf_file_name)
 
     return book
 

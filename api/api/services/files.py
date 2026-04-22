@@ -169,8 +169,8 @@ class FilesService(Service):
                 result.append("".join(parts))
         return result
 
-    def get_book_file(self, book):
-        remote_file_path = f"{book.id}/{book.file_name}"
+    def get_book_file(self, book_id, pdf_file_name) -> BytesIO:
+        remote_file_path = f"{book_id}/{pdf_file_name}"
         pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
         return BytesIO(pdf_object["Body"].read())
 

@@ -1,5 +1,4 @@
 import hashlib
-import io
 import uuid
 from datetime import datetime, UTC
 from io import BytesIO
@@ -9,10 +8,12 @@ import pymupdf
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import update, text
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from api import get_logger
 from api.models import api, db
-from api.models.db import DbSession
+from api.models.db import DbSession, MetadataCandidate, MetadataCandidates
+from api.services.experimental import identify_book
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
 from api.services.sections import SectionServiceDep
@@ -33,6 +34,8 @@ class BookService(Service):
         self.playback_progress_service = playback_progress_service
 
     def create_book(self, book: api.CreateBookRequest, user_id: uuid.UUID) -> api.BookOverview:
+        # TODO: Validate language. Fail book creation if language is not supported.
+
         # Upload the book file to the object store
         try:
             book_file_name = self.files_service.store_book_file(book.id, book.pdf_temp_file_id)
@@ -40,17 +43,23 @@ class BookService(Service):
             LOG.info("Error uploading book file to object store", exc_info=True)
             raise e
 
+        pdf_bytes = self.files_service.get_book_file(book.id, book_file_name)
+        pdf_document = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
+
         # Store book metadata in DB
         book = db.Book(id=book.id,
                        owner_id=user_id,
                        title=book.title,
                        file_name=book_file_name,
                        created_time=datetime.now(UTC),
+                       number_of_pages=pdf_document.page_count,
                        status=db.BookStatus.processing)
         with DbSession() as session:
             try:
                 session.add(book)
                 session.commit()
+
+                # TODO: Start async tasks to process the book.
             except IntegrityError as e:
                 session.rollback()
                 raise e
@@ -59,11 +68,10 @@ class BookService(Service):
     def split_pages(self, book_id: uuid.UUID, book_file_name: str):
         LOG.debug(f"Splitting book {book_id} into pages.")
 
-        pdf_file_key = f"{book_id}/{book_file_name}"
-        pdf_file_data = self.files_service._get_object(pdf_file_key)
+        pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
 
         # Split it into individual page files
-        pdf_pages = self._split_into_pages(io.BytesIO(pdf_file_data.body))
+        pdf_pages = self._split_into_pages(pdf_bytes)
 
         # Upload page files to the object store
         self.files_service.upload_book_pages(book_id, pdf_pages)
@@ -87,7 +95,11 @@ class BookService(Service):
         return pages
 
     def get_text(self, book: db.Book, first_page: int = None, last_page: int = None, raw: bool = False):
-        pdf_bytes = self.files_service.get_book_file(book)
+        pdf_bytes = self.files_service.get_book_file(book.id, book.file_name)
+        return self._get_text(pdf_bytes, first_page, last_page, raw)
+
+    def _get_text(self, pdf_bytes: BytesIO, first_page: int = None, last_page: int = None, raw: bool = False):
+        pdf_bytes.seek(0)
         doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
         pages = [p.get_text() for p in doc]
 
@@ -106,7 +118,7 @@ class BookService(Service):
         return "\n".join(lines)
 
     def get_paragraphs(self, book: db.Book, first_page: int = None, last_page: int = None):
-        pdf_bytes = self.files_service.get_book_file(book)
+        pdf_bytes = self.files_service.get_book_file(book.id, book.file_name)
         doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
         pages = [p.get_text() for p in doc]
 
@@ -124,13 +136,10 @@ class BookService(Service):
         LOG.info(f"Extracting text of the book {book_id}")
 
         # Split each page into sections. A section is one or more paragraphs.
-        pdf_file_key = f"{book_id}/{book_file_name}"
-        pdf_file_data = self.files_service._get_object(pdf_file_key)
-        pdf_bytes = io.BytesIO(pdf_file_data.body)
+        pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
 
         doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
         pages = [p.get_text() for p in doc]
-        page_num = len(pages)
         paragraphs = pages_to_paragraphs(pages)
         section_dicts = paragraphs_to_sections(paragraphs)
 
@@ -146,20 +155,40 @@ class BookService(Service):
 
         with DbSession() as session:
             session.add_all(sections)
-            session.execute(
-                update(db.Book).where(db.Book.id == book_id).values(status=db.BookStatus.ready,
-                                                                    number_of_pages=page_num))
+            session.commit()
+
+    def _set_status(self, session: Session, book_id: uuid.UUID, status: db.BookStatus):
+        session.execute(update(db.Book).where(db.Book.id == book_id).values(status=status))
+
+    def _set_candidates(self, session: Session, book_id: uuid.UUID, metadata_candidates: MetadataCandidates):
+        session.execute(update(db.Book).where(db.Book.id == book_id).values(metadata_candidates=metadata_candidates))
+
+    def extract_metadata(self, book_id: uuid.UUID, book_file_name: str):
+        LOG.info(f"Extracting metadata of the book {book_id}")
+        pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
+
+        self._extract_and_store_images(book_id, pdf_bytes)
+
+        first_pages = self._get_text(pdf_bytes, 0, 10, False)
+        llm_metadata = identify_book(first_pages)
+
+        llm_candidate = MetadataCandidate(source="gemini", **llm_metadata.model_dump())
+        metadata_candidates = MetadataCandidates(candidates=[llm_candidate], preferred_index=0, selected_index=None)
+
+        with DbSession() as session:
+            self._set_candidates(session, book_id, metadata_candidates)
+            self._set_status(session, book_id, db.BookStatus.ready_for_metadata_review)
             session.commit()
 
     def extract_and_store_images(self, book_id: uuid.UUID, book_file_name: str):
-        LOG.info(f"Extracting images of the book {book_id}")
+        pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
+        self._extract_and_store_images(book_id, pdf_bytes)
 
-        pdf_file_key = f"{book_id}/{book_file_name}"
-        pdf_file_data = self.files_service._get_object(pdf_file_key)
-        pdf_bytes = io.BytesIO(pdf_file_data.body)
+    def _extract_and_store_images(self, book_id: uuid.UUID, pdf_bytes: BytesIO):
+        LOG.info(f"Extracting images of the book {book_id}")
+        pdf_bytes.seek(0)
 
         images = self._extract_images(book_id, pdf_bytes)
-
         for image in images:
             self.files_service.upload_file(image['file_name'], image['content'])
 
