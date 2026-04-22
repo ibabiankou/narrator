@@ -45,7 +45,7 @@ def paged_response(items: List[T], total: int, index: int, size: int) -> PagedRe
 class BookOverview(BaseModel):
     id: uuid.UUID
     owner_id: uuid.UUID
-    title: str
+    title: Optional[str] = None
     pdf_file_name: str
     number_of_pages: Optional[int] = None
     status: str

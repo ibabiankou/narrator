@@ -1,10 +1,12 @@
 import hashlib
 import uuid
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime, UTC
 from io import BytesIO
 from typing import Annotated
 
 import pymupdf
+from fastapi import BackgroundTasks
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import update, text
 from sqlalchemy.exc import IntegrityError
@@ -23,6 +25,7 @@ from common_lib.service import Service
 
 LOG = get_logger(__name__)
 
+executor = ProcessPoolExecutor(max_workers=4)
 
 class BookService(Service):
     def __init__(self,
@@ -34,8 +37,6 @@ class BookService(Service):
         self.playback_progress_service = playback_progress_service
 
     def create_book(self, book: api.CreateBookRequest, user_id: uuid.UUID) -> api.BookOverview:
-        # TODO: Validate language. Fail book creation if language is not supported.
-
         # Upload the book file to the object store
         try:
             book_file_name = self.files_service.store_book_file(book.id, book.pdf_temp_file_id)
@@ -58,8 +59,37 @@ class BookService(Service):
             try:
                 session.add(book)
                 session.commit()
+            except IntegrityError as e:
+                session.rollback()
+                raise e
+            return api.BookOverview.from_orm(book)
 
-                # TODO: Start async tasks to process the book.
+    def create_book_v2(self, user_id: uuid.UUID, file_name: str, file_bytes: BytesIO, background_tasks: BackgroundTasks):
+        # TODO: Validate language. Fail book creation if language is not supported.
+
+        book_id = uuid.uuid4()
+        file_key = f"{book_id}/{file_name}"
+
+        file_bytes.seek(0)
+        self.files_service.upload_file(file_key, file_bytes)
+
+        file_bytes.seek(0)
+        pdf_document = pymupdf.open(stream=file_bytes, filetype="application/pdf")
+
+        book = db.Book(id=book_id,
+                       owner_id=user_id,
+                       file_name=file_name,
+                       created_time=datetime.now(UTC),
+                       number_of_pages=pdf_document.page_count,
+                       status=db.BookStatus.processing)
+        with DbSession() as session:
+            try:
+                session.add(book)
+                session.commit()
+
+                background_tasks.add_task(self.extract_metadata, book_id, file_name)
+                background_tasks.add_task(self.split_pages, book_id, file_name)
+                background_tasks.add_task(self.extract_text, book_id, file_name)
             except IntegrityError as e:
                 session.rollback()
                 raise e

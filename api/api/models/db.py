@@ -83,7 +83,7 @@ class Book(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     owner_id: Mapped[uuid.UUID]
-    title: Mapped[str]
+    title: Mapped[Optional[str]]
     file_name: Mapped[str]
     number_of_pages: Mapped[Optional[int]]
     created_time: Mapped[datetime.datetime]

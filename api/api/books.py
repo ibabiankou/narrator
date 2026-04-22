@@ -1,8 +1,9 @@
 import logging
 import uuid
+from io import BytesIO
 
 import m3u8
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Depends
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Depends, UploadFile
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.sql.functions import count
@@ -38,6 +39,17 @@ def create_book(book: api.CreateBookRequest,
     background_tasks.add_task(book_service.extract_text, book.id, book.pdf_file_name)
 
     return book
+
+
+@books_router.post("/add-book")
+def create_book_v2(file: UploadFile,
+                   user: UserDep,
+                   book_service: BookServiceDep,
+                   background_tasks: BackgroundTasks) -> api.BookOverview:
+    if file.size > 15 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large")
+
+    return book_service.create_book_v2(user.id, file.filename, BytesIO(file.file.read()), background_tasks)
 
 
 @books_router.get("/")
