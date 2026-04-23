@@ -6,6 +6,7 @@ import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '
 import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
 import { DEFAULT_PAGE_SIZE, PageResponse, toPageResponse } from '../models/pagination.dto';
+import { TempFile } from '../models/files.dto';
 
 @Injectable({
   providedIn: 'root'
@@ -95,5 +96,11 @@ export class BooksService {
 
   getPlaylistUrl(id: string) {
     return `${environment.api_base_url}/books/${id}/m3u8`;
+  }
+
+  uploadBook(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<BookOverview>(`${this.apiUrl}/add-book`, formData);
   }
 }
