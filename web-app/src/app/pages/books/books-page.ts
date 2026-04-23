@@ -116,7 +116,10 @@ export class BooksPage implements OnInit {
     };
     const [fileHandle]: FileSystemFileHandle[] = await (window as any).showOpenFilePicker(pickerOptions);
     const file = await fileHandle.getFile();
+    this.uploadBook(file);
+  }
 
+  private uploadBook(file: File) {
     if (file.size > 15 * 1024 * 1024) {
       this.notificationService.showError("Selected file is too large. Maximum size is 15MB.");
       return;
@@ -132,5 +135,34 @@ export class BooksPage implements OnInit {
           console.error("Error: ", err);
         }
       });
+  }
+
+  @HostListener('dragover', ['$event'])
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  @HostListener('drop', ['$event'])
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      if (files.length > 1) {
+        this.notificationService.showError("Only one book can be added at a time.");
+        return;
+      }
+
+      // Validate it's a PDF file
+      const file = files[0];
+      if (file.type !== "application/pdf") {
+        this.notificationService.showError("Invalid file type. Only PDF files are supported.");
+        return;
+      }
+
+      this.uploadBook(file);
+    }
   }
 }
