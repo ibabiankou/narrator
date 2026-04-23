@@ -15,6 +15,7 @@ import { AsyncPipe } from '@angular/common';
 import { DEFAULT_PAGE_INFO, DEFAULT_PAGE_SIZE } from '../../core/models/pagination.dto';
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
 import { NotificationService } from '../../core/services/notificationService';
+import { BookOverview, BookStatus } from '../../core/models/books.dto';
 
 @Component({
   selector: 'app-books-page',
@@ -164,5 +165,13 @@ export class BooksPage implements OnInit {
 
       this.uploadBook(file);
     }
+  }
+
+  protected bookLink(book: BookOverview) {
+    switch (book.status) {
+      case BookStatus.ready_for_metadata_review:
+        return ['/books', book.id, 'edit-metadata'];
+    }
+    return ['/books', book.id];
   }
 }

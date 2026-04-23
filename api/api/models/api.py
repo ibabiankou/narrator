@@ -6,6 +6,7 @@ from fastapi import Query
 from pydantic import BaseModel
 
 from api.models import db
+from api.models.db import MetadataCandidates
 
 T = TypeVar("T")
 
@@ -60,6 +61,11 @@ class BookOverview(BaseModel):
                             number_of_pages=book.number_of_pages,
                             status=book.status,
                             cover=book.cover)
+
+
+class BookMetadataForReview(BaseModel):
+    overview: BookOverview
+    metadata_candidates: MetadataCandidates
 
 
 class BookStats(BaseModel):

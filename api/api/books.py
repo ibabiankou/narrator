@@ -10,7 +10,6 @@ from sqlalchemy.sql.functions import count
 
 from api import SessionDep
 from api.models import db, api
-from api.models.api import PagedResponse, PageRequest, paged_response
 from api.models.auth import UserDep
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
@@ -56,10 +55,9 @@ def create_book_v2(file: UploadFile,
 def list_books(
         user: UserDep,
         session: SessionDep,
-        page_request: PageRequest = Depends()
-) -> PagedResponse[api.BookOverview]:
-
-    count_stmt =  (
+        page_request: api.PageRequest = Depends()
+) -> api.PagedResponse[api.BookOverview]:
+    count_stmt = (
         select(count())
         .where(db.Book.owner_id == user.id)
     )
@@ -78,7 +76,7 @@ def list_books(
     for book in items:
         resp.append(api.BookOverview.from_orm(book))
 
-    return paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
+    return api.paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
 
 
 @books_router.get("/search")
@@ -86,11 +84,11 @@ def search_books(
         query: str,
         user: UserDep,
         session: SessionDep,
-        page_request: PageRequest = Depends()
-) -> PagedResponse[api.BookOverview]:
+        page_request: api.PageRequest = Depends()
+) -> api.PagedResponse[api.BookOverview]:
     search_filter = f"%{query}%"
 
-    count_stmt =  (
+    count_stmt = (
         select(count())
         .where(db.Book.title.ilike(search_filter))
         .where(db.Book.owner_id == user.id)
@@ -111,7 +109,7 @@ def search_books(
     for book in books:
         resp.append(api.BookOverview.from_orm(book))
 
-    return paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
+    return api.paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
 
 
 def get_book_pages(book: db.Book, section_svc: SectionServiceDep) -> list[api.BookPage]:

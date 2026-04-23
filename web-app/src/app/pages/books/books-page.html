@@ -26,7 +26,7 @@
     @defer (when books()) {
       @for (book of books(); track book.id) {
         <div class="book-card">
-          <a [routerLink]="['/books', book.id]">
+          <a [routerLink]="bookLink(book)">
             <div class="cover-wrapper">
               @if (book.cover) {
                 <img [src]="`/api/files/${ book.cover }` | fileAsBlob | async " alt="{{ book.title }}">

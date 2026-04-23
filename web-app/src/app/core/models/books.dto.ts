@@ -6,6 +6,7 @@ export interface CreateBookRequest {
 
 export enum BookStatus {
   processing = "processing",
+  ready_for_metadata_review = "ready_for_metadata_review",
   ready = "ready"
 }
 
@@ -52,6 +53,28 @@ export interface BookWithContent {
   overview: BookOverview;
   stats: BookStats;
   pages: BookPage[];
+}
+
+export interface MetadataCandidate {
+  source: string;
+
+  title?: string;
+  series?: string;
+  description?: string;
+
+  authors: string[];
+  isbns: string[];
+}
+
+export interface MetadataCandidates {
+  candidates: MetadataCandidate[];
+  preferred_index: number;
+  selected_index?: number;
+}
+
+export interface BookMetadataForReview {
+  overview: BookOverview;
+  metadata_candidates: MetadataCandidates;
 }
 
 export interface PlaybackInfo {

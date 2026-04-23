@@ -1,4 +1,37 @@
 .main-container {
   max-width: var(--app-container-width);
-  margin: 0 auto;
+  margin: 30px auto;
+
+  .metadata-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+
+    .cover-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      img {
+        width: 80%;
+        aspect-ratio: 3 / 4;
+        object-fit: contain;
+      }
+    }
+
+    .metadata-card {
+      height: 100%;
+
+      mat-card-content {
+        mat-form-field {
+          width: 100%;
+        }
+      }
+
+      mat-card-actions {
+        margin-top: auto;
+        justify-content: flex-end;
+      }
+    }
+  }
 }

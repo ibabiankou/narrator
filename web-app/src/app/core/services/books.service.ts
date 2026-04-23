@@ -2,7 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { BookOverview, BookWithContent, CreateBookRequest, PlaybackInfo } from '../models/books.dto';
+import {
+  BookMetadataForReview,
+  BookOverview,
+  BookWithContent,
+  CreateBookRequest,
+  PlaybackInfo
+} from '../models/books.dto';
 import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
 import { DEFAULT_PAGE_SIZE, PageResponse, toPageResponse } from '../models/pagination.dto';
@@ -102,5 +108,9 @@ export class BooksService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<BookOverview>(`${this.apiUrl}/add-book`, formData);
+  }
+
+  getBookMetadataForReview(bookId: string) {
+    return this.http.get<BookMetadataForReview>(`${this.apiUrl}/${bookId}/metadata/review`);
   }
 }
