@@ -1,6 +1,6 @@
 <app-toolbar>
   <div breadcrumb>
-    <h1>Edit Book Metadata</h1>
+    <h1>Edit Book Details</h1>
   </div>
 </app-toolbar>
 
@@ -15,8 +15,8 @@
           <img src="covers/blue.png" alt="{{ book.title }}">
         }
       </div>
-      <div>
 
+      <div class="form-wrapper">
         <mat-card class="metadata-card" appearance="outlined">
           <mat-card-content>
             <mat-form-field>
@@ -31,7 +31,7 @@
 
             <mat-form-field>
               <mat-label>Description</mat-label>
-              <textarea matInput placeholder="Description" rows="5" [value]="candidate()?.description || ''"></textarea>
+              <textarea matInput placeholder="Description" rows="6" [value]="candidate()?.description || ''"></textarea>
             </mat-form-field>
 
             <mat-form-field>

@@ -49,7 +49,7 @@ export class EditMetadataPage implements OnInit {
   readonly candidate;
 
   ngOnInit() {
-    this.titleService.setTitle('Edit Metadata - NNarrator');
+    this.titleService.setTitle('Edit Details - NNarrator');
   }
 
   constructor() {
