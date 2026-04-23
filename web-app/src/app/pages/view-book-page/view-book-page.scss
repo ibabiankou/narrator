@@ -36,9 +36,8 @@ app-toolbar {
   color: darkred !important;
 }
 
-$maxWidth: 1280px;
 .main-container {
-  max-width: $maxWidth;
+  max-width: var(--app-container-width);
   margin: 0 auto;
 
   font-size: var(--book-font-size);
@@ -51,7 +50,7 @@ $maxWidth: 1280px;
   }
 
   .content-skeleton {
-    max-width: calc($maxWidth * 0.55);
+    max-width: calc(var(--app-container-width) * 0.55);
     aspect-ratio: 8.5/11;
     margin: 0 auto;
     padding: 0 15px;
@@ -82,7 +81,7 @@ $maxWidth: 1280px;
   padding: 0 15px;
 
   .sections {
-    max-width: $maxWidth;
+    max-width: var(--app-container-width);
     margin: 0 auto;
 
     app-section {

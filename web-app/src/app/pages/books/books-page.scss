@@ -35,7 +35,7 @@ button[mat-fab] {
 }
 
 .main-container {
-  max-width: 1280px;
+  max-width: var(--app-container-width);
   margin: 0 auto;
 
   .paginator {
