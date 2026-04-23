@@ -69,7 +69,7 @@ class MetadataCandidate(BaseModel):
     title: Optional[str] = Field(description="The full title of the book.")
     series: Optional[str] = Field(description="The name of the series.")
     authors: List[str] = Field(description="A list of authors of the book.")
-    isbn: List[str] = Field(description="The 10 or 13-digit ISBN(s) if found in the text.")
+    isbns: List[str] = Field(description="The 10 or 13-digit ISBN(s) if found in the text.")
 
 
 class MetadataCandidates(BaseModel):
