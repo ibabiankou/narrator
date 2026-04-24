@@ -10,14 +10,22 @@ export enum BookStatus {
   ready = "ready"
 }
 
-export interface BookOverview {
+export interface BookMetadata {
+  cover?: string;
+  title?: string;
+  series?: string;
+  description?: string;
+
+  authors: string[];
+  isbns: string[];
+}
+
+export interface BookOverview extends BookMetadata {
   id: string;
   owner_id: string;
-  title: string;
   pdf_file_name: string;
   number_of_pages: number;
   status: string;
-  cover?: string;
 }
 
 export interface BookStats {
@@ -55,15 +63,8 @@ export interface BookWithContent {
   pages: BookPage[];
 }
 
-export interface MetadataCandidate {
+export interface MetadataCandidate extends BookMetadata {
   source: string;
-
-  title?: string;
-  series?: string;
-  description?: string;
-
-  authors: string[];
-  isbns: string[];
 }
 
 export interface MetadataCandidates {

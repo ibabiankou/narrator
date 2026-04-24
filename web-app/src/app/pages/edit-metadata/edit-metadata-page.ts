@@ -14,6 +14,7 @@ import { MatButton } from '@angular/material/button';
 import { MatFormField, MatInput, MatLabel } from '@angular/material/input';
 import { MatChipGrid, MatChipInput, MatChipRow } from '@angular/material/chips';
 import { MatIcon } from '@angular/material/icon';
+import { BookDetailsForm } from '../../components/book-details-form/book-details-form';
 
 @Component({
   selector: 'app-edit-metadata-page',
@@ -33,7 +34,8 @@ import { MatIcon } from '@angular/material/icon';
     MatChipGrid,
     MatChipRow,
     MatIcon,
-    MatChipInput
+    MatChipInput,
+    BookDetailsForm
   ],
   templateUrl: './edit-metadata-page.html',
   styleUrl: './edit-metadata-page.scss',

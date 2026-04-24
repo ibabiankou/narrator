@@ -17,63 +17,7 @@
       </div>
 
       <div class="form-wrapper">
-        <mat-card class="metadata-card" appearance="outlined">
-          <mat-card-content>
-            <mat-form-field>
-              <mat-label>Title</mat-label>
-              <input matInput placeholder="Title" [value]="candidate()?.title">
-            </mat-form-field>
-
-            <mat-form-field>
-              <mat-label>Series</mat-label>
-              <input matInput placeholder="Series" [value]="candidate()?.series">
-            </mat-form-field>
-
-            <mat-form-field>
-              <mat-label>Description</mat-label>
-              <textarea matInput placeholder="Description" rows="6" [value]="candidate()?.description || ''"></textarea>
-            </mat-form-field>
-
-            <mat-form-field>
-              <mat-label>Authors</mat-label>
-              <mat-chip-grid #authorsChipGrid>
-                @for (author of candidate()?.authors; track author) {
-                  <mat-chip-row>
-                    {{ author }}
-                    <button matChipRemove>
-                      <mat-icon>cancel</mat-icon>
-                    </button>
-                  </mat-chip-row>
-                }
-              </mat-chip-grid>
-              <input
-                placeholder="New author..."
-                [matChipInputFor]="authorsChipGrid"
-              />
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>ISBNs</mat-label>
-              <mat-chip-grid #isbnsChipGrid>
-                @for (isbn of candidate()?.isbns; track isbn) {
-                  <mat-chip-row>
-                    {{ isbn }}
-                    <button matChipRemove>
-                      <mat-icon>cancel</mat-icon>
-                    </button>
-                  </mat-chip-row>
-                }
-              </mat-chip-grid>
-              <input
-                placeholder="New ISBN..."
-                [matChipInputFor]="isbnsChipGrid"
-              />
-            </mat-form-field>
-
-          </mat-card-content>
-          <mat-card-actions>
-            <button matButton>Continue</button>
-          </mat-card-actions>
-        </mat-card>
+        <app-book-details-form [bookMetadata]="metadataForReview()!.metadata_candidates.candidates[0]"></app-book-details-form>
       </div>
     </div>
     <div>

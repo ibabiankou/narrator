@@ -24,20 +24,9 @@
       justify-content: center;
       align-items: center;
 
-      .metadata-card {
+      app-book-details-form {
         height: 100%;
         width: 80%;
-
-        mat-card-content {
-          mat-form-field {
-            width: 100%;
-          }
-        }
-
-        mat-card-actions {
-          margin-top: auto;
-          justify-content: flex-end;
-        }
       }
     }
   }
