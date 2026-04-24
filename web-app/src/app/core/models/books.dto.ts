@@ -7,6 +7,7 @@ export interface CreateBookRequest {
 export enum BookStatus {
   processing = "processing",
   ready_for_metadata_review = "ready_for_metadata_review",
+  ready_for_content_review = "ready_for_content_review",
   ready = "ready"
 }
 

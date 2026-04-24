@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import NoResultFound
 
-from api.models import api
+from api.models import api, domain
 from api.models.api import SetCover
 from api.models.auth import UserDep
 from api.services.books import BookServiceDep
@@ -44,3 +44,15 @@ def get_book_metadata_for_review(
         raise HTTPException(status_code=404, detail="Book not found")
 
     return api.BookMetadataForReview(overview=overview, metadata_candidates=book.metadata_candidates)
+
+@metadata_router.post("/review")
+def update_book_metadata(
+        book_id: uuid.UUID,
+        metadata: domain.BookMetadata,
+        user: UserDep,
+        book_service: BookServiceDep) -> api.BookOverview:
+    try:
+        book = book_service.update_metadata(book_id, metadata)
+        return api.BookOverview.from_orm(book)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Book not found")

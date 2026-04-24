@@ -13,8 +13,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from api import get_logger
-from api.models import api, db
-from api.models.db import DbSession, MetadataCandidate, MetadataCandidates
+from api.models import api, db, domain
+from api.models.db import DbSession
 from api.services.experimental import identify_book
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
@@ -190,7 +190,7 @@ class BookService(Service):
     def _set_status(self, session: Session, book_id: uuid.UUID, status: db.BookStatus):
         session.execute(update(db.Book).where(db.Book.id == book_id).values(status=status))
 
-    def _set_candidates(self, session: Session, book_id: uuid.UUID, metadata_candidates: MetadataCandidates):
+    def _set_candidates(self, session: Session, book_id: uuid.UUID, metadata_candidates: domain.MetadataCandidates):
         session.execute(update(db.Book).where(db.Book.id == book_id).values(metadata_candidates=metadata_candidates))
 
     def extract_metadata(self, book_id: uuid.UUID, book_file_name: str):
@@ -202,8 +202,8 @@ class BookService(Service):
         first_pages = self._get_text(pdf_bytes, 0, 10, False)
         llm_metadata = identify_book(first_pages)
 
-        llm_candidate = MetadataCandidate(source="gemini", **llm_metadata.model_dump())
-        metadata_candidates = MetadataCandidates(candidates=[llm_candidate], preferred_index=0, selected_index=None)
+        llm_candidate = domain.MetadataCandidate(source="gemini", **llm_metadata.model_dump())
+        metadata_candidates = domain.MetadataCandidates(candidates=[llm_candidate], preferred_index=0, selected_index=None)
 
         with DbSession() as session:
             self._set_candidates(session, book_id, metadata_candidates)
@@ -310,6 +310,22 @@ class BookService(Service):
         query = "select owner_id = :owner_id from books where id = :book_id"
         with DbSession() as session:
             return session.execute(text(query), {"owner_id": user_id, "book_id": book_id}).scalar()
+
+    def update_metadata(self, book_id: uuid.UUID, metadata: api.BookMetadata) -> db.Book:
+        with DbSession() as session:
+            stmt = (
+                update(db.Book).where(db.Book.id == book_id)
+                .values(title=metadata.title,
+                        series=metadata.series,
+                        description=metadata.description,
+                        authors=metadata.authors,
+                        isbns=metadata.isbns,
+                        status=db.BookStatus.ready_for_content_review)
+                .returning(db.Book)
+            )
+            result = session.execute(stmt)
+            session.commit()
+            return result.scalars().one()
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

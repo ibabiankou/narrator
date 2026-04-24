@@ -6,7 +6,7 @@ from fastapi import Query
 from pydantic import BaseModel
 
 from api.models import db
-from api.models.db import MetadataCandidates
+from api.models.domain import BookMetadata, MetadataCandidates
 
 T = TypeVar("T")
 
@@ -43,24 +43,26 @@ def paged_response(items: List[T], total: int, index: int, size: int) -> PagedRe
     return PagedResponse(items=items, page_info=PageInfo(total=total, index=index, size=size))
 
 
-class BookOverview(BaseModel):
+class BookOverview(BookMetadata):
     id: uuid.UUID
     owner_id: uuid.UUID
-    title: Optional[str] = None
     pdf_file_name: str
     number_of_pages: Optional[int] = None
     status: str
-    cover: Optional[str] = None
 
     @classmethod
     def from_orm(cls, book: db.Book):
         return BookOverview(id=book.id,
                             owner_id=book.owner_id,
-                            title=book.title,
                             pdf_file_name=book.file_name,
                             number_of_pages=book.number_of_pages,
                             status=book.status,
-                            cover=book.cover)
+                            cover=book.cover,
+                            title=book.title,
+                            series=book.series,
+                            description=book.description,
+                            authors=[] if book.authors is None else list(book.authors),
+                            isbns=[] if book.isbns is None else list(book.isbns))
 
 
 class BookMetadataForReview(BaseModel):

@@ -1,4 +1,4 @@
-import { Component, effect, input } from '@angular/core';
+import { Component, effect, input, model, output } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatInputModule } from '@angular/material/input';
@@ -6,7 +6,7 @@ import { MatIcon } from '@angular/material/icon';
 import { BookMetadata } from '../../core/models/books.dto';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { AbstractControl, FormControl, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
+import { AbstractControl, FormControl, FormsModule, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 
 
 function cleanIsbn(value: string): string {
@@ -23,20 +23,22 @@ function cleanIsbn(value: string): string {
     MatFormFieldModule,
     MatIcon,
     MatInputModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    FormsModule
   ],
   templateUrl: './book-details-form.html',
   styleUrl: './book-details-form.scss',
 })
 export class BookDetailsForm {
 
-  protected readonly bookMetadata = input.required<BookMetadata>();
+  readonly bookMetadata = input.required<BookMetadata>();
+  reviewedMetadata = output<BookMetadata>();
 
-  protected title?: string;
-  protected series?: string;
-  protected description?: string;
-  protected authors: string[] = [];
-  protected isbns: string[] = [];
+  protected title = model<string>();
+  protected series = model<string>();
+  protected description = model<string>();
+  protected authors = model<string[]>([]);
+  protected isbns = model<string[]>([]);
 
   readonly isbnControl = new FormControl<string>("", this.validateIsbnFormat);
 
@@ -44,24 +46,24 @@ export class BookDetailsForm {
     effect(() => {
       const metadata = this.bookMetadata();
 
-      this.title = metadata.title;
-      this.series = metadata.series;
-      this.description = metadata.description;
-      this.authors = metadata.authors;
-      this.isbns = metadata.isbns;
+      this.title.set(metadata.title);
+      this.series.set(metadata.series);
+      this.description.set(metadata.description);
+      this.authors.set([...metadata.authors]);
+      this.isbns.set([...metadata.isbns]);
     });
   }
 
   protected addAuthor($event: MatChipInputEvent) {
     const newItem = $event.value.trim();
     if (newItem.length > 0) {
-      this.authors.push(newItem);
+      this.authors.set([...this.authors(), newItem]);
     }
     $event.chipInput!.clear();
   }
 
   protected removeAuthor(author: string) {
-    this.authors = this.authors.filter(a => a !== author);
+    this.authors.set(this.authors().filter(a => a !== author));
   }
 
   private validateIsbnFormat(control: AbstractControl<string>): ValidationErrors | null {
@@ -109,14 +111,25 @@ export class BookDetailsForm {
     const cleanedValue = cleanIsbn(event.value);
     if (cleanedValue.length === 0) return;
 
-    if (this.isbns.includes(cleanedValue)) return;
+    if (this.isbns().includes(cleanedValue)) return;
 
-    this.isbns.push(cleanedValue);
+    this.isbns.set([...this.isbns(), cleanedValue]);
     event.chipInput!.clear();
     this.isbnControl.setValue('');
   }
 
   protected removeIsbn(isbn: string) {
-    this.isbns = this.isbns.filter(i => i !== isbn);
+    this.isbns.set(this.isbns().filter(i => i !== isbn));
+  }
+
+  protected emitReviewedMetadata() {
+    const metadata: BookMetadata = {
+      title: this.title(),
+      series: this.series(),
+      description: this.description(),
+      authors: this.authors(),
+      isbns: this.isbns(),
+    };
+    this.reviewedMetadata.emit(metadata);
   }
 }

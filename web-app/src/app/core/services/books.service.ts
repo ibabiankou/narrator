@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  BookMetadata,
   BookMetadataForReview,
   BookOverview,
   BookWithContent,
@@ -112,5 +113,9 @@ export class BooksService {
 
   getBookMetadataForReview(bookId: string) {
     return this.http.get<BookMetadataForReview>(`${this.apiUrl}/${bookId}/metadata/review`);
+  }
+
+  updateBookMetadata(bookId: string, metadata: BookMetadata) {
+    return this.http.post<BookOverview>(`${this.apiUrl}/${bookId}/metadata/review`, metadata);
   }
 }

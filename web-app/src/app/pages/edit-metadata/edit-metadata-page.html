@@ -17,7 +17,10 @@
       </div>
 
       <div class="form-wrapper">
-        <app-book-details-form [bookMetadata]="metadataForReview()!.metadata_candidates.candidates[0]"></app-book-details-form>
+        <app-book-details-form
+          [bookMetadata]="metadataForReview()!.metadata_candidates.candidates[0]"
+          (reviewedMetadata)="submitReviewMetadata($event)"
+        ></app-book-details-form>
       </div>
     </div>
     <div>

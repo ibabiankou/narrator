@@ -66,7 +66,9 @@ export class EditBookPage {
               count: 25,
               delay: (count) => timer(2 ^ count * 300 * (0.75 + 0.5 * Math.random()))
             }),
-            filter((book) => book.overview.status == BookStatus.ready),
+            filter((book) =>
+              book.overview.status == BookStatus.ready ||
+              book.overview.status == BookStatus.ready_for_content_review),
             take(1),
             tap(book => this.titleService.setTitle(`${book.overview.title} - NNarrator`)),
             tap(book => {

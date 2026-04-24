@@ -113,10 +113,6 @@ def search_books(
 
 
 def get_book_pages(book: db.Book, section_svc: SectionServiceDep) -> list[api.BookPage]:
-    if book.status != db.BookStatus.ready or book.number_of_pages is None:
-        # There will be no content, so return immediately.
-        return []
-
     # Convert into the API model.
     pages = []
     pages_dict = {}

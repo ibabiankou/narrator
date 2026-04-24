@@ -2,23 +2,27 @@
   <mat-card-content>
     <mat-form-field>
       <mat-label>Title</mat-label>
-      <input matInput placeholder="Title" [value]="title">
+      <input matInput placeholder="Title"
+             [ngModel]="title()" (ngModelChange)="title.set($event)">
     </mat-form-field>
 
     <mat-form-field>
       <mat-label>Series</mat-label>
-      <input matInput placeholder="Series" [value]="series">
+      <input matInput placeholder="Series"
+             [ngModel]="series()" (ngModelChange)="series.set($event)">
     </mat-form-field>
 
     <mat-form-field>
       <mat-label>Description</mat-label>
-      <textarea matInput placeholder="Description" rows="6" [value]="description || ''"></textarea>
+      <textarea matInput placeholder="Description" rows="6"
+                [ngModel]="description()" (ngModelChange)="description.set($event)"
+      ></textarea>
     </mat-form-field>
 
     <mat-form-field>
       <mat-label>Authors</mat-label>
       <mat-chip-grid #authorsChipGrid>
-        @for (author of authors; track author) {
+        @for (author of authors(); track author) {
           <mat-chip-row (removed)="removeAuthor(author)">
             {{ author }}
             <button matChipRemove>
@@ -37,7 +41,7 @@
     <mat-form-field>
       <mat-label>ISBNs</mat-label>
       <mat-chip-grid #isbnsChipGrid [formControl]="isbnControl">
-        @for (isbn of isbns; track isbn) {
+        @for (isbn of isbns(); track isbn) {
           <mat-chip-row (removed)="removeIsbn(isbn)">
             {{ isbn }}
             <button matChipRemove>
@@ -67,6 +71,6 @@
 
   </mat-card-content>
   <mat-card-actions>
-    <button matButton>Continue</button>
+    <button matButton (click)="emitReviewedMetadata()">Continue</button>
   </mat-card-actions>
 </mat-card>

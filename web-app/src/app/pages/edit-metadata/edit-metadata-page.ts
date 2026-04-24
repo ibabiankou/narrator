@@ -3,17 +3,12 @@ import { BreadcrumbContentDirective, ToolbarComponent } from '../../components/t
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
-import { BookStatus } from '../../core/models/books.dto';
+import { BookMetadata, BookStatus } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
 import { AuthService } from '../../core/services/authService';
 import { Router } from '@angular/router';
 import { AsyncPipe, JsonPipe } from '@angular/common';
 import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
-import { MatCard, MatCardActions, MatCardContent } from '@angular/material/card';
-import { MatButton } from '@angular/material/button';
-import { MatFormField, MatInput, MatLabel } from '@angular/material/input';
-import { MatChipGrid, MatChipInput, MatChipRow } from '@angular/material/chips';
-import { MatIcon } from '@angular/material/icon';
 import { BookDetailsForm } from '../../components/book-details-form/book-details-form';
 
 @Component({
@@ -24,17 +19,6 @@ import { BookDetailsForm } from '../../components/book-details-form/book-details
     JsonPipe,
     AsyncPipe,
     FileAsBlobPipe,
-    MatCard,
-    MatCardContent,
-    MatCardActions,
-    MatButton,
-    MatFormField,
-    MatLabel,
-    MatInput,
-    MatChipGrid,
-    MatChipRow,
-    MatIcon,
-    MatChipInput,
     BookDetailsForm
   ],
   templateUrl: './edit-metadata-page.html',
@@ -81,4 +65,16 @@ export class EditMetadataPage implements OnInit {
     });
   }
 
+  protected submitReviewMetadata(bookMetadata: BookMetadata) {
+    console.log("submitting review metadata", bookMetadata);
+    this.booksService.updateBookMetadata(this.bookId(), bookMetadata)
+      .subscribe({
+        next: book => {
+          this.router.navigate(['/books', book.id, 'edit']);
+        },
+        error: err => {
+          console.error("Error: ", err);
+        }
+      })
+  }
 }

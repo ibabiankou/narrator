@@ -5,10 +5,12 @@ from enum import StrEnum
 from typing import Optional, Type, List
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, ForeignKey, TypeDecorator
-from sqlalchemy.dialects.postgresql import JSONB
+from pydantic import BaseModel
+from sqlalchemy import create_engine, ForeignKey, TypeDecorator, String
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker
+
+from api.models import domain
 
 load_dotenv()
 pg_url = os.path.expandvars(os.getenv("PG_URL"))
@@ -61,21 +63,8 @@ class TempFile(Base):
 class BookStatus(StrEnum):
     processing = "processing"
     ready_for_metadata_review = "ready_for_metadata_review"
+    ready_for_content_review = "ready_for_content_review"
     ready = "ready"
-
-
-class MetadataCandidate(BaseModel):
-    source: str = Field(description="The source of the metadata.")
-    title: Optional[str] = Field(description="The full title of the book.")
-    series: Optional[str] = Field(description="The name of the series.")
-    authors: List[str] = Field(description="A list of authors of the book.")
-    isbns: List[str] = Field(description="The 10 or 13-digit ISBN(s) if found in the text.")
-
-
-class MetadataCandidates(BaseModel):
-    candidates: list[MetadataCandidate]
-    preferred_index: int = Field(description="Zero based index of the candidate we think to be the best.")
-    selected_index: Optional[str] = Field(description="Zero based index of the candidate selected by the user.")
 
 
 class Book(Base):
@@ -83,14 +72,19 @@ class Book(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     owner_id: Mapped[uuid.UUID]
-    title: Mapped[Optional[str]]
     file_name: Mapped[str]
     number_of_pages: Mapped[Optional[int]]
     created_time: Mapped[datetime.datetime]
     status: Mapped[str]
-    cover: Mapped[Optional[str]]
 
-    metadata_candidates: Mapped[Optional[MetadataCandidates]] = mapped_column(type_=PydanticType(MetadataCandidates))
+    cover: Mapped[Optional[str]]
+    title: Mapped[Optional[str]]
+    series: Mapped[Optional[str]]
+    description: Mapped[Optional[str]]
+    authors: Mapped[List[str]] = mapped_column(type_=ARRAY(String))
+    isbns: Mapped[List[str]] = mapped_column(type_=ARRAY(String))
+
+    metadata_candidates: Mapped[Optional[domain.MetadataCandidates]] = mapped_column(type_=PydanticType(domain.MetadataCandidates))
 
     # TODO: Add errors field. JSONB array of dictionaries. Any processing / validation errors encountered
     #  should be stored there and displayed in UI.
