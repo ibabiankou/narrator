@@ -43,7 +43,8 @@ def get_book_metadata_for_review(
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    return api.BookMetadataForReview(overview=overview, metadata_candidates=book.metadata_candidates)
+    metadata_candidates = book.metadata_candidates if book.metadata_candidates is not None else domain.MetadataCandidates(candidates=[])
+    return api.BookMetadataForReview(overview=overview, metadata_candidates=metadata_candidates)
 
 @metadata_router.post("/review")
 def update_book_metadata(

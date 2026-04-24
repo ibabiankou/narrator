@@ -19,5 +19,5 @@ class MetadataCandidate(BookMetadata):
 
 class MetadataCandidates(BaseModel):
     candidates: list[MetadataCandidate]
-    preferred_index: int = Field(description="Zero based index of the candidate we think to be the best.")
-    selected_index: Optional[str] = Field(description="Zero based index of the candidate selected by the user.")
+    preferred_index: int = Field(default=0, description="Zero based index of the candidate we think to be the best.")
+    selected_index: Optional[str] = Field(default=None, description="Zero based index of the candidate selected by the user.")
