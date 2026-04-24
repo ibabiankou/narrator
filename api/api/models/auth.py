@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, Dict, Any
 
 from fastapi import Depends, Request, HTTPException
 from pydantic import BaseModel
@@ -13,6 +13,15 @@ class User(BaseModel):
     def has_any_role(self, roles: list[str]) -> bool:
         return any(role in self.realm_roles for role in roles)
 
+
+async def map_user(userinfo: Dict[str, Any]) -> User:
+    return User(
+        id=userinfo["sub"],
+        email=userinfo["email"],
+        realm_roles=userinfo["realm_access"]["roles"]
+    )
+
+
 def get_current_user(request: Request):
     if "user" not in request.scope:
         raise HTTPException(
@@ -21,7 +30,9 @@ def get_current_user(request: Request):
         )
     return request.scope["user"]
 
+
 UserDep = Annotated[User, Depends(get_current_user)]
+
 
 def user_with_roles(allowed_roles: list):
     def role_checker(user: UserDep):
@@ -31,6 +42,8 @@ def user_with_roles(allowed_roles: list):
                 detail="Insufficient permissions"
             )
         return user
+
     return role_checker
+
 
 AdminUser = Annotated[User, Depends(user_with_roles(["admin"]))]

@@ -1,6 +1,5 @@
 import asyncio
 import os
-import typing
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -16,7 +15,7 @@ from api.experimental import experimental_router
 from api.files import files_router
 from api.maintenance import maintenance_router
 from api.metadata import metadata_router
-from api.models.auth import User, UserDep
+from api.models.auth import UserDep, map_user
 from api.processing import processing_router
 from api.sections import sections_router
 from api.services.audiotracks import AudioTrackService
@@ -36,6 +35,7 @@ load_dotenv()
 EndpointFilter.add_filter("/api/")
 
 CORS_REGEX = "(https://)?(\w+\.)*ggnt\.eu(:\d+)?"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -69,15 +69,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
-# Set up Keycloak
-
-async def map_user(userinfo: typing.Dict[str, typing.Any]) -> User:
-    return User(
-        id=userinfo["sub"],
-        email=userinfo["email"],
-        realm_roles=userinfo["realm_access"]["roles"]
-    )
 
 keycloak_config = KeycloakConfiguration(
     url="https://iam.nnarrator.eu/",
@@ -114,7 +105,8 @@ base_url_router = APIRouter(prefix="/api")
 def health_check():
     return {"status": "ok"}
 
-@base_url_router.get("/user")
+
+@base_url_router.get("/user", tags=["System API"])
 def get_current_user(user: UserDep):
     return user
 
