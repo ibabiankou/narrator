@@ -38,6 +38,7 @@ import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { SettingsService } from '../../core/services/settings.service';
 import { secondsToTimeFormat } from '../../core/utils';
+import { FilesService } from '../../core/services/files.service';
 
 @Component({
   selector: 'app-player',
@@ -62,6 +63,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
 
   private bookService = inject(BooksService);
   private settingsService = inject(SettingsService);
+  private filesService = inject(FilesService);
   private audioPlayer: AudioPlayer;
 
   bookWithContent = input.required<BookWithContent>();
@@ -102,7 +104,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   private sliderRect!: DOMRect;
 
   constructor() {
-    this.audioPlayer = new AudioPlayer(this.bookService);
+    this.audioPlayer = new AudioPlayer(this.bookService, this.filesService);
 
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;

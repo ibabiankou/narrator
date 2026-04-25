@@ -5,6 +5,7 @@ import Hls from 'hls.js';
 import { BooksService } from '../../core/services/books.service';
 import { CachingHlsLoader } from '../../core/services/cachingHlsLoader';
 import { OSBindings } from './os-binding';
+import { FilesService } from '../../core/services/files.service';
 
 enum PlayerStatus {
   playing = "playing",
@@ -52,8 +53,8 @@ export class AudioPlayer {
   $playbackRate = new BehaviorSubject<number>(-1);
   $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
 
-  constructor(private bookService: BooksService) {
-    this.osBindings = new OSBindings(this);
+  constructor(private bookService: BooksService, filesService: FilesService) {
+    this.osBindings = new OSBindings(this, filesService);
 
     this.audio = new Audio();
     this.audio.preservesPitch = true;
