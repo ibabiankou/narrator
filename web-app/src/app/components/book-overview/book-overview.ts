@@ -1,4 +1,4 @@
-import { Component, effect, input, model } from '@angular/core';
+import { Component, computed, effect, input, model } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatInputModule } from '@angular/material/input';
@@ -31,6 +31,10 @@ export class BookOverview {
   protected description = model<string>();
   protected authors = model<string[]>([]);
   protected isbns = model<string[]>([]);
+
+  protected coverUrl = computed(() => {
+    return this.bookMetadata().cover || 'covers/gray.png';
+  });
 
   tintStyle = {"filter": `sepia(${80 + Math.floor(Math.random() * 30)}%) saturate(${60 + Math.floor(Math.random() * 90)}%) hue-rotate(${Math.floor(Math.random() * 360)}deg)`};
 
