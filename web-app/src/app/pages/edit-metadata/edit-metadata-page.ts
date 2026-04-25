@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 import { AsyncPipe, JsonPipe } from '@angular/common';
 import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
 import { BookDetailsForm } from '../../components/book-details-form/book-details-form';
+import { BookOverview } from '../../components/book-overview/book-overview';
 
 @Component({
   selector: 'app-edit-metadata-page',
@@ -19,7 +20,8 @@ import { BookDetailsForm } from '../../components/book-details-form/book-details
     JsonPipe,
     AsyncPipe,
     FileAsBlobPipe,
-    BookDetailsForm
+    BookDetailsForm,
+    BookOverview
   ],
   templateUrl: './edit-metadata-page.html',
   styleUrl: './edit-metadata-page.scss',
