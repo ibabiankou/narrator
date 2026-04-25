@@ -2,6 +2,7 @@ import datetime
 import os
 import uuid
 from enum import StrEnum
+from functools import total_ordering
 from typing import Optional, Type, List
 
 from dotenv import load_dotenv
@@ -60,11 +61,34 @@ class TempFile(Base):
     upload_time: Mapped[datetime.datetime]
 
 
+@total_ordering
 class BookStatus(StrEnum):
+    # Just uploaded book is going through initial processing.
     processing = "processing"
+
+    # Initial processing is done, and the book is ready for metadata review.
     ready_for_metadata_review = "ready_for_metadata_review"
+
+    # Book metadata is reviewed, so it's time to review the content extracted from the PDF.
     ready_for_content_review = "ready_for_content_review"
+
+    # The book is ready to be narrated, but waiting in the queue.
+    queued = "queued"
+
+    # The book is being narrated.
+    narrating = "narrating"
+
+    # The book is fully narrated and ready for playback or download.
     ready = "ready"
+
+    def _get_rank(self):
+        ordered = list(BookStatus)
+        return ordered.index(self)
+
+    def __lt__(self, other):
+        if self.__class__ is other.__class__:
+            return self._get_rank() < other._get_rank()
+        return NotImplemented
 
 
 class Book(Base):
@@ -84,7 +108,8 @@ class Book(Base):
     authors: Mapped[List[str]] = mapped_column(type_=ARRAY(String))
     isbns: Mapped[List[str]] = mapped_column(type_=ARRAY(String))
 
-    metadata_candidates: Mapped[Optional[domain.MetadataCandidates]] = mapped_column(type_=PydanticType(domain.MetadataCandidates))
+    metadata_candidates: Mapped[Optional[domain.MetadataCandidates]] = mapped_column(
+        type_=PydanticType(domain.MetadataCandidates))
 
     # TODO: Add errors field. JSONB array of dictionaries. Any processing / validation errors encountered
     #  should be stored there and displayed in UI.

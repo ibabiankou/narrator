@@ -45,6 +45,7 @@ export class BookDetailsForm {
   constructor() {
     effect(() => {
       const metadata = this.bookMetadata();
+      if (!metadata) return;
 
       this.title.set(metadata.title);
       this.series.set(metadata.series);

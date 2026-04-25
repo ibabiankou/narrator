@@ -313,6 +313,9 @@ class BookService(Service):
 
     def update_metadata(self, book_id: uuid.UUID, metadata: api.BookMetadata) -> db.Book:
         with DbSession() as session:
+            book = session.get_one(db.Book, book_id)
+            status = book.status if book.status > db.BookStatus.ready_for_metadata_review else db.BookStatus.ready_for_content_review
+
             stmt = (
                 update(db.Book).where(db.Book.id == book_id)
                 .values(title=metadata.title,
@@ -320,7 +323,7 @@ class BookService(Service):
                         description=metadata.description,
                         authors=metadata.authors,
                         isbns=metadata.isbns,
-                        status=db.BookStatus.ready_for_content_review)
+                        status=status)
                 .returning(db.Book)
             )
             result = session.execute(stmt)
