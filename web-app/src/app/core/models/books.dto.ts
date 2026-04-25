@@ -5,10 +5,41 @@ export interface CreateBookRequest {
 }
 
 export enum BookStatus {
+  /** Just uploaded book is going through initial processing. */
   processing = "processing",
+
+  /** Initial processing is done, and the book is ready for metadata review. */
   ready_for_metadata_review = "ready_for_metadata_review",
+
+  /** Book metadata is reviewed, so it's time to review the content extracted from the PDF. */
   ready_for_content_review = "ready_for_content_review",
+
+  /** The book is ready to be narrated, but waiting in the queue. */
+  queued = "queued",
+
+  /** The book is being narrated. */
+  narrating = "narrating",
+
+  /** The book is fully narrated and ready for playback or download. */
   ready = "ready"
+}
+
+const BookStatusRank: Record<BookStatus, number> = {
+  [BookStatus.processing]: 1,
+  [BookStatus.ready_for_metadata_review]: 2,
+  [BookStatus.ready_for_content_review]: 3,
+  [BookStatus.queued]: 4,
+  [BookStatus.narrating]: 5,
+  [BookStatus.ready]: 6,
+};
+
+export namespace BookStatus {
+  /**
+   *  Returns true if the left status is greater than or equal to the right status.
+   */
+  export function ge(left: BookStatus, right: BookStatus): boolean {
+    return BookStatusRank[left] >= BookStatusRank[right];
+  }
 }
 
 export interface BookMetadata {
@@ -26,7 +57,7 @@ export interface BookOverview extends BookMetadata {
   owner_id: string;
   pdf_file_name: string;
   number_of_pages: number;
-  status: string;
+  status: BookStatus;
 }
 
 export interface BookStats {

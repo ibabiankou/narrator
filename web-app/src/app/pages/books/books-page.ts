@@ -171,6 +171,8 @@ export class BooksPage implements OnInit {
     switch (book.status) {
       case BookStatus.ready_for_metadata_review:
         return ['/books', book.id, 'edit-metadata'];
+      case BookStatus.ready_for_content_review:
+        return ['/books', book.id, 'edit'];
     }
     return ['/books', book.id];
   }
