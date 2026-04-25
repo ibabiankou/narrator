@@ -6,6 +6,8 @@ import { BookMetadata } from '../../core/models/books.dto';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
+import { AsyncPipe } from '@angular/common';
 
 
 @Component({
@@ -17,7 +19,9 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
     MatFormFieldModule,
     MatInputModule,
     ReactiveFormsModule,
-    FormsModule
+    FormsModule,
+    FileAsBlobPipe,
+    AsyncPipe
   ],
   templateUrl: './book-overview.html',
   styleUrl: './book-overview.scss',

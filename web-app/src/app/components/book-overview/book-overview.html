@@ -1,9 +1,21 @@
 <div class="book-cover-container">
-  <img [src]="coverUrl()" alt="cover" [style]="!bookMetadata().cover ? tintStyle : {}" />
+  @if (bookMetadata().cover) {
+    <img [src]="`/api/files/${ bookMetadata().cover }` | fileAsBlob | async " alt="cover" />
+  } @else {
+    <img src="covers/gray.png" alt="cover" [style]="!bookMetadata().cover ? tintStyle : {}" />
+  }
   <div class="overlay">
-    <div class="authors">{{ authors().join(', ') }}</div>
-    <div class="title">{{ title() }}</div>
-    <div class="description">{{ description() }}</div>
-    <div class="isbns">{{ isbns().join(', ') }}</div>
+    @if (authors().length > 0) {
+      <div class="authors">{{ authors().join(', ') }}</div>
+    }
+    @if (title()) {
+      <div class="title">{{ title() }}</div>
+    }
+    @if (description()) {
+      <div class="description">{{ description() }}</div>
+    }
+    @if (isbns().length > 0) {
+      <div class="isbns">{{ isbns().join(', ') }}</div>
+    }
   </div>
 </div>
