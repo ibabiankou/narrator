@@ -173,5 +173,11 @@ class FilesService(Service):
         pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
         return BytesIO(pdf_object["Body"].read())
 
+    def add_temp_file(self, file_id, filename, temp_file_path, upload_time):
+        with DbSession() as session:
+            session.add(db.TempFile(id=file_id, file_name=filename, file_path=temp_file_path, upload_time=upload_time))
+            session.commit()
+
+
 
 FilesServiceDep = Annotated[FilesService, FilesService.dep()]

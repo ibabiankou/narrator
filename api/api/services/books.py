@@ -9,9 +9,10 @@ from typing import Annotated
 import pymupdf
 from fastapi import BackgroundTasks
 from pypdf import PdfReader, PdfWriter
-from sqlalchemy import update, text
+from sqlalchemy import update, text, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.functions import count
 
 from api.models import api, db, domain
 from api.models.db import DbSession
@@ -329,6 +330,57 @@ class BookService(Service):
             result = session.execute(stmt)
             session.commit()
             return result.scalars().one()
+
+    def list_books(self, user_id: uuid.UUID, page_request: api.PageRequest):
+        with DbSession() as session:
+            count_stmt = (
+                select(count())
+                .where(db.Book.owner_id == user_id)
+            )
+            total = session.execute(count_stmt).scalar()
+
+            items_stmt = (
+                select(db.Book)
+                .where(db.Book.owner_id == user_id)
+                .order_by(db.Book.created_time.desc(), db.Book.title)
+                .offset(page_request.page_index * page_request.size)
+                .limit(page_request.size)
+            )
+            items = session.execute(items_stmt).scalars().all()
+
+            resp = []
+            for book in items:
+                resp.append(api.BookOverview.from_orm(book))
+
+            return api.paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
+
+
+    def search_books(self, user_id: uuid.UUID, search_query: str, page_request: api.PageRequest):
+        with DbSession() as session:
+            search_filter = f"%{search_query}%"
+
+            count_stmt = (
+                select(count())
+                .where(db.Book.title.ilike(search_filter))
+                .where(db.Book.owner_id == user_id)
+            )
+            total = session.execute(count_stmt).scalar()
+
+            stmt = (
+                select(db.Book)
+                .where(db.Book.title.ilike(search_filter))
+                .where(db.Book.owner_id == user_id)
+                .order_by(db.Book.created_time.desc(), db.Book.title)
+                .offset(page_request.page_index * page_request.size)
+                .limit(page_request.size)
+            )
+            books = session.execute(stmt).scalars().all()
+
+            resp = []
+            for book in books:
+                resp.append(api.BookOverview.from_orm(book))
+
+            return api.paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

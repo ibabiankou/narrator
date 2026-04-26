@@ -7,8 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, UploadFile, Request, HTTPException, Response
 from fastapi.params import Header
 
-from api import SessionDep
-from api.models import db, api
+from api.models import api
 from api.services.files import FilesServiceDep, NotModified
 
 files_router = APIRouter(tags=["Files API"])
@@ -20,7 +19,7 @@ if not os.path.exists(local_dir):
 LOG = logging.getLogger(__name__)
 
 @files_router.post("/")
-def upload_file(file: UploadFile, session: SessionDep) -> api.TempFile:
+def upload_file(file: UploadFile, file_service: FilesServiceDep) -> api.TempFile:
     file_id = uuid.uuid4()
     upload_time=datetime.now(UTC)
 
@@ -31,8 +30,7 @@ def upload_file(file: UploadFile, session: SessionDep) -> api.TempFile:
         f.write(file.file.read())
 
     # store metadata in DB
-    session.add(db.TempFile(id=file_id, file_name=file.filename, file_path=temp_file_path, upload_time=upload_time))
-    session.commit()
+    file_service.add_temp_file(file_id, file.filename, temp_file_path, upload_time)
 
     resp = api.TempFile(id=file_id, filename=file.filename, upload_time=upload_time)
 

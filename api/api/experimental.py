@@ -6,8 +6,6 @@ from fastapi.params import Query
 from sqlalchemy.exc import NoResultFound
 from starlette.responses import Response
 
-from api import SessionDep
-from api.models import db
 from api.models.auth import AdminUser
 from api.services.books import BookServiceDep
 from api.services.experimental import identify_book
@@ -17,14 +15,14 @@ experimental_router = APIRouter(tags=["Experimental API"])
 
 @experimental_router.get("/{book_id}/text")
 def text(book_id: uuid.UUID,
-         session: SessionDep,
          book_service: BookServiceDep,
          user: AdminUser,
          first_page: Annotated[Optional[int], Query()] = None,
          last_page: Annotated[Optional[int], Query()] = None,
          raw: bool = False):
-    book = session.get(db.Book, book_id)
-    if book is None:
+    try:
+        book = book_service.get_book(book_id)
+    except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
     return Response(content=book_service.get_text(book, first_page, last_page, raw),
@@ -33,13 +31,13 @@ def text(book_id: uuid.UUID,
 
 @experimental_router.get("/{book_id}/paragraphs")
 def paragraphs(book_id: uuid.UUID,
-               session: SessionDep,
                book_service: BookServiceDep,
                user: AdminUser,
                first_page: Annotated[Optional[int], Query()] = None,
                last_page: Annotated[Optional[int], Query()] = None):
-    book = session.get(db.Book, book_id)
-    if book is None:
+    try:
+        book = book_service.get_book(book_id)
+    except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
     return Response(content=book_service.get_paragraphs(book, first_page, last_page),

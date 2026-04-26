@@ -2,9 +2,8 @@ import logging
 import uuid
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
+from sqlalchemy.exc import NoResultFound
 
-from api import SessionDep
-from api.models import db
 from api.models.auth import AdminUser
 from api.services.books import BookServiceDep
 
@@ -24,11 +23,11 @@ def check_task_name(task_name):
 def process_book(book_id: uuid.UUID,
                  task_name: str,
                  user: AdminUser,
-                 session: SessionDep,
                  background_tasks: BackgroundTasks,
                  book_service: BookServiceDep):
-    book = session.get(db.Book, book_id)
-    if book is None:
+    try:
+        book = book_service.get_book(book_id)
+    except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
     check_task_name(task_name)
