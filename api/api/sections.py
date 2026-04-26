@@ -1,12 +1,13 @@
+import logging
+
 from fastapi import APIRouter, HTTPException
 
-from api import get_logger
 from api.models import api
 from api.models.auth import UserDep
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.sections import SectionServiceDep
 
-LOG = get_logger(__name__)
+LOG = logging.getLogger(__name__)
 
 sections_router = APIRouter(tags=["Sections API"])
 

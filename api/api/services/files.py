@@ -9,13 +9,12 @@ from typing import Annotated, Optional, List
 import boto3
 from botocore.exceptions import ClientError
 
-from api import get_logger
 from api.models import db
 from api.models.db import DbSession
 from api.utils.images import create_thumbnail
 from common_lib.service import Service
 
-LOG = get_logger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 @dataclass

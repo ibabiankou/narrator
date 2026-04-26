@@ -1,9 +1,8 @@
+import logging
 import re
 from typing import Protocol
 
-from api import get_logger
-
-LOG = get_logger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 class ParagraphBuilder:

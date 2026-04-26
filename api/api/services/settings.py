@@ -1,15 +1,15 @@
+import logging
 import uuid
 from dataclasses import dataclass
 from typing import Annotated, Optional
 
 from sqlalchemy import select, update
 
-from api import get_logger
 from api.models import db
 from api.models.db import DbSession
 from common_lib.service import Service
 
-LOG = get_logger(__name__)
+LOG = logging.getLogger(__name__)
 
 @dataclass
 class SystemSettings:

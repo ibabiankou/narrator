@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import uuid
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime, UTC
@@ -12,7 +13,6 @@ from sqlalchemy import update, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from api import get_logger
 from api.models import api, db, domain
 from api.models.db import DbSession
 from api.services.experimental import identify_book
@@ -23,7 +23,7 @@ from api.utils.text import LineReader, CleanupPipeline, pages_to_paragraphs, \
     paragraphs_to_sections
 from common_lib.service import Service
 
-LOG = get_logger(__name__)
+LOG = logging.getLogger(__name__)
 
 executor = ProcessPoolExecutor(max_workers=4)
 

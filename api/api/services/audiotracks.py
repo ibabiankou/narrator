@@ -1,9 +1,9 @@
+import logging
 import uuid
 from typing import List, Annotated, Optional
 
 from sqlalchemy import update, insert, delete, select
 
-from api import get_logger
 from api.models import db, api
 from api.models.db import DbSession
 from api.services.files import FilesServiceDep
@@ -11,7 +11,7 @@ from common_lib import RMQClientDep
 from common_lib.models import rmq
 from common_lib.service import Service
 
-LOG = get_logger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 class AudioTrackService(Service):

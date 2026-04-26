@@ -1,11 +1,11 @@
 import asyncio
+import logging
 import os
 import uuid
 from typing import Annotated
 
 from sqlalchemy import delete, update, select, text
 
-from api import get_logger
 from api.models import db, api
 from api.models.db import DbSession
 from api.services.audiotracks import AudioTrackServiceDep
@@ -16,7 +16,7 @@ from common_lib.models import rmq
 from common_lib.rmq import Topology
 from common_lib.service import Service
 
-LOG = get_logger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 class SectionService(Service):

@@ -1,15 +1,14 @@
+import logging
 import uuid
-from dataclasses import dataclass
 from typing import Annotated, Optional
 
-from sqlalchemy import text, update, select, delete
+from sqlalchemy import update, select, delete
 
-from api import get_logger
 from api.models import db
-from api.models.db import DbSession, BookStatus
+from api.models.db import DbSession
 from common_lib.service import Service
 
-LOG = get_logger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 class PlaybackProgressService(Service):
