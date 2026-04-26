@@ -10,7 +10,6 @@ import boto3
 from botocore.exceptions import ClientError
 
 from api.models import db
-from api.models.db import DbSession
 from api.utils.images import create_thumbnail
 from common_lib.service import Service
 
@@ -32,7 +31,7 @@ class NotModified(Exception):
 class FilesService(Service):
     """A service to manage files stored in an object store."""
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.s3_client = boto3.client(
             "s3",
             endpoint_url=os.getenv("S3_ENDPOINT"),
@@ -44,18 +43,17 @@ class FilesService(Service):
 
     def store_book_file(self, book_id: uuid.UUID, book_file_id: uuid.UUID):
         """Move the book file from the local disk to the object store."""
-        with DbSession() as session:
-            book_file = session.get_one(db.TempFile, book_file_id)
+        book_file = self.db.get_one(db.TempFile, book_file_id)
 
-            remote_file_path = f"{book_id}/{book_file.file_name}"
-            LOG.info(f"Uploading {remote_file_path}")
+        remote_file_path = f"{book_id}/{book_file.file_name}"
+        LOG.info(f"Uploading {remote_file_path}")
 
-            try:
-                self.s3_client.upload_file(book_file.file_path, self.bucket_name, remote_file_path)
-            except ClientError as e:
-                logging.error(e)
-                raise e
-            return book_file.file_name
+        try:
+            self.s3_client.upload_file(book_file.file_path, self.bucket_name, remote_file_path)
+        except ClientError as e:
+            logging.error(e)
+            raise e
+        return book_file.file_name
 
     def upload_book_pages(self, book_id: uuid.UUID, pdf_pages):
         """Upload the book pages to the object store."""
@@ -174,10 +172,7 @@ class FilesService(Service):
         return BytesIO(pdf_object["Body"].read())
 
     def add_temp_file(self, file_id, filename, temp_file_path, upload_time):
-        with DbSession() as session:
-            session.add(db.TempFile(id=file_id, file_name=filename, file_path=temp_file_path, upload_time=upload_time))
-            session.commit()
-
+        self.db.add(db.TempFile(id=file_id, file_name=filename, file_path=temp_file_path, upload_time=upload_time))
 
 
 FilesServiceDep = Annotated[FilesService, FilesService.dep()]

@@ -7,11 +7,11 @@ from typing import Annotated
 from sqlalchemy import delete, update, select, text
 
 from api.models import db, api
-from api.models.db import DbSession
 from api.services.audiotracks import AudioTrackServiceDep
 from api.services.progress import PlaybackProgressServiceDep
 from api.services.settings import SettingsServiceDep
 from common_lib import RMQClientDep
+from common_lib.db import transactional
 from common_lib.models import rmq
 from common_lib.rmq import Topology
 from common_lib.service import Service
@@ -19,12 +19,14 @@ from common_lib.service import Service
 LOG = logging.getLogger(__name__)
 
 
+# noinspection PyTypeChecker,SqlDialectInspection
 class SectionService(Service):
     def __init__(self,
                  audiotracks_service: AudioTrackServiceDep,
                  progress_service: PlaybackProgressServiceDep,
                  rmq_client: RMQClientDep,
-                 settings_service: SettingsServiceDep):
+                 settings_service: SettingsServiceDep,
+                 **kwargs):
         self.audiotracks_service = audiotracks_service
         self.progress_service = progress_service
         self.rmq_client = rmq_client
@@ -34,26 +36,24 @@ class SectionService(Service):
         self._speech_generation_queue_size_threshold = int(os.getenv("SPEECH_GENERATION_QUEUE_SIZE_THRESHOLD", 10))
 
     def get_sections(self, book_id: uuid.UUID):
-        with DbSession() as session:
-            stmt = select(db.Section).where(db.Section.book_id == book_id).order_by(db.Section.section_index)
-            return session.execute(stmt).scalars().all()
+        stmt = select(db.Section).where(db.Section.book_id == book_id).order_by(db.Section.section_index)
+        return self.db.execute(stmt).scalars().all()
 
     def get_section(self, section_id: int):
-        with DbSession() as session:
-            return session.get(db.Section, section_id)
+        return self.db.get(db.Section, section_id)
 
+    @transactional
     def delete_sections(self, book_id: uuid.UUID = None, section_ids: list[int] = None):
         if not book_id and not section_ids:
             raise ValueError("Either book_id or section_ids must be provided")
 
         # Load the sections to be deleted.
-        with DbSession() as session:
-            stmt = select(db.Section)
-            if book_id:
-                stmt = stmt.where(db.Section.book_id == book_id)
-            if section_ids:
-                stmt = stmt.where(db.Section.id.in_(section_ids))
-            sections = session.scalars(stmt).all()
+        stmt = select(db.Section)
+        if book_id:
+            stmt = stmt.where(db.Section.book_id == book_id)
+        if section_ids:
+            stmt = stmt.where(db.Section.id.in_(section_ids))
+        sections = self.db.scalars(stmt).all()
 
         if not sections:
             return []
@@ -62,60 +62,58 @@ class SectionService(Service):
         self.audiotracks_service.delete_for_sections(sections)
 
         # Delete the sections.
-        with DbSession() as session:
-            stmt = delete(db.Section).returning(db.Section)
-            if book_id:
-                stmt = stmt.where(db.Section.book_id == book_id)
-            if section_ids:
-                stmt = stmt.where(db.Section.id.in_(section_ids))
-            deleted_sections = session.execute(stmt).scalars().all()
-            LOG.info("Deleted %s sections: \n%s", len(deleted_sections), deleted_sections)
-            session.commit()
+
+        stmt = delete(db.Section).returning(db.Section)
+        if book_id:
+            stmt = stmt.where(db.Section.book_id == book_id)
+        if section_ids:
+            stmt = stmt.where(db.Section.id.in_(section_ids))
+        deleted_sections = self.db.execute(stmt).scalars().all()
+        LOG.info("Deleted %s sections: \n%s", len(deleted_sections), deleted_sections)
 
         return deleted_sections
 
-    def set_phonemes(self, section_id: int, phonemes: str):
-        with DbSession() as session:
-            session.execute(update(db.Section).where(db.Section.id == section_id).values(phonemes=phonemes))
-            session.commit()
+    def _set_phonemes(self, section_id: int, phonemes: str):
+        self.db.execute(update(db.Section).where(db.Section.id == section_id).values(phonemes=phonemes))
 
+    @transactional
     def handle_phonemes_msg(self, payload: rmq.PhonemesResponse):
         LOG.debug("Got phonemes for track %s, requesting speech synthesis...", payload.track_id)
-        with DbSession() as session:
-            section = session.get(db.Section, payload.section_id)
-            if section:
-                self.set_phonemes(payload.section_id, payload.phonemes)
-                self.audiotracks_service.synthesize_speech(payload.book_id, payload.section_id, payload.track_id,
-                                                           payload.phonemes, voice=payload.voice)
-            else:
-                LOG.warn("Section %s seem to be missing, so ignoring the message...", payload.section_id)
 
+        section = self.db.get(db.Section, payload.section_id)
+        if section:
+            self._set_phonemes(payload.section_id, payload.phonemes)
+            self.audiotracks_service.synthesize_speech(payload.book_id, payload.section_id, payload.track_id,
+                                                       payload.phonemes, voice=payload.voice)
+        else:
+            LOG.warning("Section %s seem to be missing, so ignoring the message...", payload.section_id)
+
+    @transactional
     def set_content(self, section_id: int, content: str) -> list[api.AudioTrack]:
-        with DbSession() as session:
-            stmt = update(db.Section).returning(db.Section).where(db.Section.id == section_id).values(content=content)
-            updated_section = session.execute(stmt).scalars().first()
-            LOG.info("Updated section: \n%s", updated_section)
-            session.commit()
-            return self.audiotracks_service.generate_speech([updated_section]) if updated_section else []
+        stmt = update(db.Section).returning(db.Section).where(db.Section.id == section_id).values(content=content)
+        updated_section = self.db.execute(stmt).scalars().first()
+        LOG.info("Updated section: \n%s", updated_section)
+        return self.audiotracks_service.generate_speech([updated_section]) if updated_section else []
 
     async def generate_speech_maybe(self):
         while True:
             LOG.info("Checking if need to generate some speech...")
             try:
-                await self._do_generate_speech_maybe()
+                self._do_generate_speech_maybe()
             except:
                 LOG.info("Error while triggering speech generation, will try again later.", exc_info=True)
             await asyncio.sleep(self._speech_generation_interval_sec)
 
-    async def _do_generate_speech_maybe(self):
+    @transactional
+    def _do_generate_speech_maybe(self):
         system_settings = self.settings_service.get_system_settings()
         if not system_settings.speech_generation_enabled:
             LOG.info("Speech generation is disabled. Doing nothing.")
             return
 
         message_num = 0
-        message_num += await self.rmq_client.get_queue_size(Topology.phonemization_queue)
-        message_num += await self.rmq_client.get_queue_size(Topology.speech_gen_queue)
+        message_num += self.rmq_client.get_queue_size(Topology.phonemization_queue)
+        message_num += self.rmq_client.get_queue_size(Topology.speech_gen_queue)
 
         if message_num > self._speech_generation_queue_size_threshold:
             return
@@ -146,15 +144,15 @@ class SectionService(Service):
                      FROM MissingAudio
                      WHERE rank_in_book <= 5
                      ORDER BY book_id, section_index)"""
-        with DbSession() as session:
-            db_sections = session.scalars(select(db.Section).from_statement(text(query_text))).all()
-            if len(db_sections):
-                self.audiotracks_service.generate_speech(db_sections)
 
+        db_sections = self.db.scalars(select(db.Section).from_statement(text(query_text))).all()
+        if len(db_sections):
+            self.audiotracks_service.generate_speech(db_sections)
+
+    @transactional
     def is_owner(self, user_id: uuid.UUID, section_id: int) -> bool:
         query = "select owner_id = :owner_id from books where id = (select book_id from sections where id = :section_id)"
-        with DbSession() as session:
-            return session.execute(text(query), {"owner_id": user_id, "section_id": section_id}).scalar()
+        return self.db.execute(text(query), {"owner_id": user_id, "section_id": section_id}).scalar()
 
 
 SectionServiceDep = Annotated[SectionService, SectionService.dep()]

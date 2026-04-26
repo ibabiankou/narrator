@@ -41,17 +41,16 @@ CORS_REGEX = "(https://)?(\w+\.)*ggnt\.eu(:\d+)?"
 async def lifespan(app: FastAPI):
     load_dotenv()
 
-    pg_url = os.path.expandvars(os.getenv("PG_URL"))
-    db_factory = DBFactory(pg_url)
+    db_factory = DBFactory(os.path.expandvars(os.getenv("PG_URL")))
 
     # Initialize services.
-    files_svc = FilesService()
-    progress_svc = PlaybackProgressService()
-    settings_svc = SettingsService()
+    files_svc = FilesService(db_factory=db_factory)
+    progress_svc = PlaybackProgressService(db_factory=db_factory)
+    settings_svc = SettingsService(db_factory=db_factory)
 
     rmq_client = RMQClient(Topology.default_exchange)
-    audiotrack_svc = AudioTrackService(files_svc, rmq_client)
-    section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc)
+    audiotrack_svc = AudioTrackService(files_svc, rmq_client, db_factory=db_factory)
+    section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc, db_factory=db_factory)
     speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
     books_svc = BookService(files_svc, section_svc, progress_svc, db_factory=db_factory)
 

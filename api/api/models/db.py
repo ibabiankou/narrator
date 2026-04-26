@@ -1,22 +1,15 @@
 import datetime
-import os
 import uuid
 from enum import StrEnum
 from functools import total_ordering
 from typing import Optional, Type, List
 
-from dotenv import load_dotenv
 from pydantic import BaseModel
-from sqlalchemy import create_engine, ForeignKey, TypeDecorator, String
+from sqlalchemy import ForeignKey, TypeDecorator, String
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, Session
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from api.models import domain
-
-load_dotenv()
-pg_url = os.path.expandvars(os.getenv("PG_URL"))
-engine = create_engine(pg_url, pool_recycle=600)
-DbSession = sessionmaker(engine)
 
 
 class Base(DeclarativeBase):

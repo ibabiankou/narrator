@@ -67,19 +67,10 @@ class RMQClient(Service):
         configure_callback(channel)
         channel.close()
 
-    async def get_queue_size(self, queue_name: str) -> asyncio.Future[int]:
+    def get_queue_size(self, queue_name: str) -> int:
         channel = self._publisher_connection.default_channel()
-
-        future = Future()
-        def get_message_count():
-            try:
-                declare_ok = channel.queue_declare(queue_name, passive=True)
-                future.set_result(declare_ok.method.message_count)
-            except Exception as e:
-                future.set_exception(e)
-        channel.connection.add_callback_threadsafe(get_message_count)
-
-        return await asyncio.wrap_future(future)
+        declare_ok = channel.queue_declare(queue_name, passive=True)
+        return declare_ok.method.message_count
 
     def set_queue_message_handler(self, queue: str, cls: type[SubclassOfRMQMessage],
                                   message_handler: Callable[[SubclassOfRMQMessage], Any]):

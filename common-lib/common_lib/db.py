@@ -1,5 +1,6 @@
 from _contextvars import ContextVar
 from functools import wraps
+from typing import Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
@@ -11,7 +12,7 @@ class DBFactory:
         self._engine = create_engine(db_url, pool_recycle=600)
         self._session_maker = sessionmaker(self._engine)
 
-        self._session_ctx: ContextVar = ContextVar("current_session", default=None)
+        self._session_ctx: ContextVar[Optional[Session]] = ContextVar("current_session", default=None)
 
     @property
     def context(self) -> ContextVar:
@@ -31,7 +32,6 @@ def transactional(func):
     """Starts a new or nested transaction. The transaction is committed at the end of the function."""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-
         db_factory = self.db_factory
         context_var = db_factory.context
         session = context_var.get()

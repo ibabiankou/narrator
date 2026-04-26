@@ -26,6 +26,8 @@ LOG = logging.getLogger(__name__)
 
 executor = ProcessPoolExecutor(max_workers=4)
 
+
+# noinspection PyTypeChecker
 class BookService(Service):
     def __init__(self,
                  files_service: FilesServiceDep,
