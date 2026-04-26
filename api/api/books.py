@@ -66,16 +66,16 @@ def search_books(
 ) -> api.PagedResponse[api.BookOverview]:
     return book_service.search_books(user.id, query, page_request)
 
-def get_book_pages(book: db.Book, section_svc: SectionServiceDep) -> list[api.BookPage]:
+def get_book_pages(book_id, number_of_pages: int, section_svc: SectionServiceDep) -> list[api.BookPage]:
     # Convert into the API model.
     pages = []
     pages_dict = {}
     # For now, I simply generate pages, but I might need to store that data explicitly instead.
-    for i in range(book.number_of_pages or 0):
+    for i in range(number_of_pages or 0):
         pages.append(api.BookPage(index=i, file_name=f"{i}.pdf", sections=[]))
         pages_dict[i] = pages[-1]
 
-    db_sections = section_svc.get_sections(book.id)
+    db_sections = section_svc.get_sections(book_id)
     for section in db_sections:
         book_section = api.BookSection(id=section.id,
                                        book_id=section.book_id,
@@ -92,8 +92,7 @@ def get_book_with_content(book_id: uuid.UUID,
                           section_svc: SectionServiceDep
                           ) -> api.BookWithContent:
     try:
-        book = book_service.get_book(book_id)
-        overview = api.BookOverview.from_orm(book)
+        overview = book_service.get_book_overview(book_id)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
@@ -102,7 +101,7 @@ def get_book_with_content(book_id: uuid.UUID,
     stats = api.BookStats(total_narrated_seconds=raw_stats.get("narrated_duration"),
                           available_percent=(raw_stats.get("available") / total if total > 0 else 1) * 100,
                           total_size_bytes=raw_stats.get("total_size_bytes"))
-    pages = get_book_pages(book, section_svc)
+    pages = get_book_pages(overview.id, overview.number_of_pages, section_svc)
 
     return api.BookWithContent(overview=overview, stats=stats, pages=pages)
 
@@ -116,8 +115,12 @@ def list_images(book_id: uuid.UUID, file_service: FilesServiceDep) -> list[str]:
 def delete_book(book_id: uuid.UUID,
                 user: UserDep,
                 book_service: BookServiceDep):
-    if not book_service.is_owner(user.id, book_id) and not user.has_any_role(["admin"]):
+    is_owner = book_service.is_owner(user.id, book_id)
+    if is_owner is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    if not is_owner and not user.has_any_role(["admin"]):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
+
     try:
         book_service.delete_book(user.id, book_id)
     except NoResultFound:

@@ -38,13 +38,10 @@ def get_book_metadata_for_review(
         user: UserDep,
         book_service: BookServiceDep) -> api.BookMetadataForReview:
     try:
-        book = book_service.get_book(book_id)
-        overview = api.BookOverview.from_orm(book)
+        return book_service.metadata_for_review(book_id)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    metadata_candidates = book.metadata_candidates if book.metadata_candidates is not None else domain.MetadataCandidates(candidates=[])
-    return api.BookMetadataForReview(overview=overview, metadata_candidates=metadata_candidates)
 
 @metadata_router.post("/review")
 def update_book_metadata(
@@ -53,7 +50,6 @@ def update_book_metadata(
         user: UserDep,
         book_service: BookServiceDep) -> api.BookOverview:
     try:
-        book = book_service.update_metadata(book_id, metadata)
-        return api.BookOverview.from_orm(book)
+        return book_service.update_metadata(book_id, metadata)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")

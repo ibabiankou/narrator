@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 from sqlalchemy import create_engine, ForeignKey, TypeDecorator, String
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, Session, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, Session
 
 from api.models import domain
 
@@ -17,11 +17,6 @@ load_dotenv()
 pg_url = os.path.expandvars(os.getenv("PG_URL"))
 engine = create_engine(pg_url, pool_recycle=600)
 DbSession = sessionmaker(engine)
-
-
-def get_session():
-    with Session(engine) as session:
-        yield session
 
 
 class Base(DeclarativeBase):

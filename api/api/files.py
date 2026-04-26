@@ -57,7 +57,8 @@ def get_file(key: str,
         range_request = ""
 
     try:
-        LOG.info("Processing range: %s", range_request)
+        if range_request:
+            LOG.info("Processing range: %s", range_request)
         file_data = file_service._get_object(key, if_none_match, range_request)
     except NotModified:
         return Response(status_code=304)

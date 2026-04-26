@@ -26,11 +26,11 @@ from api.services.sections import SectionService
 from api.services.settings import SettingsService
 from api.settings import settings_router
 from common_lib import RMQClient
+from common_lib.db import DBFactory
 from common_lib.models import rmq
 from common_lib.rmq import Topology
 from common_lib.uvicorn import EndpointFilter
 
-load_dotenv()
 # Filter out health check from access logs.
 EndpointFilter.add_filter("/api/")
 
@@ -41,6 +41,9 @@ CORS_REGEX = "(https://)?(\w+\.)*ggnt\.eu(:\d+)?"
 async def lifespan(app: FastAPI):
     load_dotenv()
 
+    pg_url = os.path.expandvars(os.getenv("PG_URL"))
+    db_factory = DBFactory(pg_url)
+
     # Initialize services.
     files_svc = FilesService()
     progress_svc = PlaybackProgressService()
@@ -50,7 +53,7 @@ async def lifespan(app: FastAPI):
     audiotrack_svc = AudioTrackService(files_svc, rmq_client)
     section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc)
     speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
-    books_svc = BookService(files_svc, section_svc, progress_svc)
+    books_svc = BookService(files_svc, section_svc, progress_svc, db_factory=db_factory)
 
     def configure(channel: BlockingChannel):
         channel.exchange_declare(Topology.default_exchange, ExchangeType.topic, durable=True)

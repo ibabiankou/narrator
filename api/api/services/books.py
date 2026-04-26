@@ -10,18 +10,16 @@ import pymupdf
 from fastapi import BackgroundTasks
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import update, text, select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 from sqlalchemy.sql.functions import count
 
 from api.models import api, db, domain
-from api.models.db import DbSession
 from api.services.experimental import identify_book
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
 from api.services.sections import SectionServiceDep
 from api.utils.text import LineReader, CleanupPipeline, pages_to_paragraphs, \
     paragraphs_to_sections
+from common_lib.db import transactional
 from common_lib.service import Service
 
 LOG = logging.getLogger(__name__)
@@ -32,11 +30,13 @@ class BookService(Service):
     def __init__(self,
                  files_service: FilesServiceDep,
                  sections_service: SectionServiceDep,
-                 playback_progress_service: PlaybackProgressServiceDep):
+                 playback_progress_service: PlaybackProgressServiceDep,
+                 **kwargs):
         self.files_service = files_service
         self.sections_service = sections_service
         self.playback_progress_service = playback_progress_service
 
+    @transactional
     def create_book(self, book: api.CreateBookRequest, user_id: uuid.UUID) -> api.BookOverview:
         # Upload the book file to the object store
         try:
@@ -56,15 +56,10 @@ class BookService(Service):
                        created_time=datetime.now(UTC),
                        number_of_pages=pdf_document.page_count,
                        status=db.BookStatus.processing)
-        with DbSession() as session:
-            try:
-                session.add(book)
-                session.commit()
-            except IntegrityError as e:
-                session.rollback()
-                raise e
-            return api.BookOverview.from_orm(book)
+        self.db.add(book)
+        return api.BookOverview.from_orm(book)
 
+    @transactional
     def create_book_v2(self, user_id: uuid.UUID, file_name: str, file_bytes: BytesIO, background_tasks: BackgroundTasks):
         # TODO: Validate language. Fail book creation if language is not supported.
 
@@ -83,18 +78,14 @@ class BookService(Service):
                        created_time=datetime.now(UTC),
                        number_of_pages=pdf_document.page_count,
                        status=db.BookStatus.processing)
-        with DbSession() as session:
-            try:
-                session.add(book)
-                session.commit()
 
-                background_tasks.add_task(self.extract_metadata, book_id, file_name)
-                background_tasks.add_task(self.split_pages, book_id, file_name)
-                background_tasks.add_task(self.extract_text, book_id, file_name)
-            except IntegrityError as e:
-                session.rollback()
-                raise e
-            return api.BookOverview.from_orm(book)
+        self.db.add(book)
+
+        background_tasks.add_task(self.extract_metadata, book_id, file_name)
+        background_tasks.add_task(self.split_pages, book_id, file_name)
+        background_tasks.add_task(self.extract_text, book_id, file_name)
+
+        return api.BookOverview.from_orm(book)
 
     def split_pages(self, book_id: uuid.UUID, book_file_name: str):
         LOG.debug(f"Splitting book {book_id} into pages.")
@@ -163,6 +154,7 @@ class BookService(Service):
 
         return "\n".join(result)
 
+    @transactional
     def extract_text(self, book_id: uuid.UUID, book_file_name: str):
         LOG.info(f"Extracting text of the book {book_id}")
 
@@ -184,16 +176,15 @@ class BookService(Service):
                                  content=section_dict["content"])
             sections.append(section)
 
-        with DbSession() as session:
-            session.add_all(sections)
-            session.commit()
+        self.db.add_all(sections)
 
-    def _set_status(self, session: Session, book_id: uuid.UUID, status: db.BookStatus):
-        session.execute(update(db.Book).where(db.Book.id == book_id).values(status=status))
+    def _set_status(self, book_id: uuid.UUID, status: db.BookStatus):
+        self.db.execute(update(db.Book).where(db.Book.id == book_id).values(status=status))
 
-    def _set_candidates(self, session: Session, book_id: uuid.UUID, metadata_candidates: domain.MetadataCandidates):
-        session.execute(update(db.Book).where(db.Book.id == book_id).values(metadata_candidates=metadata_candidates))
+    def _set_candidates(self, book_id: uuid.UUID, metadata_candidates: domain.MetadataCandidates):
+        self.db.execute(update(db.Book).where(db.Book.id == book_id).values(metadata_candidates=metadata_candidates))
 
+    @transactional
     def extract_metadata(self, book_id: uuid.UUID, book_file_name: str):
         LOG.info(f"Extracting metadata of the book {book_id}")
         pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
@@ -206,11 +197,10 @@ class BookService(Service):
         llm_candidate = domain.MetadataCandidate(source="gemini", **llm_metadata.model_dump())
         metadata_candidates = domain.MetadataCandidates(candidates=[llm_candidate], preferred_index=0, selected_index=None)
 
-        with DbSession() as session:
-            self._set_candidates(session, book_id, metadata_candidates)
-            self._set_status(session, book_id, db.BookStatus.ready_for_metadata_review)
-            session.commit()
+        self._set_candidates(book_id, metadata_candidates)
+        self._set_status(book_id, db.BookStatus.ready_for_metadata_review)
 
+    @transactional
     def extract_and_store_images(self, book_id: uuid.UUID, book_file_name: str):
         pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
         self._extract_and_store_images(book_id, pdf_bytes)
@@ -260,26 +250,29 @@ class BookService(Service):
         LOG.info(f"Extracted {len(extracted_images)} images: {[i["file_name"] for i in extracted_images]}")
         return extracted_images
 
+    @transactional
     def set_cover(self, book_id: uuid.UUID, cover_file_name: str):
-        with DbSession() as session:
-            session.execute(update(db.Book).where(db.Book.id == book_id).values(cover=cover_file_name))
-            session.commit()
+        self.db.execute(update(db.Book).where(db.Book.id == book_id).values(cover=cover_file_name))
 
+    @transactional
     def get_book(self, book_id: uuid.UUID) -> db.Book:
-        with DbSession() as session:
-            return session.get_one(db.Book, book_id)
+        return self.db.get_one(db.Book, book_id)
 
+    @transactional
+    def get_book_overview(self, book_id: uuid.UUID) -> api.BookOverview:
+        return api.BookOverview.from_orm(self.db.get_one(db.Book, book_id))
+
+    @transactional
     def delete_book(self, user_id: uuid.UUID, book_id: uuid.UUID):
-        book = self.get_book(book_id)
+        book = self.db.get_one(db.Book, book_id)
 
         self.playback_progress_service.delete(user_id=user_id, book_id=book_id)
         self.sections_service.delete_sections(book_id=book_id)
         self.files_service.delete_book_files(book_id=book_id)
 
-        with DbSession() as session:
-            session.delete(book)
-            session.commit()
+        self.db.delete(book)
 
+    @transactional
     def get_stats(self, book_id: uuid.UUID) -> dict:
         query = """
                 select count(s.id) as length, 'total' as type
@@ -301,86 +294,91 @@ class BookService(Service):
                 """
 
         book_stats = {}
-        with DbSession() as session:
-            rs = session.execute(text(query), {"book_id": book_id})
-            for length, stat_type in rs:
-                book_stats[stat_type] = length
+        rs = self.db.execute(text(query), {"book_id": book_id})
+        for length, stat_type in rs:
+            book_stats[stat_type] = length
         return book_stats
 
+    @transactional
     def is_owner(self, user_id: uuid.UUID, book_id: uuid.UUID) -> bool:
         query = "select owner_id = :owner_id from books where id = :book_id"
-        with DbSession() as session:
-            return session.execute(text(query), {"owner_id": user_id, "book_id": book_id}).scalar()
+        return self.db.execute(text(query), {"owner_id": user_id, "book_id": book_id}).scalar()
 
-    def update_metadata(self, book_id: uuid.UUID, metadata: api.BookMetadata) -> db.Book:
-        with DbSession() as session:
-            book = session.get_one(db.Book, book_id)
-            status = book.status if book.status > db.BookStatus.ready_for_metadata_review else db.BookStatus.ready_for_content_review
+    @transactional
+    def update_metadata(self, book_id: uuid.UUID, metadata: api.BookMetadata) -> api.BookOverview:
+        book = self.db.get_one(db.Book, book_id)
+        status = book.status if book.status > db.BookStatus.ready_for_metadata_review else db.BookStatus.ready_for_content_review
 
-            stmt = (
-                update(db.Book).where(db.Book.id == book_id)
-                .values(title=metadata.title,
-                        series=metadata.series,
-                        description=metadata.description,
-                        authors=metadata.authors,
-                        isbns=metadata.isbns,
-                        status=status)
-                .returning(db.Book)
-            )
-            result = session.execute(stmt)
-            session.commit()
-            return result.scalars().one()
+        stmt = (
+            update(db.Book).where(db.Book.id == book_id)
+            .values(title=metadata.title,
+                    series=metadata.series,
+                    description=metadata.description,
+                    authors=metadata.authors,
+                    isbns=metadata.isbns,
+                    status=status)
+            .returning(db.Book)
+        )
+        result = self.db.execute(stmt)
+        return api.BookOverview.from_orm(result.scalars().one())
 
-    def list_books(self, user_id: uuid.UUID, page_request: api.PageRequest):
-        with DbSession() as session:
-            count_stmt = (
-                select(count())
-                .where(db.Book.owner_id == user_id)
-            )
-            total = session.execute(count_stmt).scalar()
+    @transactional
+    def list_books(self, user_id: uuid.UUID, page_request: api.PageRequest) -> api.PagedResponse[api.BookOverview]:
+        count_stmt = (
+            select(count())
+            .where(db.Book.owner_id == user_id)
+        )
+        total = self.db.execute(count_stmt).scalar()
 
-            items_stmt = (
-                select(db.Book)
-                .where(db.Book.owner_id == user_id)
-                .order_by(db.Book.created_time.desc(), db.Book.title)
-                .offset(page_request.page_index * page_request.size)
-                .limit(page_request.size)
-            )
-            items = session.execute(items_stmt).scalars().all()
+        items_stmt = (
+            select(db.Book)
+            .where(db.Book.owner_id == user_id)
+            .order_by(db.Book.created_time.desc(), db.Book.title)
+            .offset(page_request.page_index * page_request.size)
+            .limit(page_request.size)
+        )
+        items = self.db.execute(items_stmt).scalars().all()
 
-            resp = []
-            for book in items:
-                resp.append(api.BookOverview.from_orm(book))
+        resp = []
+        for book in items:
+            resp.append(api.BookOverview.from_orm(book))
 
-            return api.paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
+        return api.paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
 
+    @transactional
+    def search_books(self, user_id: uuid.UUID, search_query: str, page_request: api.PageRequest) -> api.PagedResponse[api.BookOverview]:
+        search_filter = f"%{search_query}%"
 
-    def search_books(self, user_id: uuid.UUID, search_query: str, page_request: api.PageRequest):
-        with DbSession() as session:
-            search_filter = f"%{search_query}%"
+        count_stmt = (
+            select(count())
+            .where(db.Book.title.ilike(search_filter))
+            .where(db.Book.owner_id == user_id)
+        )
+        total = self.db.execute(count_stmt).scalar()
 
-            count_stmt = (
-                select(count())
-                .where(db.Book.title.ilike(search_filter))
-                .where(db.Book.owner_id == user_id)
-            )
-            total = session.execute(count_stmt).scalar()
+        stmt = (
+            select(db.Book)
+            .where(db.Book.title.ilike(search_filter))
+            .where(db.Book.owner_id == user_id)
+            .order_by(db.Book.created_time.desc(), db.Book.title)
+            .offset(page_request.page_index * page_request.size)
+            .limit(page_request.size)
+        )
+        books = self.db.execute(stmt).scalars().all()
 
-            stmt = (
-                select(db.Book)
-                .where(db.Book.title.ilike(search_filter))
-                .where(db.Book.owner_id == user_id)
-                .order_by(db.Book.created_time.desc(), db.Book.title)
-                .offset(page_request.page_index * page_request.size)
-                .limit(page_request.size)
-            )
-            books = session.execute(stmt).scalars().all()
+        resp = []
+        for book in books:
+            resp.append(api.BookOverview.from_orm(book))
 
-            resp = []
-            for book in books:
-                resp.append(api.BookOverview.from_orm(book))
+        return api.paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
 
-            return api.paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
+    @transactional
+    def metadata_for_review(self, book_id: uuid.UUID) -> api.BookMetadataForReview:
+        book = self.db.get_one(db.Book, book_id)
+        overview = api.BookOverview.from_orm(book)
+        metadata_candidates = book.metadata_candidates if book.metadata_candidates is not None else domain.MetadataCandidates(candidates=[])
+
+        return api.BookMetadataForReview(overview=overview, metadata_candidates=metadata_candidates)
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]
