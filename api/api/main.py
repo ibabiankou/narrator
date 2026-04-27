@@ -54,9 +54,8 @@ async def lifespan(app: FastAPI):
     audiotrack_svc = AudioTrackService(files_svc, rmq_client, db_factory=narrator_db)
     section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc, db_factory=narrator_db)
     speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
-    books_svc = BookService(files_svc, section_svc, progress_svc, db_factory=narrator_db)
-
     openlibrary_svc = OpenlibraryService(db_factory=openlibrary_db)
+    books_svc = BookService(files_svc, section_svc, progress_svc, openlibrary_svc, db_factory=narrator_db)
 
     def configure(channel: BlockingChannel):
         channel.exchange_declare(Topology.default_exchange, ExchangeType.topic, durable=True)

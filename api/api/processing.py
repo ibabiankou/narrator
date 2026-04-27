@@ -2,7 +2,6 @@ import logging
 import uuid
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from sqlalchemy.exc import NoResultFound
 
 from api.models.auth import AdminUser
 from api.services.books import BookServiceDep
@@ -11,7 +10,7 @@ LOG = logging.getLogger(__name__)
 
 processing_router = APIRouter(tags=["Processing API"])
 
-tasks = ["split-pages", "extract-text", "extract-images"]
+tasks = ["split-pages", "extract-text", "extract-images", "extract-metadata"]
 
 
 def check_task_name(task_name):
@@ -25,18 +24,5 @@ def process_book(book_id: uuid.UUID,
                  user: AdminUser,
                  background_tasks: BackgroundTasks,
                  book_service: BookServiceDep):
-    try:
-        book = book_service.get_book(book_id)
-    except NoResultFound:
-        raise HTTPException(status_code=404, detail="Book not found")
-
     check_task_name(task_name)
-
-    if task_name == "split-pages":
-        background_tasks.add_task(book_service.split_pages, book.id, book.file_name)
-
-    if task_name == "extract-text":
-        background_tasks.add_task(book_service.extract_text, book.id, book.file_name)
-
-    if task_name == "extract-images":
-        background_tasks.add_task(book_service.extract_and_store_images, book.id, book.file_name)
+    book_service.process_book(book_id, task_name, background_tasks)

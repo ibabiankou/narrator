@@ -13,6 +13,7 @@ from sqlalchemy import update, text, select
 from sqlalchemy.sql.functions import count
 
 from api.models import api, db, domain
+from api.openlibrary.service import OpenlibraryService, OpenlibraryServiceDep
 from api.services.experimental import identify_book
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
@@ -33,10 +34,12 @@ class BookService(Service):
                  files_service: FilesServiceDep,
                  sections_service: SectionServiceDep,
                  playback_progress_service: PlaybackProgressServiceDep,
+                 openlibrary_service: OpenlibraryServiceDep,
                  **kwargs):
         self.files_service = files_service
         self.sections_service = sections_service
         self.playback_progress_service = playback_progress_service
+        self.openlibrary_service = openlibrary_service
 
     @transactional
     def create_book(self, book: api.CreateBookRequest, user_id: uuid.UUID) -> api.BookOverview:
@@ -187,7 +190,7 @@ class BookService(Service):
         self.db.execute(update(db.Book).where(db.Book.id == book_id).values(metadata_candidates=metadata_candidates))
 
     @transactional
-    def extract_metadata(self, book_id: uuid.UUID, book_file_name: str):
+    def extract_metadata(self, book_id: uuid.UUID, book_file_name: str, update_metadata: bool = True, update_status: bool = True):
         LOG.info(f"Extracting metadata of the book {book_id}")
         pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
 
@@ -197,10 +200,17 @@ class BookService(Service):
         llm_metadata = identify_book(first_pages)
 
         llm_candidate = domain.MetadataCandidate(source="gemini", **llm_metadata.model_dump())
-        metadata_candidates = domain.MetadataCandidates(candidates=[llm_candidate], preferred_index=0, selected_index=None)
+
+        ol_candidates = self.openlibrary_service.search_matches(llm_candidate)
+
+        all_candidates = [llm_candidate] + ol_candidates
+        metadata_candidates = domain.MetadataCandidates(candidates=all_candidates, preferred_index=0, selected_index=None)
 
         self._set_candidates(book_id, metadata_candidates)
-        self._set_status(book_id, db.BookStatus.ready_for_metadata_review)
+        if update_metadata:
+            self.update_metadata(book_id, llm_metadata)
+        if update_status:
+            self._set_status(book_id, db.BookStatus.ready_for_metadata_review)
 
     @transactional
     def extract_and_store_images(self, book_id: uuid.UUID, book_file_name: str):
@@ -381,6 +391,22 @@ class BookService(Service):
         metadata_candidates = book.metadata_candidates if book.metadata_candidates is not None else domain.MetadataCandidates(candidates=[])
 
         return api.BookMetadataForReview(overview=overview, metadata_candidates=metadata_candidates)
+
+    @transactional
+    def process_book(self, book_id, task_name, background_tasks):
+        book = self.get_book(book_id)
+
+        if task_name == "split-pages":
+            background_tasks.add_task(self.split_pages, book.id, book.file_name)
+
+        if task_name == "extract-text":
+            background_tasks.add_task(self.extract_text, book.id, book.file_name)
+
+        if task_name == "extract-images":
+            background_tasks.add_task(self.extract_and_store_images, book.id, book.file_name)
+
+        if task_name == "extract-metadata":
+            background_tasks.add_task(self.extract_metadata, book.id, book.file_name, False, False)
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

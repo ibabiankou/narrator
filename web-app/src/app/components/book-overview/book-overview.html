@@ -1,6 +1,10 @@
 <div class="book-cover-container">
   @if (bookMetadata().cover) {
-    <img [src]="`/api/files/${ bookMetadata().cover }` | fileAsBlob | async " alt="cover" />
+    @if (bookMetadata().cover!.startsWith('http')) {
+      <img [src]="bookMetadata().cover" alt="cover" />
+    } @else {
+      <img [src]="`/api/files/${ bookMetadata().cover }` | fileAsBlob | async " alt="cover" />
+    }
   } @else {
     <img src="covers/gray.png" alt="cover" [style]="!bookMetadata().cover ? tintStyle : {}" />
   }

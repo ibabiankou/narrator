@@ -9,7 +9,7 @@
     <div class="metadata-container">
       <div class="cover-wrapper">
         @let book = metadataForReview()!.overview;
-        @if (metadataForReview()!.overview.cover) {
+        @if (book.cover) {
           <img [src]="`/api/files/${ book.cover }` | fileAsBlob | async " alt="{{ book.title }}">
         } @else {
           <img src="covers/blue.png" alt="{{ book.title }}">
