@@ -16,6 +16,7 @@ from api.files import files_router
 from api.maintenance import maintenance_router
 from api.metadata import metadata_router
 from api.models.auth import UserDep, map_user
+from api.openlibrary.service import OpenlibraryService
 from api.processing import processing_router
 from api.sections import sections_router
 from api.services.audiotracks import AudioTrackService
@@ -41,18 +42,21 @@ CORS_REGEX = "(https://)?(\w+\.)*ggnt\.eu(:\d+)?"
 async def lifespan(app: FastAPI):
     load_dotenv()
 
-    db_factory = DBFactory(os.path.expandvars(os.getenv("PG_URL")))
+    narrator_db = DBFactory(os.path.expandvars(os.getenv("PG_URL")))
+    openlibrary_db = DBFactory(os.path.expandvars(os.getenv("OL_PG_URL")))
 
     # Initialize services.
-    files_svc = FilesService(db_factory=db_factory)
-    progress_svc = PlaybackProgressService(db_factory=db_factory)
-    settings_svc = SettingsService(db_factory=db_factory)
+    files_svc = FilesService(db_factory=narrator_db)
+    progress_svc = PlaybackProgressService(db_factory=narrator_db)
+    settings_svc = SettingsService(db_factory=narrator_db)
 
     rmq_client = RMQClient(Topology.default_exchange)
-    audiotrack_svc = AudioTrackService(files_svc, rmq_client, db_factory=db_factory)
-    section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc, db_factory=db_factory)
+    audiotrack_svc = AudioTrackService(files_svc, rmq_client, db_factory=narrator_db)
+    section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc, db_factory=narrator_db)
     speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
-    books_svc = BookService(files_svc, section_svc, progress_svc, db_factory=db_factory)
+    books_svc = BookService(files_svc, section_svc, progress_svc, db_factory=narrator_db)
+
+    openlibrary_svc = OpenlibraryService(db_factory=openlibrary_db)
 
     def configure(channel: BlockingChannel):
         channel.exchange_declare(Topology.default_exchange, ExchangeType.topic, durable=True)
