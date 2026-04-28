@@ -72,6 +72,7 @@ class OpenlibraryService(Service):
             if edition and edition.key not in edition_keys:
                 result.append(self.edition_to_metadata_candidate(edition))
                 edition_keys.add(edition.key)
+        # TODO: consider ISBN matches as precise enough and merge those with LLM result.
 
         if llm_candidate.title is not None and llm_candidate.authors is not None:
             for author in llm_candidate.authors:
