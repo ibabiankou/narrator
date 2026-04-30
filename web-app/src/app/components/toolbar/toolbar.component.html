@@ -36,6 +36,11 @@
       </mat-button-toggle-group>
     </div>
 
+     <button *appRenderIf="'desktop'" mat-menu-item aria-label="Keyboard Shortcuts">
+      <mat-icon>keyboard</mat-icon>
+      <span>Keyboard Shortcuts</span>
+    </button>
+
     <button mat-menu-item aria-label="Logout" (click)="logout()">
       <mat-icon>logout</mat-icon>
       <span>Logout</span>

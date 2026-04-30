@@ -11,6 +11,7 @@ import { SettingsService } from '../../core/services/settings.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { map, tap } from 'rxjs';
+import { RenderIfDirective } from '../../core/renderIfDirective';
 
 @Directive({
   selector: '[breadcrumb]',
@@ -46,6 +47,7 @@ export class ActionButtonContentDirective {
     MatMenu,
     MatMenuItem,
     MatMenuTrigger,
+    RenderIfDirective,
   ],
   templateUrl: './toolbar.component.html',
   styleUrl: './toolbar.component.scss',
