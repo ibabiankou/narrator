@@ -12,6 +12,8 @@ import { ThemeService } from '../../core/services/theme.service';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { map, tap } from 'rxjs';
 import { RenderIfDirective } from '../../core/renderIfDirective';
+import { MatDialog } from '@angular/material/dialog';
+import { KeyboardShortcutsDialog } from '../keyboard-shortcuts/keyboardShortcuts';
 
 @Directive({
   selector: '[breadcrumb]',
@@ -58,6 +60,7 @@ export class ToolbarComponent {
   private readonly themeService = inject(ThemeService);
 
   private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly dialog = inject(MatDialog);
 
   @ContentChild(BreadcrumbContentDirective) breadcrumbContent?: BreadcrumbContentDirective;
   @ContentChild(CenterContentDirective) centerContent?: CenterContentDirective;
@@ -83,5 +86,13 @@ export class ToolbarComponent {
 
   logout() {
     this.keycloak.logout();
+  }
+
+  protected openKeyboardShortcuts() {
+    const dialogRef = this.dialog.open(KeyboardShortcutsDialog);
+
+    dialogRef.afterClosed().subscribe(result => {
+      console.log(`Dialog result: ${result}`);
+    });
   }
 }

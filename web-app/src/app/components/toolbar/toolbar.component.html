@@ -36,7 +36,7 @@
       </mat-button-toggle-group>
     </div>
 
-     <button *appRenderIf="'desktop'" mat-menu-item aria-label="Keyboard Shortcuts">
+     <button *appRenderIf="'desktop'" mat-menu-item aria-label="Keyboard Shortcuts" (click)="openKeyboardShortcuts()">
       <mat-icon>keyboard</mat-icon>
       <span>Keyboard Shortcuts</span>
     </button>

@@ -7,7 +7,7 @@ import { BookMetadata, BookStatus } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
 import { AuthService } from '../../core/services/authService';
 import { Router } from '@angular/router';
-import { AsyncPipe, JsonPipe } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
 import { BookDetailsForm } from '../../components/book-details-form/book-details-form';
 import { BookOverview } from '../../components/book-overview/book-overview';
@@ -17,7 +17,6 @@ import { BookOverview } from '../../components/book-overview/book-overview';
   imports: [
     ToolbarComponent,
     BreadcrumbContentDirective,
-    JsonPipe,
     AsyncPipe,
     FileAsBlobPipe,
     BookDetailsForm,
