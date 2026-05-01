@@ -1,4 +1,4 @@
-import { Component, computed, effect, input, model } from '@angular/core';
+import { Component, effect, input, model } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatInputModule } from '@angular/material/input';
@@ -36,10 +36,6 @@ export class BookOverview {
   protected authors = model<string[]>([]);
   protected isbns = model<string[]>([]);
 
-  protected coverUrl = computed(() => {
-    return this.bookMetadata().cover || 'covers/gray.png';
-  });
-
   tintStyle = {"filter": `sepia(${80 + Math.floor(Math.random() * 30)}%) saturate(${60 + Math.floor(Math.random() * 90)}%) hue-rotate(${Math.floor(Math.random() * 360)}deg)`};
 
   constructor() {
@@ -53,6 +49,15 @@ export class BookOverview {
       this.authors.set([...metadata.authors]);
       this.isbns.set([...metadata.isbns]);
     });
+  }
+
+  protected hasCover() {
+    return this.bookMetadata().cover != undefined && this.bookMetadata().cover!.length > 0;
+  }
+
+  protected isCoverInternal() {
+    const externalUrl = this.bookMetadata().cover?.startsWith("http");
+    return this.hasCover() && !externalUrl;
   }
 
 }

@@ -1,10 +1,10 @@
 <div class="book-overview-container">
   <div class="cover-container">
-    @if (bookMetadata().cover) {
-      @if (bookMetadata().cover!.startsWith('http')) {
-        <img [src]="bookMetadata().cover" alt="cover" />
-      } @else {
+    @if (hasCover()) {
+      @if (isCoverInternal()) {
         <img [src]="`/api/files/${ bookMetadata().cover }` | fileAsBlob | async " alt="cover" />
+      } @else {
+        <img [src]="bookMetadata().cover" alt="cover" />
       }
     } @else {
       <img src="covers/gray.png" alt="cover" [style]="!bookMetadata().cover ? tintStyle : {}" />
@@ -15,12 +15,6 @@
       }
       @if (title()) {
         <div class="title">{{ title() }}</div>
-      }
-      @if (description()) {
-        <div class="description">{{ description() }}</div>
-      }
-      @if (isbns().length > 0) {
-        <div class="isbns">{{ isbns().join(', ') }}</div>
       }
     </div>
   </div>
