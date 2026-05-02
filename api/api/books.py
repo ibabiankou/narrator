@@ -75,14 +75,9 @@ def get_book_pages(book_id, number_of_pages: int, section_svc: SectionServiceDep
         pages.append(api.BookPage(index=i, file_name=f"{i}.pdf", sections=[]))
         pages_dict[i] = pages[-1]
 
-    db_sections = section_svc.get_sections(book_id)
-    for section in db_sections:
-        book_section = api.BookSection(id=section.id,
-                                       book_id=section.book_id,
-                                       page_index=section.page_index,
-                                       section_index=section.section_index,
-                                       content=section.content)
-        pages_dict[section.page_index].sections.append(book_section)
+    sections = section_svc.get_sections(book_id)
+    for section in sections:
+        pages_dict[section.page_index].sections.append(section)
     return pages
 
 

@@ -35,9 +35,20 @@ class SectionService(Service):
         self._speech_generation_interval_sec = int(os.getenv("SPEECH_GENERATION_INTERVAL_SEC", 30))
         self._speech_generation_queue_size_threshold = int(os.getenv("SPEECH_GENERATION_QUEUE_SIZE_THRESHOLD", 10))
 
-    def get_sections(self, book_id: uuid.UUID):
+    @transactional
+    def get_sections(self, book_id: uuid.UUID) -> list[api.BookSection]:
         stmt = select(db.Section).where(db.Section.book_id == book_id).order_by(db.Section.section_index)
-        return self.db.execute(stmt).scalars().all()
+        db_sections = self.db.execute(stmt).scalars().all()
+
+        api_sections = []
+        for section in db_sections:
+            book_section = api.BookSection(id=section.id,
+                                           book_id=section.book_id,
+                                           page_index=section.page_index,
+                                           section_index=section.section_index,
+                                           content=section.content)
+            api_sections.append(book_section)
+        return api_sections
 
     def get_section(self, section_id: int):
         return self.db.get(db.Section, section_id)
