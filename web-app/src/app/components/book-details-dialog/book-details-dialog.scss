@@ -18,6 +18,15 @@
       border-radius: 8px;
       display: block;
     }
+
+    .no-cover {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 8px;
+      aspect-ratio: 2 / 3;
+      background-color: var(--mat-sys-surface-container-low);
+    }
   }
 
   .info-column {

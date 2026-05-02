@@ -8,7 +8,9 @@
           <img [src]="bookMetadata.cover" alt="cover"/>
         }
       } @else {
-        <img src="covers/gray.png" alt="cover"/>
+        <div class="no-cover">
+          <p>Cover is missing.</p>
+        </div>
       }
     </div>
     <div class="info-column">
