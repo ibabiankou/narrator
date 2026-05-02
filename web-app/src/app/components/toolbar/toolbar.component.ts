@@ -89,10 +89,6 @@ export class ToolbarComponent {
   }
 
   protected openKeyboardShortcuts() {
-    const dialogRef = this.dialog.open(KeyboardShortcutsDialog);
-
-    dialogRef.afterClosed().subscribe(result => {
-      console.log(`Dialog result: ${result}`);
-    });
+    this.dialog.open(KeyboardShortcutsDialog);
   }
 }

@@ -28,7 +28,7 @@
         <h2>Wrong details? Consider following matches.</h2>
         <div class="grid">
           @for (candidate of metadataForReview()!.metadata_candidates.candidates; track candidate) {
-            <app-book-overview [bookMetadata]="candidate"></app-book-overview>
+            <app-book-overview [bookMetadata]="candidate" (click)="openDialog(candidate)"></app-book-overview>
           }
         </div>
       }

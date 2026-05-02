@@ -11,6 +11,8 @@ import { AsyncPipe } from '@angular/common';
 import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
 import { BookDetailsForm } from '../../components/book-details-form/book-details-form';
 import { BookOverview } from '../../components/book-overview/book-overview';
+import { MatDialog } from '@angular/material/dialog';
+import { BookDetailsDialog } from '../../components/book-details-dialog/book-details-dialog';
 
 @Component({
   selector: 'app-edit-metadata-page',
@@ -30,6 +32,7 @@ export class EditMetadataPage implements OnInit {
   private booksService = inject(BooksService);
   private authService: AuthService = inject(AuthService);
   private router: Router = inject(Router);
+  private dialog = inject(MatDialog);
 
   readonly bookId = input.required<string>();
   readonly metadataForReview;
@@ -78,5 +81,11 @@ export class EditMetadataPage implements OnInit {
           console.error("Error: ", err);
         }
       })
+  }
+
+  protected openDialog(candidate: BookMetadata) {
+    this.dialog.open(BookDetailsDialog, {
+      data: candidate
+    });
   }
 }
