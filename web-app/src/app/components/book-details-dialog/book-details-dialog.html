@@ -1,57 +1,97 @@
 <mat-dialog-content>
   <div class="book-details-container">
     <div class="cover-column">
-      @if (hasCover()) {
-        @if (isCoverInternal()) {
-          <img [src]="`/api/files/${ bookMetadata.cover }` | fileAsBlob | async " alt="cover"/>
+      <div class="cover-wrapper">
+        @if (hasCover()) {
+          @if (isCoverInternal()) {
+            <img [src]="`/api/files/${ bookMetadata.cover }` | fileAsBlob | async " alt="cover"/>
+          } @else {
+            <img [src]="bookMetadata.cover" alt="cover"/>
+          }
+          <button mat-mini-fab color="primary" class="add-cover-btn" (click)="addField('cover')">
+            <mat-icon>add</mat-icon>
+          </button>
         } @else {
-          <img [src]="bookMetadata.cover" alt="cover"/>
+          <div class="no-cover">
+            <p>Cover is missing.</p>
+          </div>
         }
-      } @else {
-        <div class="no-cover">
-          <p>Cover is missing.</p>
-        </div>
-      }
+      </div>
     </div>
     <div class="info-column">
       <div class="detail-item">
-        <mat-label>Title</mat-label>
+        <div class="detail-text">
+          <mat-label>Title</mat-label>
+          @if (title()) {
+            <span>{{ title() }}</span>
+          } @else {
+            <span>N/A</span>
+          }
+        </div>
         @if (title()) {
-          <span>{{ title() }}</span>
-        } @else {
-          <span>N/A</span>
+          <button mat-icon-button (click)="addField('title')">
+            <mat-icon>add</mat-icon>
+          </button>
         }
       </div>
       <div class="detail-item">
-        <mat-label>Series</mat-label>
+        <div class="detail-text">
+          <mat-label>Series</mat-label>
+          @if (series()) {
+            <span>{{ series() }}</span>
+          } @else {
+            <span>N/A</span>
+          }
+        </div>
         @if (series()) {
-          <span>{{ series() }}</span>
-        } @else {
-          <span>N/A</span>
+          <button mat-icon-button (click)="addField('series')">
+            <mat-icon>add</mat-icon>
+          </button>
         }
       </div>
       <div class="detail-item description">
-        <mat-label>Description</mat-label>
+        <div class="detail-text">
+          <mat-label>Description</mat-label>
+          @if (description()) {
+            <p>{{ description() }}</p>
+          } @else {
+            <p>N/A</p>
+          }
+        </div>
         @if (description()) {
-          <p>{{ description() }}</p>
-        } @else {
-          <p>N/A</p>
+          <button mat-icon-button (click)="addField('description')">
+            <mat-icon>add</mat-icon>
+          </button>
         }
       </div>
       <div class="detail-item">
-        <mat-label>Authors</mat-label>
+        <div class="detail-text">
+          <mat-label>Authors</mat-label>
+          @if (authors().length > 0) {
+            <span>{{ authors().join(', ') }}</span>
+          } @else {
+            <span>N/A</span>
+          }
+        </div>
         @if (authors().length > 0) {
-          <span>{{ authors().join(', ') }}</span>
-        } @else {
-          <span>N/A</span>
+          <button mat-icon-button (click)="addField('authors')">
+            <mat-icon>add</mat-icon>
+          </button>
         }
       </div>
       <div class="detail-item">
-        <mat-label>ISBNs</mat-label>
+        <div class="detail-text">
+          <mat-label>ISBNs</mat-label>
+          @if (isbns().length > 0) {
+            <span>{{ isbns().join(', ') }}</span>
+          } @else {
+            <span>N/A</span>
+          }
+        </div>
         @if (isbns().length > 0) {
-          <span>{{ isbns().join(', ') }}</span>
-        } @else {
-          <span>N/A</span>
+          <button mat-icon-button (click)="addField('isbns')">
+            <mat-icon>add</mat-icon>
+          </button>
         }
       </div>
     </div>

@@ -1,57 +1,80 @@
-:host {
-  width: 800px;
-}
-
 .book-details-container {
   display: flex;
   gap: 24px;
-  padding: 8px 0;
+  padding: 16px 8px;
 
   $column-width: 300px;
   .cover-column {
     flex: 0 0 $column-width;
     max-width: $column-width;
 
-    img {
-      width: 100%;
-      height: auto;
-      border-radius: 8px;
-      display: block;
-    }
+    .cover-wrapper {
+      position: relative;
+      aspect-ratio: 2/3;
 
-    .no-cover {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 8px;
-      aspect-ratio: 2 / 3;
-      background-color: var(--mat-sys-surface-container-low);
+      img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+        display: block;
+      }
+
+      .add-cover-btn {
+        position: absolute;
+        bottom: -12px;
+        right: -12px;
+        z-index: 1;
+      }
+
+      .no-cover {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 8px;
+        aspect-ratio: 2 / 3;
+        background-color: var(--mat-sys-surface-container-low);
+      }
     }
   }
 
   .info-column {
     flex: 1;
-    width: 300px;
     max-width: $column-width;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
 
     .detail-item {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
 
-      mat-label {
-        color: var(--mat-sys-outline);
+      &:last-child {
+        border-bottom: none;
       }
 
-      span {
-        font-size: 1rem;
-        color: var(--mat-sys-on-surface);
+      .detail-text {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        mat-label {
+          color: var(--mat-sys-outline);
+          font-size: 0.8rem;
+          font-weight: 400;
+        }
+
+        span {
+          font-size: 1rem;
+          color: var(--mat-sys-on-surface);
+        }
       }
 
       &.description {
+        align-items: flex-start;
+
         p {
           margin: 0;
           font-size: 0.95rem;
@@ -61,6 +84,10 @@
           opacity: 0.9;
         }
       }
+
+      button[mat-icon-button] {
+        color: var(--mat-sys-primary);
+      }
     }
   }
 }
@@ -69,11 +96,15 @@
   .book-details-container {
     flex-direction: column;
     align-items: center;
+    gap: 40px;
 
     .cover-column {
       flex: 0 0 auto;
-      margin-bottom: 24px;
       max-width: 250px;
+    }
+
+    .info-column {
+      width: 100%;
     }
   }
 }
