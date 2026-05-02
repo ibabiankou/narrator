@@ -5,10 +5,10 @@
 </app-toolbar>
 
 <div class="main-container">
-  @defer (when metadataForReview()) {
+  @defer (when metadata()) {
+    @let book = metadata()!;
     <div class="metadata-container">
       <div class="cover-wrapper">
-        @let book = metadataForReview()!.overview;
         @if (book.cover) {
           <img [src]="`/api/files/${ book.cover }` | fileAsBlob | async " alt="{{ book.title }}">
         } @else {
@@ -18,7 +18,7 @@
 
       <div class="form-wrapper">
         <app-book-details-form
-          [bookMetadata]="metadataForReview()!.overview"
+          [bookMetadata]="book"
           (reviewedMetadata)="submitReviewMetadata($event)"
         ></app-book-details-form>
       </div>

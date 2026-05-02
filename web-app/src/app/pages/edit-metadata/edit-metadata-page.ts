@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, OnInit } from '@angular/core';
+import { Component, effect, inject, input, model, OnInit } from '@angular/core';
 import { BreadcrumbContentDirective, ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -36,7 +36,8 @@ export class EditMetadataPage implements OnInit {
 
   readonly bookId = input.required<string>();
   readonly metadataForReview;
-  readonly candidate;
+
+  metadata = model<BookMetadata>();
 
   ngOnInit() {
     this.titleService.setTitle('Edit Details - NNarrator');
@@ -62,11 +63,10 @@ export class EditMetadataPage implements OnInit {
           )
       )
     ));
-    this.candidate = computed(() => {
-      if (this.metadataForReview()?.metadata_candidates.candidates.length == 0) {
-        return undefined;
-      }
-      return this.metadataForReview()?.metadata_candidates.candidates[0];
+
+    effect(() => {
+      if (!this.metadataForReview()) return;
+      this.metadata.set(this.metadataForReview()!.overview);
     });
   }
 
@@ -84,10 +84,24 @@ export class EditMetadataPage implements OnInit {
   }
 
   protected openDialog(candidate: BookMetadata) {
-    this.dialog.open(BookDetailsDialog, {
+    const dialogRef = this.dialog.open(BookDetailsDialog, {
       data: candidate,
       maxWidth: '90vw',
       maxHeight: '90vh',
+    });
+
+    dialogRef.componentInstance.onAdd.subscribe((data) => {
+      const {isbns, authors, ...rest} = data;
+
+      if (isbns && isbns.length > 0) {
+        this.metadata()?.isbns.push(...isbns);
+      }
+      if (authors && authors.length > 0) {
+        this.metadata()?.authors.push(...authors);
+      }
+
+      Object.assign(this.metadata()!, rest);
+      this.metadata.set({...this.metadata()!});
     });
   }
 }
