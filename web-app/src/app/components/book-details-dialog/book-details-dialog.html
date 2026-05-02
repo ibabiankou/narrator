@@ -1,3 +1,60 @@
-<!--Cover on the left, with a button to use that cover.-->
-<!--Book details on the right, with buttons next to each field to use or add to the list.-->
-<pre>{{json()}}</pre>
+<mat-dialog-content>
+  <div class="book-details-container">
+    <div class="cover-column">
+      @if (hasCover()) {
+        @if (isCoverInternal()) {
+          <img [src]="`/api/files/${ bookMetadata.cover }` | fileAsBlob | async " alt="cover"/>
+        } @else {
+          <img [src]="bookMetadata.cover" alt="cover"/>
+        }
+      } @else {
+        <img src="covers/gray.png" alt="cover"/>
+      }
+    </div>
+    <div class="info-column">
+      <div class="detail-item">
+        <mat-label>Title</mat-label>
+        @if (title()) {
+          <span>{{ title() }}</span>
+        } @else {
+          <span>N/A</span>
+        }
+      </div>
+      <div class="detail-item">
+        <mat-label>Series</mat-label>
+        @if (series()) {
+          <span>{{ series() }}</span>
+        } @else {
+          <span>N/A</span>
+        }
+      </div>
+      <div class="detail-item description">
+        <mat-label>Description</mat-label>
+        @if (description()) {
+          <p>{{ description() }}</p>
+        } @else {
+          <p>N/A</p>
+        }
+      </div>
+      <div class="detail-item">
+        <mat-label>Authors</mat-label>
+        @if (authors().length > 0) {
+          <span>{{ authors().join(', ') }}</span>
+        } @else {
+          <span>N/A</span>
+        }
+      </div>
+      <div class="detail-item">
+        <mat-label>ISBNs</mat-label>
+        @if (isbns().length > 0) {
+          <span>{{ isbns().join(', ') }}</span>
+        } @else {
+          <span>N/A</span>
+        }
+      </div>
+    </div>
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Close</button>
+</mat-dialog-actions>

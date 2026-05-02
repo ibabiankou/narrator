@@ -85,7 +85,9 @@ export class EditMetadataPage implements OnInit {
 
   protected openDialog(candidate: BookMetadata) {
     this.dialog.open(BookDetailsDialog, {
-      data: candidate
+      data: candidate,
+      maxWidth: '90vw',
+      maxHeight: '90vh',
     });
   }
 }

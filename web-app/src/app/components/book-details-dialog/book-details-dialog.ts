@@ -1,24 +1,22 @@
-import { Component, effect, inject, model } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatInputModule } from '@angular/material/input';
+import { Component, inject, model } from '@angular/core';
 import { BookMetadata } from '../../core/models/books.dto';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogActions, MatDialogClose, MatDialogContent } from '@angular/material/dialog';
+import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
+import { AsyncPipe } from '@angular/common';
+import { MatLabel } from '@angular/material/input';
 
 
 @Component({
   selector: 'app-book-details-dialog',
   imports: [
+    AsyncPipe,
+    FileAsBlobPipe,
     MatButtonModule,
-    MatCardModule,
-    MatChipsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    ReactiveFormsModule,
-    FormsModule
+    MatDialogActions,
+    MatDialogClose,
+    MatDialogContent,
+    MatLabel
   ],
   templateUrl: './book-details-dialog.html',
   styleUrl: './book-details-dialog.scss',
@@ -33,20 +31,21 @@ export class BookDetailsDialog {
   protected isbns = model<string[]>([]);
 
   constructor() {
-    effect(() => {
-      const metadata = this.bookMetadata;
+    const metadata = this.bookMetadata;
 
-      this.title.set(metadata.title);
-      this.series.set(metadata.series);
-      this.description.set(metadata.description);
-      this.authors.set([...metadata.authors]);
-      this.isbns.set([...metadata.isbns]);
-    });
+    this.title.set(metadata.title);
+    this.series.set(metadata.series);
+    this.description.set(metadata.description);
+    this.authors.set([...metadata.authors]);
+    this.isbns.set([...metadata.isbns]);
   }
 
-  // A dialog to display book cover along with details and controls to merge into main details.
+  protected hasCover() {
+    return this.bookMetadata.cover != undefined && this.bookMetadata.cover!.length > 0;
+  }
 
-  protected json() {
-    return JSON.stringify(this.bookMetadata, null, 2);
+  protected isCoverInternal() {
+    const externalUrl = this.bookMetadata.cover?.startsWith("http");
+    return this.hasCover() && !externalUrl;
   }
 }
