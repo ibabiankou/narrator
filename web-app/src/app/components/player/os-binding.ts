@@ -63,7 +63,7 @@ export class OSBindings {
         filter(book => book != null),
         switchMap(book => {
           if (!book.cover) {
-            this.updateMediaSession(book.title, null);
+            this.updateMediaSession(book.title ?? "Unknown", null);
             return EMPTY;
           }
 
@@ -75,7 +75,7 @@ export class OSBindings {
           );
         })
       ).subscribe(({book, artworkUrl}) => {
-        this.updateMediaSession(book.title, artworkUrl);
+        this.updateMediaSession(book.title ?? "Unknown", artworkUrl);
       }
     );
   }
