@@ -458,5 +458,37 @@ class BookService(Service):
             LOG.info("Starting narration of book %s.", book_id)
             self._set_status(book_id, db.BookStatus.narrating)
 
+    async def complete_narration_maybe(self):
+        await asyncio.sleep(5)
+
+        while True:
+            LOG.info("Checking if need to complete narration of a book...")
+            try:
+                self._do_complete_narration_maybe()
+            except:
+                LOG.info("Error while checking if book narration completed, will try again later.", exc_info=True)
+            # TODO: Move the delay duration into system configuration.
+            await asyncio.sleep(15)
+
+    @transactional
+    def _do_complete_narration_maybe(self):
+        """Update status if narration of a book is complete."""
+        # select book_id, count of sections and count of finished audio tracks.
+        query_text = """select b.id,
+                               (select count(*) from sections s where s.book_id = b.id) as section_count,
+                               (select count(*) from audio_tracks t where t.book_id = b.id and t.status = 'ready') as ready_track_count
+                        from books b
+                        where b.status = 'narrating';
+                     """
+        book_narration_stats_maybe = self.db.execute(text(query_text)).one_or_none()
+        if book_narration_stats_maybe is None:
+            LOG.info("No book is being narrated, doing nothing.")
+            return
+
+        book_id, section_count, ready_track_count = book_narration_stats_maybe
+        if ready_track_count == section_count:
+            LOG.info("Narration of book %s completed.", book_id)
+            self._set_status(book_id, db.BookStatus.ready)
+
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

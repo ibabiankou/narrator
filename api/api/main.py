@@ -59,6 +59,7 @@ async def lifespan(app: FastAPI):
     # Start background processing tasks.
     start_narration_task = asyncio.create_task(books_svc.start_narration_maybe())
     speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
+    complete_narration_task = asyncio.create_task(books_svc.complete_narration_maybe())
 
     def configure(channel: BlockingChannel):
         channel.exchange_declare(Topology.default_exchange, ExchangeType.topic, durable=True)
@@ -74,6 +75,7 @@ async def lifespan(app: FastAPI):
     yield
     start_narration_task.cancel()
     speech_gen_task.cancel()
+    complete_narration_task.cancel()
     RMQClient.instance.close()
 
 
