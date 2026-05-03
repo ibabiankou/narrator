@@ -408,5 +408,9 @@ class BookService(Service):
         if task_name == "extract-metadata":
             background_tasks.add_task(self.extract_metadata, book.id, book.file_name, False, False)
 
+    @transactional
+    def update_status(self, book_id: uuid.UUID, status: db.BookStatus):
+        self._set_status(book_id, status)
+
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

@@ -1,7 +1,7 @@
-import { Component, computed, inject, input, model, Signal, } from '@angular/core';
+import { Component, computed, inject, input, model, Signal, TemplateRef, } from '@angular/core';
 import { BookPage, BookStatus, BookWithContent, Section } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
-import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
+import { EMPTY, filter, repeat, switchMap, take, tap, timer } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 import { SectionComponent } from '../../components/section/section.component';
 import { Title } from '@angular/platform-browser';
@@ -18,8 +18,15 @@ import { VisibilityDirective } from '../../core/visibilityDirective';
 import { AuthService } from '../../core/services/authService';
 import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
 import { MatIcon } from '@angular/material/icon';
-import { MatIconButton } from '@angular/material/button';
+import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
+import {
+  MatDialog,
+  MatDialogActions,
+  MatDialogClose,
+  MatDialogContent,
+  MatDialogTitle
+} from '@angular/material/dialog';
 
 @Component({
   selector: 'app-view-book-page',
@@ -36,6 +43,11 @@ import { MatTooltip } from '@angular/material/tooltip';
     MatIcon,
     MatIconButton,
     MatTooltip,
+    MatButton,
+    MatDialogActions,
+    MatDialogClose,
+    MatDialogContent,
+    MatDialogTitle,
   ],
   templateUrl: './edit-book-page.html',
   styleUrl: './edit-book-page.scss',
@@ -46,6 +58,7 @@ export class EditBookPage {
   private router: Router = inject(Router);
   private settingsService: SettingsService = inject(SettingsService);
   private authService: AuthService = inject(AuthService);
+  private dialog = inject(MatDialog);
 
   bookId = input.required<string>();
 
@@ -95,5 +108,28 @@ export class EditBookPage {
 
   protected copyBookTitle() {
     navigator.clipboard.writeText(this.bookWithContent()?.overview.title ?? "");
+  }
+
+  protected openNarrateDialog(templateRef: TemplateRef<any>) {
+    const dialogRef = this.dialog.open(templateRef);
+
+    dialogRef.afterClosed()
+      .pipe(switchMap(result => {
+        if (result) {
+          return this.booksService.enqueue(this.bookId());
+        } else {
+          return EMPTY;
+        }
+      }))
+      .subscribe({
+        next: () => {
+          // TODO: Navigate to the book queue page.
+          this.router.navigate(['/books', this.bookId()]);
+        }
+      });
+  }
+
+  protected showNarrateButton() {
+    return this.bookWithContent()?.overview.status == BookStatus.ready_for_content_review;
   }
 }

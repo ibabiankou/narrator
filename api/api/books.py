@@ -66,6 +66,7 @@ def search_books(
 ) -> api.PagedResponse[api.BookOverview]:
     return book_service.search_books(user.id, query, page_request)
 
+
 def get_book_pages(book_id, number_of_pages: int, section_svc: SectionServiceDep) -> list[api.BookPage]:
     # Convert into the API model.
     pages = []
@@ -183,3 +184,19 @@ def update_playback_info(request: api.PlaybackInfo,
                          progress_service: PlaybackProgressServiceDep):
     progress_service.upsert_progress(db.PlaybackProgress(user_id=user.id, book_id=request.book_id, data=request.data))
     return Response(status_code=201)
+
+
+@books_router.post("/{book_id}/enqueue")
+def enqueue_book_for_narration(book_id: uuid.UUID,
+                               user: UserDep,
+                               book_service: BookServiceDep):
+    try:
+        book_overview = book_service.get_book_overview(book_id)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    if book_overview.status != db.BookStatus.ready_for_content_review:
+        raise HTTPException(status_code=422, detail="Only books ready for content review can be enqueued.")
+
+    book_service.update_status(book_id, db.BookStatus.queued)
+    return Response(status_code=204)

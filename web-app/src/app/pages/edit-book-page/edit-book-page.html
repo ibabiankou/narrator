@@ -20,6 +20,12 @@
   </div>
   <div actionButton>
     @defer (when bookWithContent()) {
+      @if (showNarrateButton()) {
+        <button matButton="outlined"
+                aria-label="Enqueue book for narration"
+                (click)="openNarrateDialog(narrateBookTemplate)"
+        >Narrate...</button>
+      }
       <app-book-menu [bookOverview]="bookWithContent().overview"
                      [bookStats]="bookWithContent().stats"
                      [editMode]="true">
@@ -57,3 +63,14 @@
     <app-skeleton class="content-skeleton"/>
   }
 </div>
+
+<ng-template #narrateBookTemplate>
+  <h2 mat-dialog-title>Start Narrating "{{ bookWithContent().overview.title }}"?</h2>
+  <mat-dialog-content>
+    <p>This will add the book to the narration queue. Please ensure your edits are final, to avoid wasted resources.</p>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button matButton mat-dialog-close>Cancel</button>
+    <button matButton="filled" [mat-dialog-close]="true">Continue</button>
+  </mat-dialog-actions>
+</ng-template>

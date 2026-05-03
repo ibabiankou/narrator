@@ -118,4 +118,8 @@ export class BooksService {
   updateBookMetadata(bookId: string, metadata: BookMetadata) {
     return this.http.post<BookOverview>(`${this.apiUrl}/${bookId}/metadata/review`, metadata);
   }
+
+  enqueue(bookId: string) {
+    return this.http.post<any>(`${this.apiUrl}/${bookId}/enqueue`, null);
+  }
 }

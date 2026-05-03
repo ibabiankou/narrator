@@ -2,6 +2,12 @@ app-toolbar {
   ::ng-deep .small-screen + .title {
     padding-left: 16px;
   }
+
+  div[actionButton] {
+    display: flex;
+    gap: 16px;
+    padding-right: 16px;
+  }
 }
 
 .title {
