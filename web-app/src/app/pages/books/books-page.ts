@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit } from '@angular/core';
+import { Component, computed, HostListener, inject, OnInit } from '@angular/core';
 import { MatFabButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { ActivatedRoute, Params, Router, RouterLink } from '@angular/router';
@@ -80,5 +80,25 @@ export class BooksPage implements OnInit {
       queryParams: {page_index: pageEvent.pageIndex, size: pageEvent.pageSize},
       queryParamsHandling: 'merge',
     });
+  }
+
+  @HostListener("document:keydown.arrowright", ["$event"])
+  nextPage(e: Event) {
+    e.preventDefault();
+    this.changePage({
+      pageIndex: Math.min(Math.floor(this.pageInfo().total / this.pageInfo().size), this.pageInfo().index + 1),
+      pageSize: this.pageInfo().size,
+      length: this.pageInfo().total,
+    })
+  }
+
+  @HostListener("document:keydown.arrowleft", ["$event"])
+  previousPage(e: Event) {
+    e.preventDefault();
+    this.changePage({
+      pageIndex: Math.max(0, this.pageInfo().index - 1),
+      pageSize: this.pageInfo().size,
+      length: this.pageInfo().total,
+    })
   }
 }

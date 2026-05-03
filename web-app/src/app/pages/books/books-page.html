@@ -44,6 +44,15 @@
       }
     }
   </div>
+  <div class="paginator">
+    <mat-paginator [length]="pageInfo().total"
+                   [pageIndex]="pageIndex()"
+                   [pageSize]="size()"
+                   [hidePageSize]="true"
+                   (page)="changePage($event)"
+                   aria-label="Select page">
+    </mat-paginator>
+  </div>
 </div>
 
 <button mat-fab color="primary" aria-label="Add new book" (click)="navigateToAdd()">
