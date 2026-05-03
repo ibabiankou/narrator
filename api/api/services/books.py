@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import logging
 import uuid
@@ -13,7 +14,7 @@ from sqlalchemy import update, text, select
 from sqlalchemy.sql.functions import count
 
 from api.models import api, db, domain
-from api.openlibrary.service import OpenlibraryService, OpenlibraryServiceDep
+from api.openlibrary.service import OpenlibraryServiceDep
 from api.services.experimental import identify_book
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
@@ -65,7 +66,8 @@ class BookService(Service):
         return api.BookOverview.from_orm(book)
 
     @transactional
-    def create_book_v2(self, user_id: uuid.UUID, file_name: str, file_bytes: BytesIO, background_tasks: BackgroundTasks):
+    def create_book_v2(self, user_id: uuid.UUID, file_name: str, file_bytes: BytesIO,
+                       background_tasks: BackgroundTasks):
         # TODO: Validate language. Fail book creation if language is not supported.
 
         book_id = uuid.uuid4()
@@ -190,7 +192,8 @@ class BookService(Service):
         self.db.execute(update(db.Book).where(db.Book.id == book_id).values(metadata_candidates=metadata_candidates))
 
     @transactional
-    def extract_metadata(self, book_id: uuid.UUID, book_file_name: str, update_metadata: bool = True, update_status: bool = True):
+    def extract_metadata(self, book_id: uuid.UUID, book_file_name: str, update_metadata: bool = True,
+                         update_status: bool = True):
         LOG.info(f"Extracting metadata of the book {book_id}")
         pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
 
@@ -204,7 +207,8 @@ class BookService(Service):
         ol_candidates = self.openlibrary_service.search_matches(llm_candidate)
 
         all_candidates = [llm_candidate] + ol_candidates
-        metadata_candidates = domain.MetadataCandidates(candidates=all_candidates, preferred_index=0, selected_index=None)
+        metadata_candidates = domain.MetadataCandidates(candidates=all_candidates, preferred_index=0,
+                                                        selected_index=None)
 
         self._set_candidates(book_id, metadata_candidates)
         if update_metadata:
@@ -358,7 +362,8 @@ class BookService(Service):
         return api.paged_response(items=resp, total=total, index=page_request.page_index, size=page_request.size)
 
     @transactional
-    def search_books(self, user_id: uuid.UUID, search_query: str, page_request: api.PageRequest) -> api.PagedResponse[api.BookOverview]:
+    def search_books(self, user_id: uuid.UUID, search_query: str, page_request: api.PageRequest) -> api.PagedResponse[
+        api.BookOverview]:
         search_filter = f"%{search_query}%"
 
         count_stmt = (
@@ -388,7 +393,8 @@ class BookService(Service):
     def metadata_for_review(self, book_id: uuid.UUID) -> api.BookMetadataForReview:
         book = self.db.get_one(db.Book, book_id)
         overview = api.BookOverview.from_orm(book)
-        metadata_candidates = book.metadata_candidates if book.metadata_candidates is not None else domain.MetadataCandidates(candidates=[])
+        metadata_candidates = book.metadata_candidates if book.metadata_candidates is not None else domain.MetadataCandidates(
+            candidates=[])
 
         return api.BookMetadataForReview(overview=overview, metadata_candidates=metadata_candidates)
 
@@ -411,6 +417,46 @@ class BookService(Service):
     @transactional
     def update_status(self, book_id: uuid.UUID, status: db.BookStatus):
         self._set_status(book_id, status)
+
+    async def start_narration_maybe(self):
+        while True:
+            LOG.info("Checking if need to start narration of a book...")
+            try:
+                self._do_start_narration_maybe()
+            except:
+                LOG.info("Error while selecting book to narrate, will try again later.", exc_info=True)
+            # TODO: Move the delay duration into system configuration.
+            await asyncio.sleep(15)
+
+    @transactional
+    def _do_start_narration_maybe(self):
+        """If no books are being narrated, pick one from the queue."""
+
+        # Count books with the status
+        count_stmt = (
+            select(count())
+            .where(db.Book.status == db.BookStatus.narrating)
+        )
+        count_narrating = self.db.execute(count_stmt).scalar()
+        if count_narrating > 0:
+            LOG.info("%s books already being narrated, not adding more.", count_narrating)
+            return
+
+        # Select one book to be narrated.
+        query_text = """select b.id
+                        from books b
+                        where b.status = :status
+                        order by b.created_time 
+                        limit 1
+                     """
+        book_id_maybe = self.db.execute(text(query_text), {"status": db.BookStatus.queued}).one_or_none()
+        if book_id_maybe is None:
+            LOG.info("The queue seem to be empty. Doing nothing.")
+            return
+        else:
+            book_id = book_id_maybe[0]
+            LOG.info("Starting narration of book %s.", book_id)
+            self._set_status(book_id, db.BookStatus.narrating)
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

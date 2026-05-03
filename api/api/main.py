@@ -53,9 +53,12 @@ async def lifespan(app: FastAPI):
     rmq_client = RMQClient(Topology.default_exchange)
     audiotrack_svc = AudioTrackService(files_svc, rmq_client, db_factory=narrator_db)
     section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc, db_factory=narrator_db)
-    speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
     openlibrary_svc = OpenlibraryService(db_factory=openlibrary_db)
     books_svc = BookService(files_svc, section_svc, progress_svc, openlibrary_svc, db_factory=narrator_db)
+
+    # Start background processing tasks.
+    start_narration_task = asyncio.create_task(books_svc.start_narration_maybe())
+    speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
 
     def configure(channel: BlockingChannel):
         channel.exchange_declare(Topology.default_exchange, ExchangeType.topic, durable=True)
@@ -69,6 +72,7 @@ async def lifespan(app: FastAPI):
     rmq_client.set_queue_message_handler(Topology.api_queue, rmq.SpeechResponse, audiotrack_svc.handle_speech_msg)
     rmq_client.start_consuming()
     yield
+    start_narration_task.cancel()
     speech_gen_task.cancel()
     RMQClient.instance.close()
 
