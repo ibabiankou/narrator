@@ -49,8 +49,10 @@
   }
 </div>
 @defer (when bookWithContent()) {
-  <app-player appHideIdle
-              [bookWithContent]="bookWithContent()"
-              (sectionPlayed)="setCurrentSectionId($event)"
-  ></app-player>
+  @if (BookStatus.ge(bookWithContent().overview.status, BookStatus.narrating)) {
+    <app-player appHideIdle
+                [bookWithContent]="bookWithContent()"
+                (sectionPlayed)="setCurrentSectionId($event)"
+    ></app-player>
+  }
 }

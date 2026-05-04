@@ -76,7 +76,7 @@ export class ViewBookPage implements AfterViewInit {
               count: 25,
               delay: (count) => timer(2 ^ count * 300 * (0.75 + 0.5 * Math.random()))
             }),
-            filter((book) => book.overview.status == BookStatus.ready),
+            filter((book) => BookStatus.ge(book.overview.status, BookStatus.queued)),
             take(1),
             tap(book => this.titleService.setTitle(`${book.overview.title} - NNarrator`)),
           )
@@ -171,4 +171,6 @@ export class ViewBookPage implements AfterViewInit {
   protected copyBookTitle() {
     navigator.clipboard.writeText(this.bookWithContent()?.overview.title ?? "");
   }
+
+  protected readonly BookStatus = BookStatus;
 }
