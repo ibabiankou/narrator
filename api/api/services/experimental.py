@@ -1,5 +1,4 @@
 import os
-import re
 
 from google import genai
 from google.genai.types import HttpOptions, HttpRetryOptions
@@ -7,6 +6,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from api.models import domain
+from api.utils.isbn import clean_isbn
 
 
 class BookMetadata(BaseModel):
@@ -20,12 +20,6 @@ client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"),
                       http_options=HttpOptions(retry_options=HttpRetryOptions(attempts=10,
                                                                               http_status_codes=[408, 429, 500, 502,
                                                                                                  503, 504])))
-
-
-def clean_isbn(value: str) -> str:
-    # Remove any character that is NOT 0-9 or X (case-insensitive)
-    cleaned = re.sub(r'[^0-9X]', '', value, flags=re.IGNORECASE)
-    return cleaned.upper()
 
 
 def identify_book(book_text_sample: str) -> domain.BookMetadata:

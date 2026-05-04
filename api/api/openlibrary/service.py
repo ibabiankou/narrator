@@ -74,6 +74,8 @@ class OpenlibraryService(Service):
                 edition_keys.add(edition.key)
         # TODO: consider ISBN matches as precise enough and merge those with LLM result.
 
+        # TODO: fetch other editions by work_id from DB.
+
         if llm_candidate.title is not None and llm_candidate.authors is not None:
             for author in llm_candidate.authors:
                 edition = self.edition_by_title_author(llm_candidate.title, author)
