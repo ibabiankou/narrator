@@ -2,6 +2,7 @@ import logging
 import uuid
 from typing import List, Annotated, Optional
 
+import m3u8
 from sqlalchemy import update, insert, delete, select
 
 from api.models import db, api
@@ -111,6 +112,39 @@ class AudioTrackService(Service):
     @transactional
     def delete(self, track_id: int):
         self.db.execute(delete(db.AudioTrack).where(db.AudioTrack.id == track_id))
+
+    @transactional
+    def get_playlist(self, book_id: uuid.UUID) -> str:
+        all_tracks = self.get_tracks(book_id)
+        ready_tracks = [t for t in all_tracks if t.status == db.AudioStatus.ready]
+        LOG.info("Loaded %s tracks", len(ready_tracks))
+
+        return self._generate_dynamic_playlist(ready_tracks)
+
+    def _generate_dynamic_playlist(self, tracks: List[db.AudioTrack]) -> str:
+        playlist = m3u8.M3U8()
+
+        playlist.version = "4"
+        playlist.target_duration = max([t.duration for t in tracks] or [0]) + 1
+        playlist.media_sequence = 0
+        # TODO: What would be behavior if I set it to False? Would it help for books that are being generated?
+        playlist.is_endlist = True
+
+        for track in tracks:
+            segment = m3u8.Segment(
+                uri=f"/api/files/{track.book_id}/speech/{track.file_name}",
+                duration=track.duration,
+                discontinuity=True,
+                dateranges=[{
+                    "id": str(track.section_id),
+                    "start_date": "1111-11-11",
+                    "x_order": str(track.playlist_order),
+                    "x_duration": str(track.duration)
+                }]
+            )
+            playlist.segments.append(segment)
+
+        return playlist.dumps()
 
 
 AudioTrackServiceDep = Annotated[AudioTrackService, AudioTrackService.dep()]

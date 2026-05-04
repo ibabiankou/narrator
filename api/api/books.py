@@ -2,7 +2,6 @@ import logging
 import uuid
 from io import BytesIO
 
-import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Depends, UploadFile
 from sqlalchemy.exc import NoResultFound
 
@@ -114,41 +113,10 @@ def book_playlist(book_id: uuid.UUID,
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    all_tracks = audio_track_service.get_tracks(book_id)
-    ready_tracks = [t for t in all_tracks if t.status == db.AudioStatus.ready]
-
-    LOG.info("Loaded %s tracks", len(ready_tracks))
-
     return Response(
-        content=generate_dynamic_playlist(ready_tracks),
+        content=audio_track_service.get_playlist(book_id),
         media_type="application/vnd.apple.mpegurl"
     )
-
-
-def generate_dynamic_playlist(tracks: list[db.AudioTrack]):
-    playlist = m3u8.M3U8()
-
-    playlist.version = "4"
-    playlist.target_duration = max([t.duration for t in tracks] or [0]) + 1
-    playlist.media_sequence = 0
-    # TODO: What would be behavior if I set it to False? Would it help for books that are being generated?
-    playlist.is_endlist = True
-
-    for track in tracks:
-        segment = m3u8.Segment(
-            uri=f"/api/files/{track.book_id}/speech/{track.file_name}",
-            duration=track.duration,
-            discontinuity=True,
-            dateranges=[{
-                "id": str(track.section_id),
-                "start_date": "1111-11-11",
-                "x_order": str(track.playlist_order),
-                "x_duration": str(track.duration)
-            }]
-        )
-        playlist.segments.append(segment)
-
-    return playlist.dumps()
 
 
 @books_router.get("/{book_id}/playback_info")
