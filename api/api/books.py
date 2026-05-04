@@ -4,7 +4,7 @@ from io import BytesIO
 
 import m3u8
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Depends, UploadFile
-from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.exc import NoResultFound
 
 from api.models import db, api
 from api.models.auth import UserDep
@@ -17,24 +17,6 @@ from api.services.sections import SectionServiceDep
 LOG = logging.getLogger(__name__)
 
 books_router = APIRouter(tags=["Books API"])
-
-
-@books_router.post("/")
-def create_book(book: api.CreateBookRequest,
-                user: UserDep,
-                background_tasks: BackgroundTasks,
-                book_service: BookServiceDep) -> api.BookOverview:
-    try:
-        book = book_service.create_book(book, user.id)
-    except IntegrityError:
-        LOG.error("Error creating book", exc_info=True)
-        raise HTTPException(status_code=409, detail="Book with this title already exists")
-
-    background_tasks.add_task(book_service.extract_metadata, book.id, book.pdf_file_name)
-    background_tasks.add_task(book_service.split_pages, book.id, book.pdf_file_name)
-    background_tasks.add_task(book_service.extract_text, book.id, book.pdf_file_name)
-
-    return book
 
 
 @books_router.post("/add-book")

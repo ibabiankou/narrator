@@ -1,13 +1,10 @@
 import logging
 import os.path
-import uuid
-from datetime import datetime, UTC
 from typing import Annotated
 
-from fastapi import APIRouter, UploadFile, Request, HTTPException, Response
+from fastapi import APIRouter, Request, HTTPException, Response
 from fastapi.params import Header
 
-from api.models import api
 from api.services.files import FilesServiceDep, NotModified
 
 files_router = APIRouter(tags=["Files API"])
@@ -17,24 +14,6 @@ if not os.path.exists(local_dir):
     os.makedirs(local_dir)
 
 LOG = logging.getLogger(__name__)
-
-@files_router.post("/")
-def upload_file(file: UploadFile, file_service: FilesServiceDep) -> api.TempFile:
-    file_id = uuid.uuid4()
-    upload_time=datetime.now(UTC)
-
-    # Write file to a temp dir
-    unique_name = str(file_id) + "_" + file.filename
-    temp_file_path = os.path.join(local_dir, unique_name)
-    with open(temp_file_path, "wb") as f:
-        f.write(file.file.read())
-
-    # store metadata in DB
-    file_service.add_temp_file(file_id, file.filename, temp_file_path, upload_time)
-
-    resp = api.TempFile(id=file_id, filename=file.filename, upload_time=upload_time)
-
-    return resp
 
 
 @files_router.get("/{key:path}")

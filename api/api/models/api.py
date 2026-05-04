@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime
 from typing import Optional, Generic, List, TypeVar
 
 from fastapi import Query
@@ -9,12 +8,6 @@ from api.models import db
 from api.models.domain import BookMetadata, MetadataCandidates
 
 T = TypeVar("T")
-
-
-class TempFile(BaseModel):
-    id: uuid.UUID
-    filename: str
-    upload_time: datetime
 
 
 class CreateBookRequest(BaseModel):

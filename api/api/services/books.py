@@ -43,29 +43,6 @@ class BookService(Service):
         self.openlibrary_service = openlibrary_service
 
     @transactional
-    def create_book(self, book: api.CreateBookRequest, user_id: uuid.UUID) -> api.BookOverview:
-        # Upload the book file to the object store
-        try:
-            book_file_name = self.files_service.store_book_file(book.id, book.pdf_temp_file_id)
-        except Exception as e:
-            LOG.info("Error uploading book file to object store", exc_info=True)
-            raise e
-
-        pdf_bytes = self.files_service.get_book_file(book.id, book_file_name)
-        pdf_document = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
-
-        # Store book metadata in DB
-        book = db.Book(id=book.id,
-                       owner_id=user_id,
-                       title=book.title,
-                       file_name=book_file_name,
-                       created_time=datetime.now(UTC),
-                       number_of_pages=pdf_document.page_count,
-                       status=db.BookStatus.processing)
-        self.db.add(book)
-        return api.BookOverview.from_orm(book)
-
-    @transactional
     def create_book_v2(self, user_id: uuid.UUID, file_name: str, file_bytes: BytesIO,
                        background_tasks: BackgroundTasks):
         # TODO: Validate language. Fail book creation if language is not supported.

@@ -7,13 +7,11 @@ import {
   BookMetadataForReview,
   BookOverview,
   BookWithContent,
-  CreateBookRequest,
   PlaybackInfo
 } from '../models/books.dto';
 import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
 import { DEFAULT_PAGE_SIZE, PageResponse, toPageResponse } from '../models/pagination.dto';
-import { TempFile } from '../models/files.dto';
 
 @Injectable({
   providedIn: 'root'
@@ -35,10 +33,6 @@ export class BooksService {
       this.connectionService,
       "books",
       (url: string) => this.http.get<BookWithContent>(url));
-  }
-
-  createBook(data: CreateBookRequest): Observable<BookOverview> {
-    return this.http.post<BookOverview>(`${this.apiUrl}/`, data);
   }
 
   getBookWithContent(bookId: string): Observable<BookWithContent> {

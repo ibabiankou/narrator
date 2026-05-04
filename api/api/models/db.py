@@ -40,15 +40,6 @@ class PydanticType(TypeDecorator):
         return self.pydantic_type.model_validate(value)
 
 
-class TempFile(Base):
-    __tablename__ = "temp_files"
-
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
-    file_name: Mapped[str]
-    file_path: Mapped[str]
-    upload_time: Mapped[datetime.datetime]
-
-
 @total_ordering
 class BookStatus(StrEnum):
     # Just uploaded book is going through initial processing.

@@ -9,7 +9,6 @@ from typing import Annotated, Optional, List
 import boto3
 from botocore.exceptions import ClientError
 
-from api.models import db
 from api.utils.images import create_thumbnail
 from common_lib.service import Service
 
@@ -40,20 +39,6 @@ class FilesService(Service):
             aws_secret_access_key=os.getenv("S3_SECRET")
         )
         self.bucket_name = os.getenv("S3_BUCKET", "narrator")
-
-    def store_book_file(self, book_id: uuid.UUID, book_file_id: uuid.UUID):
-        """Move the book file from the local disk to the object store."""
-        book_file = self.db.get_one(db.TempFile, book_file_id)
-
-        remote_file_path = f"{book_id}/{book_file.file_name}"
-        LOG.info(f"Uploading {remote_file_path}")
-
-        try:
-            self.s3_client.upload_file(book_file.file_path, self.bucket_name, remote_file_path)
-        except ClientError as e:
-            logging.error(e)
-            raise e
-        return book_file.file_name
 
     def upload_book_pages(self, book_id: uuid.UUID, pdf_pages):
         """Upload the book pages to the object store."""
@@ -170,9 +155,6 @@ class FilesService(Service):
         remote_file_path = f"{book_id}/{pdf_file_name}"
         pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
         return BytesIO(pdf_object["Body"].read())
-
-    def add_temp_file(self, file_id, filename, temp_file_path, upload_time):
-        self.db.add(db.TempFile(id=file_id, file_name=filename, file_path=temp_file_path, upload_time=upload_time))
 
 
 FilesServiceDep = Annotated[FilesService, FilesService.dep()]

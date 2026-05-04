@@ -1,8 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable, switchMap } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { TempFile } from '../models/files.dto';
 import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
 
@@ -17,7 +15,6 @@ interface FileData {
 })
 export class FilesService {
 
-  private apiUrl = `${environment.api_base_url}/files/`;
   private cache: IndexDBCache<FileData>;
 
   private allowedHeaders = new Set<string>(["content-type", "etag", "content-range"]);
@@ -30,12 +27,6 @@ export class FilesService {
       "files",
       key => this.loadFileData(key),
     );
-  }
-
-  uploadFile(file: File): Observable<TempFile> {
-    const formData = new FormData();
-    formData.append('file', file);
-    return this.http.post<TempFile>(this.apiUrl, formData);
   }
 
   /**
