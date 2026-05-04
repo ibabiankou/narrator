@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 
 from sqlalchemy import update, select, delete
 
-from api.models import db
+from api.models import db, api
 from common_lib.db import transactional
 from common_lib.service import Service
 
@@ -18,9 +18,13 @@ class PlaybackProgressService(Service):
         pass
 
     @transactional
-    def get_playback_info(self, user_id: uuid.UUID, book_id: uuid.UUID) -> Optional[db.PlaybackProgress]:
-        return self.db.scalar(select(db.PlaybackProgress).where(db.PlaybackProgress.user_id == user_id).where(
-            db.PlaybackProgress.book_id == book_id))
+    def get_playback_info(self, user_id: uuid.UUID, book_id: uuid.UUID) -> api.PlaybackInfo:
+        stmt = (select(db.PlaybackProgress)
+                .where(db.PlaybackProgress.user_id == user_id)
+                .where(db.PlaybackProgress.book_id == book_id)
+                )
+        playback_info = self.db.scalar(stmt)
+        return api.PlaybackInfo(book_id=book_id, data=playback_info.data if playback_info else {})
 
     @transactional
     def upsert_progress(self, progress: db.PlaybackProgress):

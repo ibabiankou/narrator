@@ -123,8 +123,7 @@ def book_playlist(book_id: uuid.UUID,
 def get_playback_info(book_id: uuid.UUID,
                       user: UserDep,
                       progress_service: PlaybackProgressServiceDep) -> api.PlaybackInfo:
-    playback_info = progress_service.get_playback_info(user.id, book_id)
-    return api.PlaybackInfo(book_id=book_id, data=playback_info.data if playback_info else {})
+    return progress_service.get_playback_info(user.id, book_id)
 
 
 @books_router.post("/{book_id}/playback_info")
