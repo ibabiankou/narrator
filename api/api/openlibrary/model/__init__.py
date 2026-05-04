@@ -17,6 +17,13 @@ class Link(BaseModel):
     url: str
     title: str
 
+class TextBlock(BaseModel):
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    type: str
+    value: str
+
 
 class Author(BaseModel):
     model_config = ConfigDict(
@@ -42,7 +49,7 @@ class Edition(BaseModel):
     title: str
 
     series: Optional[list[str]] = None
-    description: Optional[str] = None
+    description: Optional[TextBlock] = None
 
     covers: Optional[list[int]] = None
     authors: Optional[list[Reference]] = None

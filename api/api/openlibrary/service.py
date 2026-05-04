@@ -89,16 +89,17 @@ class OpenlibraryService(Service):
             cover_url = self.cover_url(edition.covers[0])
 
         authors = []
-        for ref in edition.authors:
-            author = self.autor_by_key(ref.key)
-            if author:
-                authors.append(author.name)
+        if edition.authors:
+            for ref in edition.authors:
+                author = self.autor_by_key(ref.key)
+                if author:
+                    authors.append(author.name)
 
         return MetadataCandidate(source="openlibrary",
                                  cover=cover_url,
                                  title=edition.title,
                                  series=", ".join(edition.series or []),
-                                 description=edition.description,
+                                 description=edition.description.value if edition.description else None,
                                  authors=authors,
                                  isbns=edition.isbn_10 or [] + edition.isbn_13 or [])
 
