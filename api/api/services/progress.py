@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 from sqlalchemy import update, select, delete
 
 from api.models import db
+from common_lib.db import transactional
 from common_lib.service import Service
 
 LOG = logging.getLogger(__name__)
@@ -16,10 +17,12 @@ class PlaybackProgressService(Service):
     def __init__(self, **kwargs):
         pass
 
+    @transactional
     def get_playback_info(self, user_id: uuid.UUID, book_id: uuid.UUID) -> Optional[db.PlaybackProgress]:
         return self.db.scalar(select(db.PlaybackProgress).where(db.PlaybackProgress.user_id == user_id).where(
             db.PlaybackProgress.book_id == book_id))
 
+    @transactional
     def upsert_progress(self, progress: db.PlaybackProgress):
         stmt = select(db.PlaybackProgress).where(db.PlaybackProgress.user_id == progress.user_id).where(
             db.PlaybackProgress.book_id == progress.book_id)
