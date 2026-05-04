@@ -5,6 +5,7 @@ from sqlalchemy import text
 
 from api.models.domain import BookMetadata, MetadataCandidate
 from api.openlibrary.model import Author, Edition
+from api.utils.isbn import validate_isbn, expand_isbns
 from common_lib.db import transactional
 from common_lib.service import Service
 
@@ -67,7 +68,7 @@ class OpenlibraryService(Service):
         result = []
         edition_keys = set()
 
-        for isbn in llm_candidate.isbns:
+        for isbn in expand_isbns(llm_candidate.isbns):
             edition = self.edition_by_isbn(isbn)
             if edition and edition.key not in edition_keys:
                 result.append(self.edition_to_metadata_candidate(edition))
@@ -97,13 +98,18 @@ class OpenlibraryService(Service):
                 if author:
                     authors.append(author.name)
 
+        valid_isbns = []
+        for isbn in edition.isbn_10 or [] + edition.isbn_13 or []:
+            if validate_isbn(isbn):
+                valid_isbns.append(isbn)
+
         return MetadataCandidate(source="openlibrary",
                                  cover=cover_url,
                                  title=edition.title,
                                  series=", ".join(edition.series or []),
                                  description=edition.description.value if edition.description else None,
                                  authors=authors,
-                                 isbns=edition.isbn_10 or [] + edition.isbn_13 or [])
+                                 isbns=valid_isbns)
 
 
 OpenlibraryServiceDep = Annotated[OpenlibraryService, OpenlibraryService.dep()]
