@@ -78,7 +78,6 @@ export class EditMetadataPage implements OnInit {
   }
 
   protected submitReviewMetadata(bookMetadata: BookMetadata) {
-    console.log("submitting review metadata", bookMetadata);
     this.booksService.updateBookMetadata(this.bookId(), bookMetadata)
       .subscribe({
         next: book => {
@@ -90,25 +89,13 @@ export class EditMetadataPage implements OnInit {
       })
   }
 
-  protected openDialog(candidate: BookMetadata) {
+  protected openDialog(candidate: BookMetadata, detailsForm: BookDetailsForm) {
     const dialogRef = this.dialog.open(BookDetailsDialog, {
       data: candidate,
       maxWidth: '90vw',
       maxHeight: '90vh',
     });
 
-    dialogRef.componentInstance.onAdd.subscribe((data) => {
-      const {isbns, authors, ...rest} = data;
-
-      if (isbns && isbns.length > 0) {
-        this.metadata()?.isbns.push(...isbns);
-      }
-      if (authors && authors.length > 0) {
-        this.metadata()?.authors.push(...authors);
-      }
-
-      Object.assign(this.metadata()!, rest);
-      this.metadata.set({...this.metadata()!});
-    });
+    dialogRef.componentInstance.onAdd.subscribe((data) => detailsForm.update(data));
   }
 }

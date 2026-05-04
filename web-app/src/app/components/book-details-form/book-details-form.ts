@@ -56,11 +56,15 @@ export class BookDetailsForm {
   }
 
   protected addAuthor($event: MatChipInputEvent) {
-    const newItem = $event.value.trim();
-    if (newItem.length > 0) {
-      this.authors.set([...this.authors(), newItem]);
-    }
+    this.doAddAuthor($event.value.trim());
     $event.chipInput!.clear();
+  }
+
+  private doAddAuthor(author: string) {
+    if (author.length > 0) {
+      if (this.authors().includes(author)) return;
+      this.authors.set([...this.authors(), author]);
+    }
   }
 
   protected removeAuthor(author: string) {
@@ -73,7 +77,7 @@ export class BookDetailsForm {
 
     // 1. Basic length check
     if (value.length !== 10 && value.length !== 13) {
-      return { invalidIsbn: 'Invalid length' };
+      return {invalidIsbn: 'Invalid length'};
     }
 
     // 2. ISBN-10 Checksum
@@ -86,7 +90,7 @@ export class BookDetailsForm {
       sum += (lastChar === 'X') ? 10 : parseInt(lastChar);
 
       const validIsbn10 = (sum % 11 === 0);
-      return validIsbn10 ? null : { checksum: true };
+      return validIsbn10 ? null : {checksum: true};
     }
 
     // 3. ISBN-13 Checksum
@@ -98,7 +102,7 @@ export class BookDetailsForm {
       }
 
       const validIsbn13 = (sum % 10 === 0);
-      return validIsbn13 ? null : { checksum: true };
+      return validIsbn13 ? null : {checksum: true};
     }
 
     return null;
@@ -106,17 +110,19 @@ export class BookDetailsForm {
 
   protected addIsbn(event: MatChipInputEvent): void {
     this.isbnControl.markAsTouched();
-
     if (this.isbnControl.invalid) return;
 
-    const cleanedValue = cleanIsbn(event.value);
-    if (cleanedValue.length === 0) return;
+    this.doAddIsbn(event.value);
 
-    if (this.isbns().includes(cleanedValue)) return;
-
-    this.isbns.set([...this.isbns(), cleanedValue]);
     event.chipInput!.clear();
     this.isbnControl.setValue('');
+  }
+
+  private doAddIsbn(isbn: string) {
+    const cleanedValue = cleanIsbn(isbn);
+    if (cleanedValue.length === 0) return;
+    if (this.isbns().includes(cleanedValue)) return;
+    this.isbns.set([...this.isbns(), cleanedValue]);
   }
 
   protected removeIsbn(isbn: string) {
@@ -132,5 +138,28 @@ export class BookDetailsForm {
       isbns: this.isbns(),
     };
     this.reviewedMetadata.emit(metadata);
+  }
+
+  update(data: Partial<BookMetadata>) {
+    const {isbns, authors, cover, title, series, description} = data;
+
+    if (isbns && isbns.length > 0) {
+      isbns.forEach(isbn => this.doAddIsbn(isbn));
+    }
+    if (authors && authors.length > 0) {
+      authors.forEach(author => this.doAddAuthor(author));
+    }
+    if (cover) {
+      // TODO: What should I do with cover?
+    }
+    if (title) {
+      this.title.set(title);
+    }
+    if (series) {
+      this.series.set(series);
+    }
+    if (description) {
+      this.description.set(description);
+    }
   }
 }
