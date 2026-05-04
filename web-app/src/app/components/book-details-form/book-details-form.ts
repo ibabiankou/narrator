@@ -7,6 +7,8 @@ import { BookMetadata } from '../../core/models/books.dto';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { AbstractControl, FormControl, FormsModule, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
+import { AsyncPipe } from '@angular/common';
+import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
 
 
 function cleanIsbn(value: string): string {
@@ -24,7 +26,9 @@ function cleanIsbn(value: string): string {
     MatIcon,
     MatInputModule,
     ReactiveFormsModule,
-    FormsModule
+    FormsModule,
+    AsyncPipe,
+    FileAsBlobPipe
   ],
   templateUrl: './book-details-form.html',
   styleUrl: './book-details-form.scss',
@@ -34,6 +38,7 @@ export class BookDetailsForm {
   readonly bookMetadata = input.required<BookMetadata>();
   reviewedMetadata = output<BookMetadata>();
 
+  protected cover = model<string>();
   protected title = model<string>();
   protected series = model<string>();
   protected description = model<string>();
@@ -47,6 +52,7 @@ export class BookDetailsForm {
       const metadata = this.bookMetadata();
       if (!metadata) return;
 
+      this.cover.set(metadata.cover);
       this.title.set(metadata.title);
       this.series.set(metadata.series);
       this.description.set(metadata.description);
@@ -150,7 +156,7 @@ export class BookDetailsForm {
       authors.forEach(author => this.doAddAuthor(author));
     }
     if (cover) {
-      // TODO: What should I do with cover?
+      this.cover.set(cover);
     }
     if (title) {
       this.title.set(title);

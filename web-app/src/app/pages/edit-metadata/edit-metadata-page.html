@@ -11,23 +11,11 @@
 
 <div class="main-container">
   @defer (when metadata()) {
-    @let book = metadata()!;
-    <div class="metadata-container">
-      <div class="cover-wrapper">
-        @if (book.cover) {
-          <img [src]="`/api/files/${ book.cover }` | fileAsBlob | async " alt="{{ book.title }}">
-        } @else {
-          <img src="covers/blue.png" alt="{{ book.title }}">
-        }
-      </div>
+    <app-book-details-form #detailsForm
+                           [bookMetadata]="metadata()!"
+                           (reviewedMetadata)="submitReviewMetadata($event)"
+    ></app-book-details-form>
 
-      <div class="form-wrapper">
-        <app-book-details-form #detailsForm
-          [bookMetadata]="book"
-          (reviewedMetadata)="submitReviewMetadata($event)"
-        ></app-book-details-form>
-      </div>
-    </div>
     <div class="alternative-candidates">
       @if (metadataForReview()!.metadata_candidates.candidates.length > 0) {
         <h2>Wrong details? Consider following matches.</h2>

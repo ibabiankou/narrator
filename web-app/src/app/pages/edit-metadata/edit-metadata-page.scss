@@ -2,35 +2,6 @@
   max-width: var(--app-container-width);
   margin: 30px auto;
 
-  .metadata-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-
-    .cover-wrapper {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-
-      img {
-        width: 80%;
-        aspect-ratio: 3 / 4;
-        object-fit: contain;
-      }
-    }
-
-    .form-wrapper {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-
-      app-book-details-form {
-        height: 100%;
-        width: 80%;
-      }
-    }
-  }
-
   .alternative-candidates {
     margin-top: 40px;
     padding: 20px;

@@ -1,76 +1,88 @@
-<mat-card class="metadata-card" appearance="outlined">
-  <mat-card-content>
-    <mat-form-field>
-      <mat-label>Title</mat-label>
-      <input matInput placeholder="Title"
-             [ngModel]="title()" (ngModelChange)="title.set($event)">
-    </mat-form-field>
+<div class="metadata-container">
+  <div class="cover-wrapper">
+    @if (cover()) {
+      <img [src]="`/api/files/${ cover() }` | fileAsBlob | async " alt="{{ title() }}">
+    } @else {
+      <img src="covers/blue.png" alt="{{ title() }}">
+    }
+  </div>
 
-    <mat-form-field>
-      <mat-label>Series</mat-label>
-      <input matInput placeholder="Series"
-             [ngModel]="series()" (ngModelChange)="series.set($event)">
-    </mat-form-field>
+  <div class="form-wrapper">
+    <mat-card class="metadata-card" appearance="outlined">
+      <mat-card-content>
+        <mat-form-field>
+          <mat-label>Title</mat-label>
+          <input matInput placeholder="Title"
+                 [ngModel]="title()" (ngModelChange)="title.set($event)">
+        </mat-form-field>
 
-    <mat-form-field>
-      <mat-label>Description</mat-label>
-      <textarea matInput placeholder="Description" rows="6"
-                [ngModel]="description()" (ngModelChange)="description.set($event)"
-      ></textarea>
-    </mat-form-field>
+        <mat-form-field>
+          <mat-label>Series</mat-label>
+          <input matInput placeholder="Series"
+                 [ngModel]="series()" (ngModelChange)="series.set($event)">
+        </mat-form-field>
 
-    <mat-form-field>
-      <mat-label>Authors</mat-label>
-      <mat-chip-grid #authorsChipGrid>
-        @for (author of authors(); track author) {
-          <mat-chip-row (removed)="removeAuthor(author)">
-            {{ author }}
-            <button matChipRemove>
-              <mat-icon>cancel</mat-icon>
-            </button>
-          </mat-chip-row>
-        }
-      </mat-chip-grid>
-      <input
-        placeholder="New author..."
-        [matChipInputFor]="authorsChipGrid"
-        [matChipInputAddOnBlur]="true"
-        (matChipInputTokenEnd)="addAuthor($event)"
-      />
-    </mat-form-field>
-    <mat-form-field>
-      <mat-label>ISBNs</mat-label>
-      <mat-chip-grid #isbnsChipGrid [formControl]="isbnControl">
-        @for (isbn of isbns(); track isbn) {
-          <mat-chip-row (removed)="removeIsbn(isbn)">
-            {{ isbn }}
-            <button matChipRemove>
-              <mat-icon>cancel</mat-icon>
-            </button>
-          </mat-chip-row>
-        }
-      </mat-chip-grid>
-      <input
-        matInput
-        placeholder="New ISBN..."
-        [formControl]="isbnControl"
-        [matChipInputFor]="isbnsChipGrid"
-        [matChipInputAddOnBlur]="true"
-        (matChipInputTokenEnd)="addIsbn($event)"
-      />
-      @if (isbnControl.invalid) {
-        <mat-error>
-          @if (isbnControl.hasError('invalidIsbn')) {
-            Please enter exactly 10 or 13 digits.
-          } @else if (isbnControl.hasError('checksum')) {
-            This isn't a valid ISBN (Checksum failed).
+        <mat-form-field>
+          <mat-label>Description</mat-label>
+          <textarea matInput placeholder="Description" rows="6"
+                    [ngModel]="description()" (ngModelChange)="description.set($event)"
+          ></textarea>
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Authors</mat-label>
+          <mat-chip-grid #authorsChipGrid>
+            @for (author of authors(); track author) {
+              <mat-chip-row (removed)="removeAuthor(author)">
+                {{ author }}
+                <button matChipRemove>
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip-row>
+            }
+          </mat-chip-grid>
+          <input
+            placeholder="New author..."
+            [matChipInputFor]="authorsChipGrid"
+            [matChipInputAddOnBlur]="true"
+            (matChipInputTokenEnd)="addAuthor($event)"
+          />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>ISBNs</mat-label>
+          <mat-chip-grid #isbnsChipGrid [formControl]="isbnControl">
+            @for (isbn of isbns(); track isbn) {
+              <mat-chip-row (removed)="removeIsbn(isbn)">
+                {{ isbn }}
+                <button matChipRemove>
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip-row>
+            }
+          </mat-chip-grid>
+          <input
+            matInput
+            placeholder="New ISBN..."
+            [formControl]="isbnControl"
+            [matChipInputFor]="isbnsChipGrid"
+            [matChipInputAddOnBlur]="true"
+            (matChipInputTokenEnd)="addIsbn($event)"
+          />
+          @if (isbnControl.invalid) {
+            <mat-error>
+              @if (isbnControl.hasError('invalidIsbn')) {
+                Please enter exactly 10 or 13 digits.
+              } @else if (isbnControl.hasError('checksum')) {
+                This isn't a valid ISBN (Checksum failed).
+              }
+            </mat-error>
           }
-        </mat-error>
-      }
-    </mat-form-field>
+        </mat-form-field>
 
-  </mat-card-content>
-  <mat-card-actions>
-    <button matButton (click)="emitReviewedMetadata()">Continue</button>
-  </mat-card-actions>
-</mat-card>
+      </mat-card-content>
+      <mat-card-actions>
+        <button matButton (click)="emitReviewedMetadata()">Continue</button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+</div>
