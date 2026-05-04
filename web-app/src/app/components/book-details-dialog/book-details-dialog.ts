@@ -1,4 +1,4 @@
-import { Component, inject, model, output } from '@angular/core';
+import { Component, inject, output } from '@angular/core';
 import { BookMetadata } from '../../core/models/books.dto';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogActions, MatDialogClose, MatDialogContent } from '@angular/material/dialog';
@@ -27,23 +27,8 @@ import { MatLabel } from '@angular/material/input';
 export class BookDetailsDialog {
   readonly bookMetadata = inject<BookMetadata>(MAT_DIALOG_DATA);
 
-  readonly onAdd = output<Partial<BookMetadata>>();
-
-  protected title = model<string>();
-  protected series = model<string>();
-  protected description = model<string>();
-  protected authors = model<string[]>([]);
-  protected isbns = model<string[]>([]);
-
-  constructor() {
-    const metadata = this.bookMetadata;
-
-    this.title.set(metadata.title);
-    this.series.set(metadata.series);
-    this.description.set(metadata.description);
-    this.authors.set([...metadata.authors]);
-    this.isbns.set([...metadata.isbns]);
-  }
+  readonly useOneField = output<Partial<BookMetadata>>();
+  readonly useAllInfo = output<BookMetadata>();
 
   protected hasCover() {
     return this.bookMetadata.cover != undefined && this.bookMetadata.cover!.length > 0;
@@ -55,7 +40,11 @@ export class BookDetailsDialog {
   }
 
   protected addField(field: keyof BookMetadata) {
-    const partial: Partial<BookMetadata> = { [field]: this.bookMetadata[field] };
-    this.onAdd.emit(partial);
+    const partial: Partial<BookMetadata> = {[field]: this.bookMetadata[field]};
+    this.useOneField.emit(partial);
+  }
+
+  protected addAllDetails() {
+    this.useAllInfo.emit(this.bookMetadata);
   }
 }

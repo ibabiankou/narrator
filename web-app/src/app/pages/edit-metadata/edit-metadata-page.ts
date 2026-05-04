@@ -96,6 +96,7 @@ export class EditMetadataPage implements OnInit {
       maxHeight: '90vh',
     });
 
-    dialogRef.componentInstance.onAdd.subscribe((data) => detailsForm.update(data));
+    dialogRef.componentInstance.useOneField.subscribe((data) => detailsForm.update(data));
+    dialogRef.componentInstance.useAllInfo.subscribe((data) => this.metadata.set(data));
   }
 }

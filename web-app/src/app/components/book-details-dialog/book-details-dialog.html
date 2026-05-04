@@ -9,7 +9,7 @@
             <img [src]="bookMetadata.cover" alt="cover"/>
           }
           <button mat-mini-fab color="primary" class="add-cover-btn" (click)="addField('cover')">
-            <mat-icon>add</mat-icon>
+            <mat-icon>content_copy</mat-icon>
           </button>
         } @else {
           <div class="no-cover">
@@ -22,58 +22,58 @@
       <div class="detail-item">
         <div class="detail-text">
           <mat-label>Title</mat-label>
-          @if (title()) {
-            <span>{{ title() }}</span>
+          @if (bookMetadata.title) {
+            <span>{{ bookMetadata.title }}</span>
           } @else {
             <span>N/A</span>
           }
         </div>
-        @if (title()) {
+        @if (bookMetadata.title) {
           <button mat-icon-button (click)="addField('title')">
-            <mat-icon>add</mat-icon>
+            <mat-icon>content_copy</mat-icon>
           </button>
         }
       </div>
       <div class="detail-item">
         <div class="detail-text">
           <mat-label>Series</mat-label>
-          @if (series()) {
-            <span>{{ series() }}</span>
+          @if (bookMetadata.series) {
+            <span>{{ bookMetadata.series }}</span>
           } @else {
             <span>N/A</span>
           }
         </div>
-        @if (series()) {
+        @if (bookMetadata.series) {
           <button mat-icon-button (click)="addField('series')">
-            <mat-icon>add</mat-icon>
+            <mat-icon>content_copy</mat-icon>
           </button>
         }
       </div>
       <div class="detail-item description">
         <div class="detail-text">
           <mat-label>Description</mat-label>
-          @if (description()) {
-            <p>{{ description() }}</p>
+          @if (bookMetadata.description) {
+            <p>{{ bookMetadata.description }}</p>
           } @else {
             <p>N/A</p>
           }
         </div>
-        @if (description()) {
+        @if (bookMetadata.description) {
           <button mat-icon-button (click)="addField('description')">
-            <mat-icon>add</mat-icon>
+            <mat-icon>content_copy</mat-icon>
           </button>
         }
       </div>
       <div class="detail-item">
         <div class="detail-text">
           <mat-label>Authors</mat-label>
-          @if (authors().length > 0) {
-            <span>{{ authors().join(', ') }}</span>
+          @if (bookMetadata.authors.length > 0) {
+            <span>{{ bookMetadata.authors.join(', ') }}</span>
           } @else {
             <span>N/A</span>
           }
         </div>
-        @if (authors().length > 0) {
+        @if (bookMetadata.authors.length > 0) {
           <button mat-icon-button (click)="addField('authors')">
             <mat-icon>add</mat-icon>
           </button>
@@ -82,13 +82,13 @@
       <div class="detail-item">
         <div class="detail-text">
           <mat-label>ISBNs</mat-label>
-          @if (isbns().length > 0) {
-            <span>{{ isbns().join(', ') }}</span>
+          @if (bookMetadata.isbns.length > 0) {
+            <span>{{ bookMetadata.isbns.join(', ') }}</span>
           } @else {
             <span>N/A</span>
           }
         </div>
-        @if (isbns().length > 0) {
+        @if (bookMetadata.isbns.length > 0) {
           <button mat-icon-button (click)="addField('isbns')">
             <mat-icon>add</mat-icon>
           </button>
@@ -99,4 +99,5 @@
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button mat-dialog-close>Close</button>
+  <button mat-button (click)="addAllDetails()" mat-dialog-close>Copy all details</button>
 </mat-dialog-actions>
