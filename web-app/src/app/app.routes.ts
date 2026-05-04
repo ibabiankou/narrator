@@ -10,7 +10,7 @@ export const routes: Routes = [
   {path: 'books', component: BooksPage, canActivate: [authGuard]},
   {path: 'books/:bookId', component: ViewBookPage, canActivate: [authGuard]},
   {path: 'books/:bookId/edit', component: EditBookPage, canActivate: [authGuard]},
-  {path: 'books/:bookId/edit-metadata', component: EditMetadataPage, canActivate: [authGuard]},
+  {path: 'books/:bookId/edit-details', component: EditMetadataPage, canActivate: [authGuard]},
   {path: 'forbidden', component: ForbiddenPage},
   {path: '**', redirectTo: '/books'}
 ];

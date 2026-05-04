@@ -16,26 +16,33 @@
     </div>
   }
 
-  @if (!editMode()) {
-    <a mat-menu-item
-            *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
-            aria-label="Edit book"
-            routerLink="/books/{{ bookOverview().id }}/edit">
-      <mat-icon>edit</mat-icon>
-      <span>Edit book</span>
-    </a>
-  }
+  <a mat-menu-item
+          *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
+          aria-label="Edit details"
+          routerLink="/books/{{ bookOverview().id }}/edit-details">
+    <mat-icon>edit</mat-icon>
+    <span>Edit details</span>
+  </a>
+  <a mat-menu-item
+          *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
+          aria-label="Edit content"
+          routerLink="/books/{{ bookOverview().id }}/edit">
+    <mat-icon>edit</mat-icon>
+    <span>Edit content</span>
+  </a>
 
-  @if (isDownloaded()) {
-    <button mat-menu-item aria-label="Show storage info" (click)="storageInfoDialog(storageInfoTemplate)">
-      <mat-icon>database</mat-icon>
-      <span>Storage info</span>
-    </button>
-  } @else {
-    <button mat-menu-item aria-label="Download this book" (click)="downloadBookDialog(downloadBookTemplate)">
-      <mat-icon>download</mat-icon>
-      <span>Download</span>
-    </button>
+  @if (bookOverview().status == BookStatus.ready && bookStats()) {
+    @if (isDownloaded()) {
+      <button mat-menu-item aria-label="Show storage info" (click)="storageInfoDialog(storageInfoTemplate)">
+        <mat-icon>database</mat-icon>
+        <span>Storage info</span>
+      </button>
+    } @else {
+      <button mat-menu-item aria-label="Download this book" (click)="downloadBookDialog(downloadBookTemplate)">
+        <mat-icon>download</mat-icon>
+        <span>Download</span>
+      </button>
+    }
   }
 
   <button mat-menu-item class="delete-button"

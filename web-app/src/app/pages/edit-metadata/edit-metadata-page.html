@@ -2,6 +2,11 @@
   <div breadcrumb>
     <h1>Edit Book Details</h1>
   </div>
+  <div actionButton>
+    @defer (when metadata()) {
+      <app-book-menu [bookOverview]="metadataForReview()!.overview"></app-book-menu>
+    }
+  </div>
 </app-toolbar>
 
 <div class="main-container">

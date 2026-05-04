@@ -129,7 +129,7 @@ export class BooksPage implements OnInit {
     return this.bookService.uploadBook(file)
       .subscribe({
         next: bookDetails => {
-          this.router.navigate(['/books', bookDetails.id, 'edit-metadata']);
+          this.router.navigate(['/books', bookDetails.id, 'edit-details']);
         },
         error: err => {
           // TODO: show the error message.
@@ -170,7 +170,7 @@ export class BooksPage implements OnInit {
   protected bookLink(book: BookOverview) {
     switch (book.status) {
       case BookStatus.ready_for_metadata_review:
-        return ['/books', book.id, 'edit-metadata'];
+        return ['/books', book.id, 'edit-details'];
       case BookStatus.ready_for_content_review:
         return ['/books', book.id, 'edit'];
     }

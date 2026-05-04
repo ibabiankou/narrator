@@ -1,3 +1,11 @@
+:host {
+  ::ng-deep div[actionButton] {
+    display: flex;
+    gap: 16px;
+    padding-right: 16px;
+  }
+}
+
 $toolbarHeight: 75px;
 mat-toolbar {
   position: fixed;

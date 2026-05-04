@@ -1,5 +1,9 @@
 import { Component, effect, inject, input, model, OnInit } from '@angular/core';
-import { BreadcrumbContentDirective, ToolbarComponent } from '../../components/toolbar/toolbar.component';
+import {
+  ActionButtonContentDirective,
+  BreadcrumbContentDirective,
+  ToolbarComponent
+} from '../../components/toolbar/toolbar.component';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
@@ -13,6 +17,7 @@ import { BookDetailsForm } from '../../components/book-details-form/book-details
 import { BookOverview } from '../../components/book-overview/book-overview';
 import { MatDialog } from '@angular/material/dialog';
 import { BookDetailsDialog } from '../../components/book-details-dialog/book-details-dialog';
+import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
 
 @Component({
   selector: 'app-edit-metadata-page',
@@ -22,7 +27,9 @@ import { BookDetailsDialog } from '../../components/book-details-dialog/book-det
     AsyncPipe,
     FileAsBlobPipe,
     BookDetailsForm,
-    BookOverview
+    BookOverview,
+    ActionButtonContentDirective,
+    BookMenu,
   ],
   templateUrl: './edit-metadata-page.html',
   styleUrl: './edit-metadata-page.scss',

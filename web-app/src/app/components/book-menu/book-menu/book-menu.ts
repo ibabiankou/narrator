@@ -16,7 +16,7 @@ import { Router, RouterLink } from '@angular/router';
 import { OwnerDirective } from '../../../core/ownerDirective';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { filter, interval, Subscription, switchMap, take } from 'rxjs';
-import { BookOverview, BookStats, DownloadInfo } from '../../../core/models/books.dto';
+import { BookOverview, BookStats, BookStatus, DownloadInfo } from '../../../core/models/books.dto';
 import { DownloadService } from '../../../core/services/download.service';
 
 @Component({
@@ -50,7 +50,7 @@ export class BookMenu {
   private downloadSubscription: Subscription | null = null;
 
   bookOverview = input.required<BookOverview>();
-  bookStats = input.required<BookStats>();
+  bookStats = input<BookStats>();
   editMode = input<boolean>(false);
   showPages = computed(() => <string>this.settingsService.userPreferences()!["viewer_mode"]);
 
@@ -122,7 +122,7 @@ export class BookMenu {
   });
 
   protected totalSizeMb() {
-    return this.formatter.format(this.bookStats().total_size_bytes / 1024 / 1024);
+    return this.formatter.format(this.bookStats()!.total_size_bytes / 1024 / 1024);
   }
 
   protected downloadProgressPercent(): string {
@@ -156,4 +156,6 @@ export class BookMenu {
       }
     );
   }
+
+  protected readonly BookStatus = BookStatus;
 }
