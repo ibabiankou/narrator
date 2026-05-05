@@ -7,6 +7,7 @@ from io import BytesIO
 from typing import Annotated, Optional, List
 
 import boto3
+import requests
 from botocore.exceptions import ClientError
 
 from api.utils.images import create_thumbnail
@@ -155,6 +156,19 @@ class FilesService(Service):
         remote_file_path = f"{book_id}/{pdf_file_name}"
         pdf_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=remote_file_path)
         return BytesIO(pdf_object["Body"].read())
+
+    def upload_remote_file(self, key_prefix: str, source_url: str) -> str:
+        """Download remote file from `source_url` and put it to the object store."""
+
+        key = f"{key_prefix}/{source_url.split('/')[-1]}"
+        LOG.debug("Uploading %s file to %s", source_url, key)
+
+        # Use stream=True to avoid loading the whole file into RAM
+        with requests.get(source_url, stream=True) as response:
+            response.raise_for_status()
+            self.s3_client.upload_fileobj(response.raw, self.bucket_name, key)
+
+        return key
 
 
 FilesServiceDep = Annotated[FilesService, FilesService.dep()]

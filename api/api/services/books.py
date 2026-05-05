@@ -181,7 +181,7 @@ class BookService(Service):
 
         llm_candidate = domain.MetadataCandidate(source="gemini", **llm_metadata.model_dump())
 
-        ol_candidates = self.openlibrary_service.search_matches(llm_candidate)
+        ol_candidates = self.openlibrary_service.search_matches(book_id, llm_candidate)
 
         all_candidates = [llm_candidate] + ol_candidates
         metadata_candidates = domain.MetadataCandidates(candidates=all_candidates, preferred_index=0,

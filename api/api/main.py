@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI):
     rmq_client = RMQClient(Topology.default_exchange)
     audiotrack_svc = AudioTrackService(files_svc, rmq_client, db_factory=narrator_db)
     section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc, db_factory=narrator_db)
-    openlibrary_svc = OpenlibraryService(db_factory=openlibrary_db)
+    openlibrary_svc = OpenlibraryService(files_svc, db_factory=openlibrary_db)
     books_svc = BookService(files_svc, section_svc, progress_svc, openlibrary_svc, db_factory=narrator_db)
 
     # Start background processing tasks.

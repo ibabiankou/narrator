@@ -1,10 +1,12 @@
 import logging
+import uuid
 from typing import Annotated, Optional
 
 from sqlalchemy import text
 
 from api.models.domain import BookMetadata, MetadataCandidate
 from api.openlibrary.model import Author, Edition
+from api.services.files import FilesServiceDep
 from api.utils.isbn import validate_isbn, expand_isbns
 from common_lib.db import transactional
 from common_lib.service import Service
@@ -14,8 +16,8 @@ LOG = logging.getLogger(__name__)
 
 # noinspection PyTypeChecker
 class OpenlibraryService(Service):
-    def __init__(self, **kwargs):
-        pass
+    def __init__(self, files_service: FilesServiceDep, **kwargs):
+        self.files_service = files_service
 
     @transactional
     def edition_by_isbn(self, isbn: str) -> Optional[Edition]:
@@ -64,14 +66,14 @@ class OpenlibraryService(Service):
     def cover_url(self, id: int) -> str:
         return f"https://covers.openlibrary.org/b/id/{id}.jpg"
 
-    def search_matches(self, llm_candidate: BookMetadata) -> list[MetadataCandidate]:
+    def search_matches(self, book_id: uuid.UUID, llm_candidate: BookMetadata) -> list[MetadataCandidate]:
         result = []
         edition_keys = set()
 
         for isbn in expand_isbns(llm_candidate.isbns):
             edition = self.edition_by_isbn(isbn)
             if edition and edition.key not in edition_keys:
-                result.append(self.edition_to_metadata_candidate(edition))
+                result.append(self.edition_to_metadata_candidate(book_id, edition))
                 edition_keys.add(edition.key)
         # TODO: consider ISBN matches as precise enough and merge those with LLM result.
 
@@ -81,15 +83,18 @@ class OpenlibraryService(Service):
             for author in llm_candidate.authors:
                 edition = self.edition_by_title_author(llm_candidate.title, author)
                 if edition and edition.key not in edition_keys:
-                    result.append(self.edition_to_metadata_candidate(edition))
+                    result.append(self.edition_to_metadata_candidate(book_id, edition))
                     edition_keys.add(edition.key)
 
         return result
 
-    def edition_to_metadata_candidate(self, edition: Edition) -> MetadataCandidate:
+    def edition_to_metadata_candidate(self, book_id: uuid.UUID, edition: Edition) -> MetadataCandidate:
         cover_url = None
         if edition.covers and len(edition.covers) > 0:
-            cover_url = self.cover_url(edition.covers[0])
+            # TODO: Consider if I need to use other covers.
+            remote_cover_url = self.cover_url(edition.covers[0])
+            covers_prefix = f"{book_id}/images/covers"
+            cover_url = self.files_service.upload_remote_file(covers_prefix, remote_cover_url)
 
         authors = []
         if edition.authors:
