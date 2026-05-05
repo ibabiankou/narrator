@@ -175,12 +175,17 @@ class BookService(Service):
         LOG.info(f"Extracting metadata of the book {book_id}")
         pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
 
-        self._extract_and_store_images(book_id, pdf_bytes)
-
         first_pages = self._get_text(pdf_bytes, 0, 10, False)
         llm_metadata = identify_book(first_pages)
 
         llm_candidate = domain.MetadataCandidate(source="gemini", **llm_metadata.model_dump())
+
+        image_filenames = self._extract_and_store_images(book_id, pdf_bytes)
+        if len(image_filenames) > 0:
+            # Assume the first image is the book cover image.
+            thumbnail_path = self.files_service.create_thumbnail(book_id, image_filenames[0])
+            self.set_cover(book_id, thumbnail_path)
+            llm_candidate.cover = image_filenames[0]
 
         ol_candidates = self.openlibrary_service.search_matches(book_id, llm_candidate)
 
@@ -199,7 +204,9 @@ class BookService(Service):
         pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
         self._extract_and_store_images(book_id, pdf_bytes)
 
-    def _extract_and_store_images(self, book_id: uuid.UUID, pdf_bytes: BytesIO):
+    def _extract_and_store_images(self, book_id: uuid.UUID, pdf_bytes: BytesIO) -> list[str]:
+        """Extracts all images found in the given PDF file and uploads them to files_service.
+        Returns the list of uploaded file names."""
         LOG.info(f"Extracting images of the book {book_id}")
         pdf_bytes.seek(0)
 
@@ -207,9 +214,7 @@ class BookService(Service):
         for image in images:
             self.files_service.upload_file(image['file_name'], image['content'])
 
-        if len(images) > 0:
-            thumbnail_path = self.files_service.create_thumbnail(book_id, images[0]['file_name'])
-            self.set_cover(book_id, thumbnail_path)
+        return [image['file_name'] for image in images]
 
     def _extract_images(self, book_id: uuid.UUID, pdf_bytes: BytesIO):
         pdf_bytes.seek(0)
@@ -429,7 +434,7 @@ class BookService(Service):
         query_text = """select b.id
                         from books b
                         where b.status = :status
-                        order by b.created_time 
+                        order by b.created_time
                         limit 1
                      """
         book_id_maybe = self.db.execute(text(query_text), {"status": db.BookStatus.queued}).one_or_none()
@@ -458,7 +463,7 @@ class BookService(Service):
         """Update status if narration of a book is complete."""
         # select book_id, count of sections and count of finished audio tracks.
         query_text = """select b.id,
-                               (select count(*) from sections s where s.book_id = b.id) as section_count,
+                               (select count(*) from sections s where s.book_id = b.id)                            as section_count,
                                (select count(*) from audio_tracks t where t.book_id = b.id and t.status = 'ready') as ready_track_count
                         from books b
                         where b.status = 'narrating';
