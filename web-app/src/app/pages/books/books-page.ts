@@ -138,13 +138,13 @@ export class BooksPage implements OnInit {
       });
   }
 
-  @HostListener('dragover', ['$event'])
+  @HostListener('document:dragover', ['$event'])
   onDragOver(event: DragEvent) {
     event.preventDefault();
     event.stopPropagation();
   }
 
-  @HostListener('drop', ['$event'])
+  @HostListener('document:drop', ['$event'])
   onDrop(event: DragEvent) {
     event.preventDefault();
     event.stopPropagation();

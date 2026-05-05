@@ -16,6 +16,7 @@ import { BookOverview } from '../../components/book-overview/book-overview';
 import { MatDialog } from '@angular/material/dialog';
 import { BookDetailsDialog } from '../../components/book-details-dialog/book-details-dialog';
 import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
+import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-edit-metadata-page',
@@ -26,6 +27,7 @@ import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
     BookOverview,
     ActionButtonContentDirective,
     BookMenu,
+    SkeletonComponent,
   ],
   templateUrl: './edit-metadata-page.html',
   styleUrl: './edit-metadata-page.scss',
