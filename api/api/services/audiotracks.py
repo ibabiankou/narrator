@@ -69,6 +69,11 @@ class AudioTrackService(Service):
         stmt = select(db.AudioTrack).where(db.AudioTrack.id == track_id)
         return self.db.scalars(stmt).first()
 
+    @transactional
+    def get_track_by_section_id(self, section_id: int) -> Optional[db.AudioTrack]:
+        stmt = select(db.AudioTrack).where(db.AudioTrack.section_id == section_id)
+        return self.db.scalars(stmt).first()
+
     def synthesize_speech(self, book_id: uuid.UUID, section_id: int, track_id: int, phonemes: str, voice: str):
         dir_path = self.files_service.speech_filename(book_id)
         msg = rmq.SynthesizeSpeech(book_id=book_id, section_id=section_id, track_id=track_id,

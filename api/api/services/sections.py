@@ -104,7 +104,17 @@ class SectionService(Service):
         stmt = update(db.Section).returning(db.Section).where(db.Section.id == section_id).values(content=content)
         updated_section = self.db.execute(stmt).scalars().first()
         LOG.info("Updated section: \n%s", updated_section)
-        return self.audiotracks_service.generate_speech([updated_section]) if updated_section else []
+
+        if updated_section is None:
+            # Nothing was updated, so return empty list.
+            return []
+
+        track_maybe = self.audiotracks_service.get_track_by_section_id(section_id)
+        if track_maybe is None:
+            # Updated section has corresponding track, so trigger speech generation for updated content.
+            return []
+
+        return self.audiotracks_service.generate_speech([updated_section])
 
     async def generate_speech_maybe(self):
         while True:
