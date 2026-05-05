@@ -150,8 +150,6 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.settingsService.userPreferences$
       .pipe(take(1))
       .subscribe(preferences => {
-        // Passing through initial configurations;
-        this.setFontSizeStyle(preferences["text_size"]);
         this.audioPlayer.setPlaybackRate(preferences["playback_rate"]);
       });
     this.audioPlayer.$playbackRate.pipe(
@@ -385,16 +383,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   }
 
   protected setFontSizePx(px: number) {
-    this.setFontSizeStyle(px);
+    this.settingsService.setFontSizeStyle(px);
     this.settingsService.patchUserPreferences({text_size: px});
-  }
-
-  private setFontSizeStyle(px: number) {
-    const element = document.querySelector('app-view-book-page') as HTMLElement;
-    if (element) {
-      element.style.setProperty('--book-font-size', `${px}px`);
-    } else {
-      console.warn("Could not find app-view-book-page element");
-    }
   }
 }

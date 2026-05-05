@@ -31,6 +31,7 @@ import { RouterLink } from '@angular/router';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
+import { SettingsService } from '../../core/services/settings.service';
 
 @Component({
   selector: 'app-view-book-page',
@@ -54,6 +55,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 export class ViewBookPage implements AfterViewInit {
   private booksService = inject(BooksService);
   private titleService = inject(Title);
+  private settingsService = inject(SettingsService);
 
   bookId = input.required<string>();
 
@@ -85,6 +87,12 @@ export class ViewBookPage implements AfterViewInit {
     const bookWithContentSignal = toSignal(this.$bookWithContent);
     this.bookWithContent = computed(() => bookWithContentSignal()!);
     this.pages = computed(() => this.bookWithContent()?.pages);
+
+    this.settingsService.userPreferences$
+      .pipe(take(1))
+      .subscribe(preferences => {
+        this.settingsService.setFontSizeStyle(preferences["text_size"]);
+      });
 
     effect(() => {
       const pages = this.pages();

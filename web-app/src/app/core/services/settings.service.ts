@@ -69,4 +69,13 @@ export class SettingsService {
       })
     );
   }
+
+  setFontSizeStyle(px: number) {
+    const element = document.querySelector('app-view-book-page') as HTMLElement;
+    if (element) {
+      element.style.setProperty('--book-font-size', `${px}px`);
+    } else {
+      console.warn("Could not find app-view-book-page element");
+    }
+  }
 }
