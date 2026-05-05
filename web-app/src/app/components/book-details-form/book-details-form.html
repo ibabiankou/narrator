@@ -81,6 +81,13 @@
 
       </mat-card-content>
       <mat-card-actions>
+        @if (title()) {
+          <a matButton [href]="goodreadsUrl()" target="_blank">
+            Search on Goodreads
+            <mat-icon iconPositionEnd>open_in_new</mat-icon>
+          </a>
+        }
+        <span class="spacer"></span>
         <button matButton (click)="emitReviewedMetadata()">Continue</button>
       </mat-card-actions>
     </mat-card>

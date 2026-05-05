@@ -169,4 +169,15 @@ export class BookDetailsForm {
       this.description.set(description);
     }
   }
+
+  protected goodreadsUrl() {
+    var query = "";
+    if (this.title()) {
+      query += this.title() + " ";
+    }
+    if (this.authors().length > 0) {
+      query += this.authors().join(" ");
+    }
+    return `https://www.goodreads.com/search?q=${query}`;
+  }
 }
