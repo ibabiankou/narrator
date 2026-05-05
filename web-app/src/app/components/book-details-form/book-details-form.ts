@@ -137,6 +137,7 @@ export class BookDetailsForm {
 
   protected emitReviewedMetadata() {
     const metadata: BookMetadata = {
+      cover: this.cover(),
       title: this.title(),
       series: this.series(),
       description: this.description(),
