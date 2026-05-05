@@ -5,6 +5,7 @@ import uuid
 from typing import Annotated
 
 from sqlalchemy import delete, update, select, text
+from sqlalchemy.exc import NoResultFound
 
 from api.models import db, api
 from api.services.audiotracks import AudioTrackServiceDep
@@ -107,7 +108,7 @@ class SectionService(Service):
 
         if updated_section is None:
             # Nothing was updated, so return empty list.
-            return []
+            raise NoResultFound()
 
         track_maybe = self.audiotracks_service.get_track_by_section_id(section_id)
         if track_maybe is None:

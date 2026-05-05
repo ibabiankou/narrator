@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy.exc import NoResultFound
 
 from api.models import api
 from api.models.auth import UserDep
@@ -20,7 +21,9 @@ def update_section(section_id: int,
     if not section_service.is_owner(user.id, section_id) and not user.has_any_role(["admin"]):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    if not section_service.set_content(section_id, api_section.content):
+    try:
+        section_service.set_content(section_id, api_section.content)
+    except NoResultFound:
         raise HTTPException(status_code=404, detail="Section not found")
 
 
