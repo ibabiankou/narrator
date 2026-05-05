@@ -92,3 +92,15 @@ a {
 .error-snackbar .mat-mdc-snackbar-surface {
   background-color: #ffc5c1 !important;
 }
+
+.message-snackbar .mat-mdc-snackbar-surface {
+  background-color: #d7e3ff !important;
+}
+
+.mat-mdc-snackbar-surface {
+  color: #2f3033 !important;
+
+  .mdc-button {
+    color: #005cbb !important;
+  }
+}

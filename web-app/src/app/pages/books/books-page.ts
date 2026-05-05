@@ -125,10 +125,14 @@ export class BooksPage implements OnInit {
       this.notificationService.showError("Selected file is too large. Maximum size is 15MB.");
       return;
     }
+    this.notificationService.showMessage(`Uploading '${file.name}'...`);
 
     return this.bookService.uploadBook(file)
       .subscribe({
         next: bookDetails => {
+          this.notificationService.showMessage(
+            "Processing the book. It might take a few seconds. Be patient...",
+            10_000);
           this.router.navigate(['/books', bookDetails.id, 'edit-details']);
         },
         error: err => {
