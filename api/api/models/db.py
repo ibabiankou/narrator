@@ -1,11 +1,10 @@
 import datetime
 import uuid
 from enum import StrEnum
-from functools import total_ordering
 from typing import Optional, Type, List
 
 from pydantic import BaseModel
-from sqlalchemy import ForeignKey, TypeDecorator, String
+from sqlalchemy import ForeignKey, TypeDecorator, String, Enum
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -40,7 +39,6 @@ class PydanticType(TypeDecorator):
         return self.pydantic_type.model_validate(value)
 
 
-@total_ordering
 class BookStatus(StrEnum):
     # Just uploaded book is going through initial processing.
     processing = "processing"
@@ -69,6 +67,21 @@ class BookStatus(StrEnum):
             return self._get_rank() < other._get_rank()
         return NotImplemented
 
+    def __le__(self, other):
+        if self.__class__ is other.__class__:
+            return self._get_rank() <= other._get_rank()
+        return NotImplemented
+
+    def __gt__(self, other):
+        if self.__class__ is other.__class__:
+            return self._get_rank() > other._get_rank()
+        return NotImplemented
+
+    def __ge__(self, other):
+        if self.__class__ is other.__class__:
+            return self._get_rank() >= other._get_rank()
+        return NotImplemented
+
 
 class Book(Base):
     __tablename__ = "books"
@@ -78,7 +91,7 @@ class Book(Base):
     file_name: Mapped[str]
     number_of_pages: Mapped[Optional[int]]
     created_time: Mapped[datetime.datetime]
-    status: Mapped[str]
+    status: Mapped[BookStatus] = mapped_column(Enum(BookStatus, native_enum=False, values_callable=lambda x: [e.value for e in x]))
 
     cover: Mapped[Optional[str]]
     title: Mapped[Optional[str]]

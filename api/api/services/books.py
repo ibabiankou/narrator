@@ -8,7 +8,6 @@ from io import BytesIO
 from typing import Annotated
 
 import pymupdf
-from PIL.ImageOps import cover
 from fastapi import BackgroundTasks
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import update, text, select
@@ -308,9 +307,10 @@ class BookService(Service):
         book = self.db.get_one(db.Book, book_id)
 
         cover_thumbnail = book.cover
-        if metadata.cover is not None:
+        if metadata.cover is not None and book.cover != metadata.cover:
             cover_thumbnail = self.files_service.create_thumbnail(book_id, metadata.cover)
 
+        # Don't change status back to ready_for_content_review.
         status = book.status if book.status > db.BookStatus.ready_for_metadata_review else db.BookStatus.ready_for_content_review
         stmt = (
             update(db.Book).where(db.Book.id == book_id)
