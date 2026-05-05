@@ -7,6 +7,7 @@ import {
   inject,
   input,
   model,
+  OnInit,
   QueryList,
   Signal,
   ViewChildren
@@ -52,7 +53,7 @@ import { SettingsService } from '../../core/services/settings.service';
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
 })
-export class ViewBookPage implements AfterViewInit {
+export class ViewBookPage implements OnInit, AfterViewInit {
   private booksService = inject(BooksService);
   private titleService = inject(Title);
   private settingsService = inject(SettingsService);
@@ -87,12 +88,6 @@ export class ViewBookPage implements AfterViewInit {
     const bookWithContentSignal = toSignal(this.$bookWithContent);
     this.bookWithContent = computed(() => bookWithContentSignal()!);
     this.pages = computed(() => this.bookWithContent()?.pages);
-
-    this.settingsService.userPreferences$
-      .pipe(take(1))
-      .subscribe(preferences => {
-        this.settingsService.setFontSizeStyle(preferences["text_size"]);
-      });
 
     effect(() => {
       const pages = this.pages();
@@ -148,6 +143,14 @@ export class ViewBookPage implements AfterViewInit {
           })
         );
     });
+  }
+
+  ngOnInit() {
+    this.settingsService.userPreferences$
+      .pipe(take(1))
+      .subscribe(preferences => {
+        this.settingsService.setFontSizeStyle(preferences["text_size"]);
+      });
   }
 
   ngAfterViewInit() {
