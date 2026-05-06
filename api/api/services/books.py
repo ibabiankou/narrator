@@ -12,6 +12,7 @@ from fastapi import BackgroundTasks
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import update, text, select
 from sqlalchemy.sql.functions import count
+from tenacity import retry, stop_after_attempt, wait_exponential, wait_random
 
 from api.models import api, db, domain
 from api.openlibrary.service import OpenlibraryServiceDep
@@ -168,6 +169,10 @@ class BookService(Service):
     def _set_candidates(self, book_id: uuid.UUID, metadata_candidates: domain.MetadataCandidates):
         self.db.execute(update(db.Book).where(db.Book.id == book_id).values(metadata_candidates=metadata_candidates))
 
+    @retry(
+        wait=wait_exponential(multiplier=2, min=1, max=10) + wait_random(0, 5),
+        stop=stop_after_attempt(3)
+    )
     @transactional
     def extract_metadata(self, book_id: uuid.UUID, book_file_name: str, update_metadata: bool = True,
                          update_status: bool = True):
@@ -176,25 +181,29 @@ class BookService(Service):
 
         first_pages = self._get_text(pdf_bytes, 0, 10, False)
         llm_metadata = identify_book(first_pages)
+        if llm_metadata is None:
+            LOG.error("Failed to extract metadata from the book text, skipping other sources.")
+        else:
+            llm_candidate = domain.MetadataCandidate(source="gemini", **llm_metadata.model_dump())
 
-        llm_candidate = domain.MetadataCandidate(source="gemini", **llm_metadata.model_dump())
+            image_filenames = self._extract_and_store_images(book_id, pdf_bytes)
+            if len(image_filenames) > 0:
+                # Assume the first image is the book cover image.
+                thumbnail_path = self.files_service.create_thumbnail(book_id, image_filenames[0])
+                self.set_cover(book_id, thumbnail_path)
+                llm_candidate.cover = image_filenames[0]
 
-        image_filenames = self._extract_and_store_images(book_id, pdf_bytes)
-        if len(image_filenames) > 0:
-            # Assume the first image is the book cover image.
-            thumbnail_path = self.files_service.create_thumbnail(book_id, image_filenames[0])
-            self.set_cover(book_id, thumbnail_path)
-            llm_candidate.cover = image_filenames[0]
+            ol_candidates = self.openlibrary_service.search_matches(book_id, llm_candidate)
 
-        ol_candidates = self.openlibrary_service.search_matches(book_id, llm_candidate)
+            all_candidates = [llm_candidate] + ol_candidates
+            metadata_candidates = domain.MetadataCandidates(candidates=all_candidates, preferred_index=0,
+                                                            selected_index=None)
 
-        all_candidates = [llm_candidate] + ol_candidates
-        metadata_candidates = domain.MetadataCandidates(candidates=all_candidates, preferred_index=0,
-                                                        selected_index=None)
+            self._set_candidates(book_id, metadata_candidates)
 
-        self._set_candidates(book_id, metadata_candidates)
-        if update_metadata:
-            self.update_metadata(book_id, llm_metadata)
+            if update_metadata:
+                self.update_metadata(book_id, llm_metadata)
+
         if update_status:
             self._set_status(book_id, db.BookStatus.ready_for_metadata_review)
 
