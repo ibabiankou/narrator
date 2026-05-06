@@ -13,6 +13,8 @@ FROM python:3.13-slim AS final
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y media-types && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /app/requirements.txt .
 COPY api/log_conf.yaml .
 COPY common-lib ./common-lib

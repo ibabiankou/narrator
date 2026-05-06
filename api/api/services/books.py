@@ -186,6 +186,7 @@ class BookService(Service):
         else:
             llm_candidate = domain.MetadataCandidate(source="gemini", **llm_metadata.model_dump())
 
+            # TODO: Consider moving cover extraction outside this method.
             image_filenames = self._extract_and_store_images(book_id, pdf_bytes)
             if len(image_filenames) > 0:
                 # Assume the first image is the book cover image.
