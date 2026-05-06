@@ -1,6 +1,6 @@
 import { Component, effect, inject, input, model, output, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
+import { MatChipEditedEvent, MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatInputModule } from '@angular/material/input';
 import { MatIcon } from '@angular/material/icon';
 import { BookMetadata } from '../../core/models/books.dto';
@@ -68,9 +68,9 @@ export class BookDetailsForm {
     });
   }
 
-  protected addAuthor($event: MatChipInputEvent) {
-    this.doAddAuthor($event.value.trim());
-    $event.chipInput!.clear();
+  protected addAuthor(event: MatChipInputEvent) {
+    this.doAddAuthor(event.value.trim());
+    event.chipInput!.clear();
   }
 
   private doAddAuthor(author: string) {
@@ -78,6 +78,25 @@ export class BookDetailsForm {
       if (this.authors().includes(author)) return;
       this.authors.set([...this.authors(), author]);
     }
+  }
+
+  protected editAuthor(author: string, event: MatChipEditedEvent) {
+    const value = event.value.trim();
+
+    if (!value) {
+      this.removeAuthor(author);
+      return;
+    }
+
+    // Edit existing fruit inplace. Avoid removing and adding because the chip will jump to the end.
+    this.authors.update(authors => {
+      const index = authors.indexOf(author);
+      if (index >= 0) {
+        authors[index] = value;
+        return [...authors];
+      }
+      return authors;
+    });
   }
 
   protected removeAuthor(author: string) {

@@ -40,7 +40,10 @@
           <mat-label>Authors</mat-label>
           <mat-chip-grid #authorsChipGrid>
             @for (author of authors(); track author) {
-              <mat-chip-row (removed)="removeAuthor(author)">
+              <mat-chip-row (removed)="removeAuthor(author)"
+                            [editable]="true"
+                            (edited)="editAuthor(author, $event)"
+              >
                 {{ author }}
                 <button matChipRemove>
                   <mat-icon>cancel</mat-icon>
