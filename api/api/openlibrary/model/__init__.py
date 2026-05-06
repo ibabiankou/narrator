@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel, ConfigDict
 
@@ -49,9 +49,14 @@ class Edition(BaseModel):
     title: str
 
     series: Optional[list[str]] = None
-    description: Optional[TextBlock] = None
+    description: Optional[Union[TextBlock, str]] = None
 
     covers: Optional[list[int]] = None
     authors: Optional[list[Reference]] = None
     isbn_10: Optional[list[str]] = None
     isbn_13: Optional[list[str]] = None
+
+    def get_description(self) -> Optional[str]:
+        if isinstance(self.description, TextBlock):
+            return self.description.value
+        return self.description

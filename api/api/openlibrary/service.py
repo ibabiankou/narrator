@@ -2,6 +2,7 @@ import logging
 import uuid
 from typing import Annotated, Optional
 
+from pydantic import ValidationError
 from sqlalchemy import text
 
 from api.models.domain import BookMetadata, MetadataCandidate
@@ -22,7 +23,7 @@ class OpenlibraryService(Service):
     @transactional
     def edition_by_isbn(self, isbn: str) -> Optional[Edition]:
         query = text("""
-                     select e.data
+                     select e.data, e.key
                      from edition_isbns ei
                               join editions e on e.key = ei.edition_key
                      where ei.isbn = :isbn
@@ -30,12 +31,17 @@ class OpenlibraryService(Service):
         result = self.db.execute(query, {"isbn": isbn}).fetchone()
         if result is None:
             return None
-        return Edition.model_validate(result[0])
+        try:
+            return Edition.model_validate(result[0])
+        except ValidationError as e:
+            edition_key = result[1]
+            LOG.error("Error loading edition %s by ISBN %s.", edition_key, isbn, exc_info=e)
+            return None
 
     @transactional
     def edition_by_title_author(self, title: str, author: str) -> Optional[Edition]:
         query = text("""
-                     select e.data
+                     select e.data, e.key
                      from editions e
                               join works w
                                    on w.key = e.work_key
@@ -49,7 +55,12 @@ class OpenlibraryService(Service):
         result = self.db.execute(query, {"title": title, "author": author}).fetchone()
         if result is None:
             return None
-        return Edition.model_validate(result[0])
+        try:
+            return Edition.model_validate(result[0])
+        except ValidationError as e:
+            edition_key = result[1]
+            LOG.error("Error loading edition %s by title '%s' and author '%s'.", edition_key, title, author, exc_info=e)
+            return None
 
     @transactional
     def autor_by_key(self, key: str) -> Optional[Author]:
@@ -61,7 +72,11 @@ class OpenlibraryService(Service):
         result = self.db.execute(query, {"key": key}).fetchone()
         if result is None:
             return None
-        return Author.model_validate(result[0])
+        try:
+            return Author.model_validate(result[0])
+        except ValidationError as e:
+            LOG.error("Error loading author %s.", key, exc_info=e)
+            return None
 
     def cover_url(self, id: int) -> str:
         return f"https://covers.openlibrary.org/b/id/{id}.jpg"
@@ -112,7 +127,7 @@ class OpenlibraryService(Service):
                                  cover=cover_url,
                                  title=edition.title,
                                  series=", ".join(edition.series or []),
-                                 description=edition.description.value if edition.description else None,
+                                 description=edition.get_description(),
                                  authors=authors,
                                  isbns=valid_isbns)
 
