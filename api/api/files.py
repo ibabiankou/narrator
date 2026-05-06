@@ -35,12 +35,9 @@ def get_file(key: str,
     else:
         range_request = ""
 
-    try:
-        if range_request:
-            LOG.info("Processing range: %s", range_request)
-        file_data = file_service._get_object(key, if_none_match, range_request)
-    except NotModified:
-        return Response(status_code=304)
+    if range_request:
+        LOG.info("Processing range: %s", range_request)
+    file_data = file_service._get_object(key, if_none_match, range_request)
 
     if file_data is None:
         raise HTTPException(status_code=404, detail="File not found")

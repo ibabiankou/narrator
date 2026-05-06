@@ -1,6 +1,7 @@
 import { ConnectionService } from './connection.service';
 import { catchError, firstValueFrom, forkJoin, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { fromPromise } from 'rxjs/internal/observable/innerFrom';
+import { HttpErrorResponse } from '@angular/common/http';
 
 // TODO: Limit number of sync attempts.
 interface Entry<T> {
@@ -12,7 +13,7 @@ interface Entry<T> {
 /**
  * A function that loads an entry to be cached from its source (typically backend).
  */
-type EntryLoader<T> = (key: string) => Observable<T>;
+type EntryLoader<T> = (key: string, cachedValue: T | undefined) => Observable<T>;
 
 /**
  * A function that writes(syncs) an entry back to its source (typically backend).
@@ -117,12 +118,23 @@ export class IndexDBCache<T> {
       return fromPromise(this._get(key)).pipe(map(v => v?.value));
     }
 
-    return this.load(key).pipe(
-      tap((val) => this._set({key: key, value: val, syncWhenOnline: false})),
-      catchError((error) => {
-        console.warn("Loader has failed, falling back to cache:", error);
-        return fromPromise(this._get(key)).pipe(map(v => v?.value));
-      }));
+    return fromPromise(this._get(key))
+      .pipe(
+        switchMap(entry => {
+          if (this.isOnline) {
+            return this.load(key, entry?.value).pipe(
+              tap((val) => this._set({key: key, value: val, syncWhenOnline: false})),
+              catchError((error) => {
+                if (error instanceof HttpErrorResponse && error.status != 304) {
+                  console.warn("Loader has failed, falling back to cache:", error);
+                }
+                return of(entry?.value)
+              }));
+          } else {
+            return of(entry?.value);
+          }
+        }),
+      );
   }
 
   async getAllEntries(): Promise<Entry<T>[]> {

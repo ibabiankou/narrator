@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { map, Observable, switchMap } from 'rxjs';
 import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
@@ -25,15 +25,20 @@ export class FilesService {
     this.cache = new IndexDBCache(
       this.connectionService,
       "files",
-      key => this.loadFileData(key),
+      (key, cachedData) => this.loadFileData(key, cachedData),
     );
   }
 
   /**
    * Loads file data from API.
    */
-  private loadFileData(url: string): Observable<FileData> {
-    return this.http.get(url, {observe: 'response', responseType: 'blob'}).pipe(
+  private loadFileData(url: string, cachedData: FileData | undefined): Observable<FileData> {
+    let headers = new HttpHeaders();
+    if (cachedData && "etag" in cachedData.headers) {
+      headers = headers.append("If-None-Match", cachedData.headers["etag"]);
+    }
+
+    return this.http.get(url, {headers: headers, observe: 'response', responseType: 'blob'}).pipe(
       switchMap(async (response) => {
         if (!response.body) {
           throw new Error('Response body is null');

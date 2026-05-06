@@ -9,6 +9,7 @@ from typing import Annotated, Optional, List
 import boto3
 import requests
 from botocore.exceptions import ClientError
+from fastapi import HTTPException
 
 from api.utils.images import create_thumbnail
 from common_lib.service import Service
@@ -24,8 +25,9 @@ class FileData:
     range: Optional[str]
 
 
-class NotModified(Exception):
-    pass
+class NotModified(HTTPException):
+    def __init__(self):
+        super().__init__(status_code=304)
 
 
 class FilesService(Service):
