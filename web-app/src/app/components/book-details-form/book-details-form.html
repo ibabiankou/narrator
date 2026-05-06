@@ -1,10 +1,17 @@
 <div class="metadata-container">
-  <div class="cover-wrapper">
-    @if (cover()) {
-      <img [src]="`/api/files/${ cover() }` | fileAsBlob | async " alt="{{ title() }}">
-    } @else {
-      <img src="covers/blue.png" alt="{{ title() }}">
-    }
+  <div class="cover-column">
+    <div class="cover-wrapper">
+      @if (cover()) {
+        <img [src]="`/api/files/${ cover() }${refreshTrigger()}` | fileAsBlob | async " alt="{{ title() }}">
+      } @else {
+        <div class="no-cover">
+          <p>Cover is missing.</p>
+        </div>
+      }
+      <button mat-mini-fab color="primary" class="add-cover-btn" (click)="selectCover()">
+        <mat-icon>upload</mat-icon>
+      </button>
+    </div>
   </div>
 
   <div class="form-wrapper">

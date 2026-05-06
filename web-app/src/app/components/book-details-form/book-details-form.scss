@@ -3,15 +3,36 @@
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 
-  .cover-wrapper {
+  .cover-column {
     display: flex;
     justify-content: center;
     align-items: center;
 
-    img {
-      width: 80%;
+    .cover-wrapper {
+      width: 400px;
       aspect-ratio: 3 / 4;
-      object-fit: contain;
+      position: relative;
+
+      img {
+        width: 100%;
+        object-fit: contain;
+      }
+
+      .add-cover-btn {
+        position: absolute;
+        bottom: -12px;
+        right: -12px;
+        z-index: 1;
+      }
+
+      .no-cover {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 8px;
+        aspect-ratio: 2 / 3;
+        background-color: var(--mat-sys-surface-container-low);
+      }
     }
   }
 

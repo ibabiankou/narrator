@@ -38,7 +38,7 @@ def upload_book_cover(book_id: uuid.UUID,
                       file: UploadFile,
                       user: UserDep,
                       book_service: BookServiceDep,
-                      file_service: FilesServiceDep):
+                      file_service: FilesServiceDep) -> str:
     if file.size and file.size > 5 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large. The limit is 5MB.")
 
@@ -55,6 +55,7 @@ def upload_book_cover(book_id: uuid.UUID,
     thumbnail_path = file_service.create_thumbnail(book_id, file_bytes=file_bytes)
 
     book_service.set_cover(book_id, thumbnail_path)
+    return thumbnail_path
 
 
 @metadata_router.get("/review")

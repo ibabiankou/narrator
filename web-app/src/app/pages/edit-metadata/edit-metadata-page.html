@@ -12,6 +12,7 @@
 <div class="main-container">
   @defer (when metadata()) {
     <app-book-details-form #detailsForm
+                           [bookId]="bookId()"
                            [bookMetadata]="metadata()!"
                            (reviewedMetadata)="submitReviewMetadata($event)"
     ></app-book-details-form>

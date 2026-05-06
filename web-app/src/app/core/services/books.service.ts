@@ -116,4 +116,10 @@ export class BooksService {
   enqueue(bookId: string) {
     return this.http.post<any>(`${this.apiUrl}/${bookId}/enqueue`, null);
   }
+
+  uploadCover(bookId: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<string>(`${this.apiUrl}/${bookId}/metadata/upload-cover`, formData);
+  }
 }

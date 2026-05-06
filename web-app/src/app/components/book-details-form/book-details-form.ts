@@ -1,4 +1,4 @@
-import { Component, effect, input, model, output } from '@angular/core';
+import { Component, effect, inject, input, model, output, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatInputModule } from '@angular/material/input';
@@ -9,6 +9,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { AbstractControl, FormControl, FormsModule, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import { AsyncPipe } from '@angular/common';
 import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
+import { NotificationService } from '../../core/services/notificationService';
+import { BooksService } from '../../core/services/books.service';
 
 
 function cleanIsbn(value: string): string {
@@ -34,7 +36,10 @@ function cleanIsbn(value: string): string {
   styleUrl: './book-details-form.scss',
 })
 export class BookDetailsForm {
+  private bookService = inject(BooksService);
+  private notificationService = inject(NotificationService);
 
+  readonly bookId = input.required<string>();
   readonly bookMetadata = input.required<BookMetadata>();
   reviewedMetadata = output<BookMetadata>();
 
@@ -44,6 +49,8 @@ export class BookDetailsForm {
   protected description = model<string>();
   protected authors = model<string[]>([]);
   protected isbns = model<string[]>([]);
+
+  protected refreshTrigger = signal("");
 
   readonly isbnControl = new FormControl<string>("", this.validateIsbnFormat);
 
@@ -179,5 +186,43 @@ export class BookDetailsForm {
       query += this.authors().join(" ");
     }
     return `https://www.goodreads.com/search?q=${query}`;
+  }
+
+  protected async selectCover() {
+    const pickerOptions = {
+      startIn: "downloads",
+      types: [
+        {
+          description: "Images",
+          accept: {
+            "image/jpg": [".jpg", ".jpeg"],
+            "image/png": [".png"],
+            "image/webp": [".webp"],
+          },
+        },
+      ],
+      excludeAcceptAllOption: true,
+      multiple: false,
+    };
+    const [fileHandle]: FileSystemFileHandle[] = await (window as any).showOpenFilePicker(pickerOptions);
+    const file = await fileHandle.getFile();
+    this.uploadCover(file);
+  }
+
+  private uploadCover(file: File) {
+    if (file.size > 5 * 1024 * 1024) {
+      this.notificationService.showError("Selected file is too large. Maximum size is 5MB.");
+      return;
+    }
+    this.notificationService.showMessage(`Uploading '${file.name}'...`);
+
+    return this.bookService.uploadCover(this.bookId(), file)
+      .subscribe({
+        next: coverPath => {
+          this.notificationService.dismiss();
+          this.cover.set(coverPath);
+          this.refreshTrigger.set(`#v${Date.now()}`);
+        }
+      });
   }
 }
