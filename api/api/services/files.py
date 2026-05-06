@@ -51,9 +51,20 @@ class FilesService(Service):
             LOG.info(f"Uploading {remote_path}")
             self.upload_file(remote_path, page["content"])
 
-    def create_thumbnail(self, book_id: uuid.UUID, image_key: str) -> str:
-        file_data = self._get_object(image_key)
-        thumbnail_buffer = create_thumbnail(BytesIO(file_data.body))
+    def create_thumbnail(self, book_id: uuid.UUID, image_key: str = None, file_bytes: BytesIO = None) -> str:
+        if image_key is None and file_bytes is None:
+            raise ValueError("Either image_key or image_bytes must be provided")
+        if image_key is not None and file_bytes is not None:
+            raise ValueError("Only one of image_key or image_bytes can be provided")
+
+        image_bytes = file_bytes
+        if image_key:
+            file_data = self._get_object(image_key)
+            if file_data is None:
+                raise ValueError(f"File {image_key} not found")
+            image_bytes = BytesIO(file_data.body)
+
+        thumbnail_buffer = create_thumbnail(image_bytes)
         thumbnail_path = f"{book_id}/images/cover.webp"
         self.upload_file(thumbnail_path, thumbnail_buffer)
         return thumbnail_path
