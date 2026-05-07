@@ -1,4 +1,5 @@
 import logging
+import os
 import uuid
 from typing import Annotated, Optional
 
@@ -8,6 +9,7 @@ from sqlalchemy import text
 from api.models.domain import BookMetadata, MetadataCandidate
 from api.openlibrary.model import Author, Edition
 from api.services.files import FilesServiceDep
+from api.utils.imgproxy import ImgProxy
 from api.utils.isbn import validate_isbn, expand_isbns
 from common_lib.db import transactional
 from common_lib.service import Service
@@ -19,6 +21,9 @@ LOG = logging.getLogger(__name__)
 class OpenlibraryService(Service):
     def __init__(self, files_service: FilesServiceDep, **kwargs):
         self.files_service = files_service
+
+        self.img_proxy = ImgProxy()
+
 
     @transactional
     def edition_by_isbn(self, isbn: str) -> Optional[Edition]:
@@ -109,7 +114,8 @@ class OpenlibraryService(Service):
             # TODO: Consider if I need to use other covers.
             remote_cover_url = self.cover_url(edition.covers[0])
             covers_prefix = f"{book_id}/images/covers"
-            cover_url = self.files_service.upload_remote_file(covers_prefix, remote_cover_url)
+            cover_path = self.files_service.upload_remote_file(covers_prefix, remote_cover_url)
+            cover_url = self.img_proxy.build_url(cover_path)
 
         authors = []
         if edition.authors:

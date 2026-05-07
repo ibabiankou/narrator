@@ -2,7 +2,7 @@
   <div class="cover-column">
     <div class="cover-wrapper">
       @if (cover()) {
-        <img [src]="`/api/files/${ cover() }${refreshTrigger()}` | fileAsBlob | async " alt="{{ title() }}">
+        <img ngSrc="{{cover()}}" fill alt="{{ title() }}">
       } @else {
         <div class="no-cover">
           <p>Cover is missing.</p>

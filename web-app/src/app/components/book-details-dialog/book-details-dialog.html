@@ -3,11 +3,7 @@
     <div class="cover-column">
       <div class="cover-wrapper">
         @if (hasCover()) {
-          @if (isCoverInternal()) {
-            <img [src]="`/api/files/${ bookMetadata.cover }` | fileAsBlob | async " alt="cover"/>
-          } @else {
-            <img [src]="bookMetadata.cover" alt="cover"/>
-          }
+          <img ngSrc="{{bookMetadata.cover}}" fill alt="cover"/>
           <button mat-mini-fab color="primary" class="add-cover-btn" (click)="addField('cover')">
             <mat-icon>content_copy</mat-icon>
           </button>

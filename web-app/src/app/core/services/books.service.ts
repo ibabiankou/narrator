@@ -102,7 +102,7 @@ export class BooksService {
   uploadBook(file: File) {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.post<BookOverview>(`${this.apiUrl}/add-book`, formData);
+    return this.http.post<BookOverview>(`${this.apiUrl}/`, formData);
   }
 
   getBookMetadataForReview(bookId: string) {

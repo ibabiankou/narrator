@@ -29,9 +29,9 @@
           <a [routerLink]="bookLink(book)">
             <div class="cover-wrapper">
               @if (book.cover) {
-                <img [src]="`/api/files/${ book.cover }` | fileAsBlob | async " alt="{{ book.title }}">
+                <img ngSrc="{{book.cover}}" fill alt="{{ book.title }}" >
               } @else {
-                <img src="covers/{{$index % 2 === 0 ? 'blue' : 'red'}}.png" alt="{{ book.title }}">
+                <img ngSrc="covers/{{$index % 2 === 0 ? 'blue' : 'red'}}.png" fill alt="{{ book.title }}">
               }
             </div>
             <h3 class="book-title">{{ book.title }}</h3>

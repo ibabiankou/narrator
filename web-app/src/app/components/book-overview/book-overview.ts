@@ -6,8 +6,7 @@ import { BookMetadata } from '../../core/models/books.dto';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
-import { AsyncPipe } from '@angular/common';
+import { NgOptimizedImage } from '@angular/common';
 
 
 @Component({
@@ -20,8 +19,7 @@ import { AsyncPipe } from '@angular/common';
     MatInputModule,
     ReactiveFormsModule,
     FormsModule,
-    FileAsBlobPipe,
-    AsyncPipe
+    NgOptimizedImage
   ],
   templateUrl: './book-overview.html',
   styleUrl: './book-overview.scss',
@@ -54,10 +52,4 @@ export class BookOverview {
   protected hasCover() {
     return this.bookMetadata().cover != undefined && this.bookMetadata().cover!.length > 0;
   }
-
-  protected isCoverInternal() {
-    const externalUrl = this.bookMetadata().cover?.startsWith("http");
-    return this.hasCover() && !externalUrl;
-  }
-
 }

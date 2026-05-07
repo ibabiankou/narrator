@@ -18,15 +18,15 @@ LOG = logging.getLogger(__name__)
 books_router = APIRouter(tags=["Books API"])
 
 
-@books_router.post("/add-book")
-def create_book_v2(file: UploadFile,
-                   user: UserDep,
-                   book_service: BookServiceDep,
-                   background_tasks: BackgroundTasks) -> api.BookOverview:
+@books_router.post("/")
+def create_book(file: UploadFile,
+                user: UserDep,
+                book_service: BookServiceDep,
+                background_tasks: BackgroundTasks) -> api.BookOverview:
     if file.size > 15 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large")
 
-    return book_service.create_book_v2(user.id, file.filename, BytesIO(file.file.read()), background_tasks)
+    return book_service.create_book(user.id, file.filename, BytesIO(file.file.read()), background_tasks)
 
 
 @books_router.get("/")

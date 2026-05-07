@@ -20,6 +20,7 @@ from api.services.experimental import identify_book
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
 from api.services.sections import SectionServiceDep
+from api.utils.imgproxy import ImgProxy
 from api.utils.text import LineReader, CleanupPipeline, pages_to_paragraphs, \
     paragraphs_to_sections
 from common_lib.db import transactional
@@ -43,9 +44,11 @@ class BookService(Service):
         self.playback_progress_service = playback_progress_service
         self.openlibrary_service = openlibrary_service
 
+        self.img_proxy = ImgProxy()
+
     @transactional
-    def create_book_v2(self, user_id: uuid.UUID, file_name: str, file_bytes: BytesIO,
-                       background_tasks: BackgroundTasks):
+    def create_book(self, user_id: uuid.UUID, file_name: str, file_bytes: BytesIO,
+                    background_tasks: BackgroundTasks):
         # TODO: Validate language. Fail book creation if language is not supported.
 
         book_id = uuid.uuid4()
@@ -190,9 +193,9 @@ class BookService(Service):
             image_filenames = self._extract_and_store_images(book_id, pdf_bytes)
             if len(image_filenames) > 0:
                 # Assume the first image is the book cover image.
-                thumbnail_path = self.files_service.create_thumbnail(book_id, image_filenames[0])
+                thumbnail_path = self.img_proxy.build_url(image_filenames[0])
                 self.set_cover(book_id, thumbnail_path)
-                llm_candidate.cover = image_filenames[0]
+                llm_candidate.cover = thumbnail_path
 
             ol_candidates = self.openlibrary_service.search_matches(book_id, llm_candidate)
 
@@ -318,7 +321,10 @@ class BookService(Service):
 
         cover_thumbnail = book.cover
         if metadata.cover is not None and book.cover != metadata.cover:
-            cover_thumbnail = self.files_service.create_thumbnail(book_id, metadata.cover)
+            if self.img_proxy.is_img_proxy_url(metadata.cover):
+                cover_thumbnail = metadata.cover
+            else:
+                cover_thumbnail = self.img_proxy.build_url(metadata.cover)
 
         # Don't change status back to ready_for_content_review.
         status = book.status if book.status > db.BookStatus.ready_for_metadata_review else db.BookStatus.ready_for_content_review
@@ -474,7 +480,10 @@ class BookService(Service):
         # select book_id, count of sections and count of finished audio tracks.
         query_text = """select b.id,
                                (select count(*) from sections s where s.book_id = b.id)                            as section_count,
-                               (select count(*) from audio_tracks t where t.book_id = b.id and t.status = 'ready') as ready_track_count
+                               (select count(*)
+                                from audio_tracks t
+                                where t.book_id = b.id
+                                  and t.status = 'ready')                                                          as ready_track_count
                         from books b
                         where b.status = 'narrating';
                      """

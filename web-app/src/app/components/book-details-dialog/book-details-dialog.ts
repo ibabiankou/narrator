@@ -3,7 +3,7 @@ import { BookMetadata } from '../../core/models/books.dto';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogActions, MatDialogClose, MatDialogContent } from '@angular/material/dialog';
 import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, NgOptimizedImage } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatLabel } from '@angular/material/input';
 
@@ -19,7 +19,8 @@ import { MatLabel } from '@angular/material/input';
     MatDialogClose,
     MatDialogContent,
     MatIconModule,
-    MatLabel
+    MatLabel,
+    NgOptimizedImage
   ],
   templateUrl: './book-details-dialog.html',
   styleUrl: './book-details-dialog.scss',
@@ -32,11 +33,6 @@ export class BookDetailsDialog {
 
   protected hasCover() {
     return this.bookMetadata.cover != undefined && this.bookMetadata.cover!.length > 0;
-  }
-
-  protected isCoverInternal() {
-    const externalUrl = this.bookMetadata.cover?.startsWith("http");
-    return this.hasCover() && !externalUrl;
   }
 
   protected addField(field: keyof BookMetadata) {

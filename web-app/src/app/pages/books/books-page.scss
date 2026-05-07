@@ -67,8 +67,8 @@ button[mat-fab] {
   transform: translateY(-5px);
 }
 
-/* Wrapper to maintain book shape (3:4 aspect ratio) */
 .cover-wrapper {
+  position: relative;
   width: 100%;
   aspect-ratio: 3 / 4;
   overflow: hidden;

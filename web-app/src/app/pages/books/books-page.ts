@@ -10,8 +10,7 @@ import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { MatFormField, MatInput } from '@angular/material/input';
 import { combineLatest, switchMap } from 'rxjs';
 import { FormsModule } from '@angular/forms';
-import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
-import { AsyncPipe } from '@angular/common';
+import { NgOptimizedImage } from '@angular/common';
 import { DEFAULT_PAGE_INFO, DEFAULT_PAGE_SIZE } from '../../core/models/pagination.dto';
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
 import { NotificationService } from '../../core/services/notificationService';
@@ -28,9 +27,8 @@ import { BookOverview, BookStatus } from '../../core/models/books.dto';
     MatFormField,
     MatInput,
     FormsModule,
-    FileAsBlobPipe,
-    AsyncPipe,
     MatPaginator,
+    NgOptimizedImage,
   ],
   templateUrl: './books-page.html',
   styleUrl: './books-page.scss',

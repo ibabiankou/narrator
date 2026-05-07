@@ -1,13 +1,9 @@
 <div class="book-overview-container">
   <div class="cover-container">
     @if (hasCover()) {
-      @if (isCoverInternal()) {
-        <img [src]="`/api/files/${ bookMetadata().cover }` | fileAsBlob | async " alt="cover" />
-      } @else {
-        <img [src]="bookMetadata().cover" alt="cover" />
-      }
+      <img ngSrc="{{bookMetadata().cover}}" fill alt="cover"/>
     } @else {
-      <img src="covers/gray.png" alt="cover" [style]="!bookMetadata().cover ? tintStyle : {}" />
+      <img ngSrc="covers/gray.png" fill alt="cover" [style]="!bookMetadata().cover ? tintStyle : {}"/>
     }
     <div class="overlay">
       @if (authors().length > 0) {

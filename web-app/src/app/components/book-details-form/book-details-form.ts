@@ -7,8 +7,7 @@ import { BookMetadata } from '../../core/models/books.dto';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { AbstractControl, FormControl, FormsModule, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
-import { AsyncPipe } from '@angular/common';
-import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
+import { NgOptimizedImage } from '@angular/common';
 import { NotificationService } from '../../core/services/notificationService';
 import { BooksService } from '../../core/services/books.service';
 
@@ -29,8 +28,7 @@ function cleanIsbn(value: string): string {
     MatInputModule,
     ReactiveFormsModule,
     FormsModule,
-    AsyncPipe,
-    FileAsBlobPipe
+    NgOptimizedImage
   ],
   templateUrl: './book-details-form.html',
   styleUrl: './book-details-form.scss',
@@ -49,8 +47,6 @@ export class BookDetailsForm {
   protected description = model<string>();
   protected authors = model<string[]>([]);
   protected isbns = model<string[]>([]);
-
-  protected refreshTrigger = signal("");
 
   readonly isbnControl = new FormControl<string>("", this.validateIsbnFormat);
 
@@ -240,7 +236,6 @@ export class BookDetailsForm {
         next: coverPath => {
           this.notificationService.dismiss();
           this.cover.set(coverPath);
-          this.refreshTrigger.set(`#v${Date.now()}`);
         }
       });
   }

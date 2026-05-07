@@ -66,4 +66,4 @@ def generate_and_sign_imgproxy_url(processing_options: str,
                                    seo_file_name: str,
                                    user: AdminUser) -> str:
     img_proxy = ImgProxy()
-    return img_proxy.build_url(processing_options, source_image, seo_file_name)
+    return img_proxy.build_url(source_image, seo_file_name, processing_options)
