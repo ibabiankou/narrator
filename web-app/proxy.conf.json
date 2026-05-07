@@ -6,7 +6,7 @@
     "logLevel": "debug"
   },
   "/img": {
-    "target": "https://nnarrator.eu",
+    "target": "http://localhost:8082",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"

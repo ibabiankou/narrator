@@ -35,6 +35,9 @@ services:
       speech:
         condition: service_started
         restart: true
+      imgnginx:
+        condition: service_started
+        restart: true
     ports:
       - "8000:8000"
   pg:
@@ -59,7 +62,7 @@ services:
       retries: 5
     volumes:
       - "./scripts/init-s3.py:/etc/localstack/init/ready.d/init-s3.py"
-      - "./volume:/var/lib/localstack"
+      - "./volumes/s3:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
   rmq:
     image: rabbitmq:4.2-management-alpine
@@ -72,12 +75,6 @@ services:
     healthcheck:
       test: rabbitmq-diagnostics -q ping
       retries: 5
-
-  web-app:
-    image: ibabiankou/home-lab:narrator-web-app
-    build: ./web-app
-    ports:
-      - "80:80"
 
   speech:
     image: ibabiankou/home-lab:narrator-speech
@@ -124,3 +121,40 @@ services:
     volumes:
       # Map your local themes folder to the Keycloak themes directory
       - ./keycloak-theme:/opt/keycloak/themes/nnarrator
+
+
+  imgproxy:
+    image: ghcr.io/imgproxy/imgproxy:v3.31.3
+    environment:
+      IMGPROXY_USE_S3: "true"
+      IMGPROXY_S3_ENDPOINT: "http://s3:4566"
+      IMGPROXY_S3_ENDPOINT_USE_PATH_STYLE: "true"
+      IMGPROXY_BASE64_URL_INCLUDES_FILENAME: "true"
+      IMGPROXY_BASE_URL: "s3://narrator"
+      IMGPROXY_USE_ETAG: "true"
+      IMGPROXY_USE_LAST_MODIFIED: "true"
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
+      IMGPROXY_KEY: ""
+      IMGPROXY_SALT: ""
+    ports:
+      - "8081:8080"
+    volumes:
+      - "./volumes/imgnginx:/proxy_cache"
+    depends_on:
+      s3:
+        condition: service_healthy
+        restart: true
+
+
+  imgnginx:
+    image: nginxinc/nginx-unprivileged:1.29.8
+    volumes:
+      - "./volumes/imgnginx:/proxy_cache"
+      - "./local-configs/imgnginx.conf:/etc/nginx/nginx.conf"
+    ports:
+      - "8082:8080"
+    depends_on:
+      imgproxy:
+        condition: service_started
+        restart: true

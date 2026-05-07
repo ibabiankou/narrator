@@ -19,3 +19,10 @@ def test_source_decoding():
 
     decoded_source_url = img_proxy.get_source_image(signed_url)
     assert decoded_source_url == source_url
+
+def test_no_key_or_salt():
+    img_proxy = ImgProxy("", "")
+    assert img_proxy._key == b''
+    assert img_proxy._salt == b''
+
+    img_proxy._sign_imgproxy_url("/full_path")
