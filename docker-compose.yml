@@ -20,6 +20,8 @@ services:
       KC_CLIENT_ID: ${KC_CLIENT_ID}
       KC_CLIENT_SECRET: ${KC_CLIENT_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      IMGPROXY_KEY: ${IMGPROXY_KEY}
+      IMGPROXY_SALT: ${IMGPROXY_SALT}
     depends_on:
       pg:
         condition: service_healthy

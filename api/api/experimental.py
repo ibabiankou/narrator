@@ -9,6 +9,7 @@ from starlette.responses import Response
 from api.models.auth import AdminUser
 from api.services.books import BookServiceDep
 from api.services.experimental import identify_book
+from api.utils.imgproxy import ImgProxy
 
 experimental_router = APIRouter(tags=["Experimental API"])
 
@@ -57,3 +58,12 @@ def llm_metadata(book_id: uuid.UUID,
     book_metadata = identify_book(first_pages)
 
     return book_metadata
+
+
+@experimental_router.get("/imgproxy-url")
+def generate_and_sign_imgproxy_url(processing_options: str,
+                                   source_image: str,
+                                   seo_file_name: str,
+                                   user: AdminUser) -> str:
+    img_proxy = ImgProxy()
+    return img_proxy.build_url(processing_options, source_image, seo_file_name)

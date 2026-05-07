@@ -5,6 +5,12 @@
     "changeOrigin": true,
     "logLevel": "debug"
   },
+  "/img": {
+    "target": "https://nnarrator.eu",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
   "/docs": {
     "target": "http://localhost:8000",
     "secure": false,
