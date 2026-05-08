@@ -33,3 +33,5 @@ tmp/
 
 # Log files
 *.log
+
+out/

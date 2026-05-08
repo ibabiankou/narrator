@@ -6,7 +6,7 @@ from scripts.auth import session
 def load_images(book_id, attempts=10):
     images = []
     for i in range(attempts):
-        images = request.get(f"https://nnarrator.eu/api/books/{book_id}/images").json()
+        images = request.get(f"/books/{book_id}/images").json()
         if len(images) > 0:
             return images
         else:
@@ -16,9 +16,9 @@ def load_images(book_id, attempts=10):
 
 
 if __name__ == "__main__":
-    request = session()
+    request = session("https://nnarrator.eu/api")
 
-    books = request.get("https://nnarrator.eu/api/books/").json()
+    books = request.get("/books/").json()
     print(books)
 
     # For each book without cover, extract images, load images, set cover.
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         book_images = load_images(book['id'], 1)
         if len(book_images) == 0:
             print(f"Triggering image extraction for book {book['title']}...")
-            request.post(f"https://nnarrator.eu/api/processing/{book['id']}/extract-images")
+            request.post(f"/processing/{book['id']}/extract-images")
             time.sleep(5)
 
             # Reload images
@@ -48,8 +48,7 @@ if __name__ == "__main__":
                 raise Exception(f"No images found for book {book['title']} after extraction.")
 
         print(f"Setting {book_images[0]} as cover for book {book['title']}...")
-        request.post(f"https://nnarrator.eu/api/books/{book['id']}/metadata/cover",
-                     json={"file_path": book_images[0]})
+        request.post(f"/books/{book['id']}/metadata/cover", json={"file_path": book_images[0]})
 
         time.sleep(0.5)
 

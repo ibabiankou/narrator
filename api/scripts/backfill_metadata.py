@@ -20,7 +20,7 @@ def get_all_books():
             "page_index": page_index,
             "size": page_size
         }
-        books_page = request.get("https://nnarrator.eu/api/books/", params=params).json()
+        books_page = request.get("/books/", params=params).json()
         books.extend(books_page["items"])
         keep_going = books_page["page_info"]["total"] > books_page["page_info"]["size"] * (books_page["page_info"]["index"] + 1)
         if keep_going:
@@ -30,7 +30,7 @@ def get_all_books():
 
 
 if __name__ == "__main__":
-    request = session()
+    request = session("https://nnarrator.eu/api")
 
     books = get_all_books()
     print(ts(), "Got", len(books), "books.")
@@ -40,12 +40,12 @@ if __name__ == "__main__":
     for book in reverse_books:
         print(ts(), "Processing book", book["id"], book["title"])
 
-        metadata_for_review = request.get(f"https://nnarrator.eu/api/books/{book['id']}/metadata/review").json()
+        metadata_for_review = request.get(f"/books/{book['id']}/metadata/review").json()
         if len(metadata_for_review["metadata_candidates"]["candidates"]) > 0:
             print(ts(), "Skipping book", book["id"], book["title"], "already has metadata.")
             continue
 
-        request.post(f"https://nnarrator.eu/api/processing/{book['id']}/extract-metadata")
+        request.post(f"/processing/{book['id']}/extract-metadata")
         time.sleep(5)
 
     print(ts(), "Done...")

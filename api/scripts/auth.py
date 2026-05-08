@@ -1,5 +1,6 @@
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urljoin
 
 from requests_oauthlib import OAuth2Session
 
@@ -29,8 +30,24 @@ class CallbackHandler(BaseHTTPRequestHandler):
         return  # Silences the local server logs in console
 
 
-def session() -> OAuth2Session:
-    oauth = OAuth2Session(client_id, redirect_uri=redirect_uri, scope=scope, pkce="S256")
+class BaseUrlSession(OAuth2Session):
+    def __init__(self, base_url: str, *args, **kwargs):
+        super(BaseUrlSession, self).__init__(*args, **kwargs)
+
+        if base_url and not base_url.endswith('/'):
+            base_url += '/'
+        self.base_url = base_url
+
+    def request(self, method, url, *args, **kwargs):
+        # Remove leading slashes from the endpoint to prevent urljoin
+        # from jumping back to the domain root
+        url = url.lstrip('/')
+        full_url = urljoin(self.base_url, url)
+        return super(BaseUrlSession, self).request(method, full_url, *args, **kwargs)
+
+
+def session(base_url: str) -> BaseUrlSession:
+    oauth = BaseUrlSession(base_url=base_url, client_id=client_id, redirect_uri=redirect_uri, scope=scope, pkce="S256")
     authorization_url, state = oauth.authorization_url(authorization_base_url)
 
     # 1. Start a local server on port 8080
