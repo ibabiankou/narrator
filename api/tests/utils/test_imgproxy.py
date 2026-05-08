@@ -46,3 +46,13 @@ def test_no_key_or_salt():
     assert img_proxy._salt == b''
 
     img_proxy._sign_imgproxy_url("/full_path")
+
+
+def test_source_does_anot_start_with_slash():
+    img_proxy = ImgProxy(hex_key=hex_str(12037), hex_salt=hex_str(120314))
+
+
+    signed_url="/img/cmuqUEi4CJhJQ_JMgtwZ9NWfAAHIRVYJMofNDbP_Gsg/rs:fit:400:600:0/f:webp/LzZkODk0ZmY4LTBmY2UtNGI3Yi1hMjBjLTE3Y2JmODMxZjc3OS9pbWFnZXMvcGFnZTBfSW1hZ2UwLmpwZw/cover.webp"
+
+    decoded_source_url = img_proxy.get_source_image(signed_url)
+    print(decoded_source_url)

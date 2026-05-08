@@ -37,6 +37,13 @@ class ImgProxy:
 
     def get_source_image(self, full_path: str) -> str:
         encoded_source = full_path.split('/')[-2]
+
+        # Base64 strings must be multiples of 4.
+        # This logic adds 0, 1, or 2 '=' characters as needed.
+        missing_padding = len(encoded_source) % 4
+        if missing_padding:
+            encoded_source += '=' * (4 - missing_padding)
+
         return base64.urlsafe_b64decode(encoded_source).decode()
 
     def get_default_options(self):
