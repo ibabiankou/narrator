@@ -1,5 +1,5 @@
 import { AudioPlayer } from './audio.player';
-import { EMPTY, filter, map, switchMap } from 'rxjs';
+import { filter } from 'rxjs';
 import { FilesService } from '../../core/services/files.service';
 
 const SUPPORTED_ACTIONS: MediaSessionAction[] = ["nexttrack", "pause", "play", "previoustrack", "seekbackward", "seekforward", "seekto", "stop"];
@@ -60,22 +60,9 @@ export class OSBindings {
 
     this.audioPlayer.$bookDetails
       .pipe(
-        filter(book => book != null),
-        switchMap(book => {
-          if (!book.cover) {
-            this.updateMediaSession(book.title ?? "Unknown", null);
-            return EMPTY;
-          }
-
-          return this.filesService.getFileData(`/api/files/${book.cover}`).pipe(
-            map(fileData => {
-              const artworkUrl = URL.createObjectURL(new Blob([fileData.data as ArrayBuffer]));
-              return {book, artworkUrl};
-            })
-          );
-        })
-      ).subscribe(({book, artworkUrl}) => {
-        this.updateMediaSession(book.title ?? "Unknown", artworkUrl);
+        filter(book => book != null)
+      ).subscribe((book) => {
+        this.updateMediaSession(book.title ?? "Unknown", book.cover ?? null);
       }
     );
   }
