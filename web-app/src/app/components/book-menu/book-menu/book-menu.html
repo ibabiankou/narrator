@@ -16,20 +16,22 @@
     </div>
   }
 
-  <a mat-menu-item
-          *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
-          aria-label="Edit details"
-          routerLink="/books/{{ bookOverview().id }}/edit-details">
-    <mat-icon>edit</mat-icon>
-    <span>Edit details</span>
-  </a>
-  <a mat-menu-item
-          *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
-          aria-label="Edit content"
-          routerLink="/books/{{ bookOverview().id }}/edit">
-    <mat-icon>edit</mat-icon>
-    <span>Edit content</span>
-  </a>
+  <ng-container *appRenderIf="'desktop'">
+    <a mat-menu-item
+       *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
+       aria-label="Edit details"
+       routerLink="/books/{{ bookOverview().id }}/edit-details">
+      <mat-icon>edit</mat-icon>
+      <span>Edit details</span>
+    </a>
+    <a mat-menu-item
+       *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
+       aria-label="Edit content"
+       routerLink="/books/{{ bookOverview().id }}/edit">
+      <mat-icon>edit</mat-icon>
+      <span>Edit content</span>
+    </a>
+  </ng-container>
 
   @if (bookOverview().status == BookStatus.ready && bookStats()) {
     @if (isDownloaded()) {

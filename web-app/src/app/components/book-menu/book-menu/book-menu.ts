@@ -18,6 +18,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { filter, interval, Subscription, switchMap, take } from 'rxjs';
 import { BookOverview, BookStats, BookStatus, DownloadInfo } from '../../../core/models/books.dto';
 import { DownloadService } from '../../../core/services/download.service';
+import { RenderIfDirective } from '../../../core/renderIfDirective';
 
 @Component({
   selector: 'app-book-menu',
@@ -35,7 +36,8 @@ import { DownloadService } from '../../../core/services/download.service';
     MatDialogContent,
     MatDialogTitle,
     OwnerDirective,
-    RouterLink
+    RouterLink,
+    RenderIfDirective
   ],
   templateUrl: './book-menu.html',
   styleUrl: './book-menu.scss',

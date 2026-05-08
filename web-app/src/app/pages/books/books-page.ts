@@ -15,6 +15,7 @@ import { DEFAULT_PAGE_INFO, DEFAULT_PAGE_SIZE } from '../../core/models/paginati
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
 import { NotificationService } from '../../core/services/notificationService';
 import { BookOverview, BookStatus } from '../../core/models/books.dto';
+import { RenderIfDirective } from '../../core/renderIfDirective';
 
 @Component({
   selector: 'app-books-page',
@@ -29,6 +30,7 @@ import { BookOverview, BookStatus } from '../../core/models/books.dto';
     FormsModule,
     MatPaginator,
     NgOptimizedImage,
+    RenderIfDirective,
   ],
   templateUrl: './books-page.html',
   styleUrl: './books-page.scss',

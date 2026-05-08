@@ -56,6 +56,8 @@
 </div>
 
 
-<button mat-fab color="primary" aria-label="Add new book" (click)="openFilePicker()">
+<button mat-fab color="primary" aria-label="Add new book"
+        *appRenderIf="'desktop'"
+        (click)="openFilePicker()">
   <mat-icon>add</mat-icon>
 </button>
