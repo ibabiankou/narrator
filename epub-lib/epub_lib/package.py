@@ -20,14 +20,17 @@ PACKAGE_NS_MAP = {
     NS_XML: NS_XML_URL,
 }
 
+class BasePackageModel(BaseXmlModel, nsmap=PACKAGE_NS_MAP):
+    pass
 
-class Identifier(BaseXmlModel, tag="identifier", ns=NS_DC, nsmap=PACKAGE_NS_MAP):
+
+class Identifier(BasePackageModel, tag="identifier", ns=NS_DC):
     id: str = attr(name="id")
 
     value: Annotated[str, StringConstraints(strip_whitespace=True)]
 
 
-class Title(BaseXmlModel, tag="title", ns=NS_DC, nsmap=PACKAGE_NS_MAP):
+class Title(BasePackageModel, tag="title", ns=NS_DC):
     id: Optional[str] = attr(name="id", default=None)
     lang: Optional[str] = attr(name="lang", ns=NS_XML, default=None)
     dir: Optional[str] = attr(name="dir", default=None)
@@ -35,15 +38,16 @@ class Title(BaseXmlModel, tag="title", ns=NS_DC, nsmap=PACKAGE_NS_MAP):
     value: Annotated[str, StringConstraints(strip_whitespace=True)]
 
 
-class Language(BaseXmlModel, tag="language", ns=NS_DC, nsmap=PACKAGE_NS_MAP):
+class Language(BasePackageModel, tag="language", ns=NS_DC):
     id: Optional[str] = attr(name="id", default=None)
 
     value: Annotated[str, StringConstraints(strip_whitespace=True)]
 
-
-class Meta(BaseXmlModel, tag="meta", nsmap=PACKAGE_NS_MAP):
+# This is a combination of EPUB3 and EPUB2 meta element.
+# https://www.w3.org/TR/epub-33/#sec-meta-elem
+class Meta(BasePackageModel, tag="meta"):
     # https://www.w3.org/TR/epub-33/#sec-property-datatype
-    property: str = attr(name="property")
+    property: Optional[str] = attr(name="property", default=None)
 
     id: Optional[str] = attr(name="id", default=None)
     lang: Optional[str] = attr(name="lang", ns=NS_XML, default=None)
@@ -51,10 +55,15 @@ class Meta(BaseXmlModel, tag="meta", nsmap=PACKAGE_NS_MAP):
     refines: Optional[str] = attr(name="refines", default=None)
     scheme: Optional[str] = attr(name="scheme", default=None)
 
-    value: Annotated[str, StringConstraints(strip_whitespace=True)]
+    #
+    http_equiv: Optional[str] = attr(name="http-equiv", default=None)
+    name: Optional[str] = attr(name="name", default=None)
+    content: Optional[str] = attr(name="content", default=None)
+
+    value: Annotated[Optional[str], StringConstraints(strip_whitespace=True)]
 
 
-class Link(BaseXmlModel, tag="link", nsmap=PACKAGE_NS_MAP):
+class Link(BasePackageModel, tag="link"):
     href_lang: Optional[str] = attr(name="hreflang", default=None)
     id: Optional[str] = attr(name="id", default=None)
     media_type: Optional[str] = attr(name="media-type", default=None)
@@ -66,7 +75,7 @@ class Link(BaseXmlModel, tag="link", nsmap=PACKAGE_NS_MAP):
 
 
 # https://www.w3.org/TR/epub-33/#sec-metadata-elem
-class Metadata(BaseXmlModel, tag="metadata", search_mode='unordered', nsmap=PACKAGE_NS_MAP):
+class Metadata(BasePackageModel, tag="metadata", search_mode='unordered'):
     identifier: List[Identifier] = element(tag="identifier", ns=NS_DC)
     title: List[Title] = element(tag="title", ns=NS_DC)
     language: List[Language] = element(tag="language", ns=NS_DC)
@@ -76,7 +85,7 @@ class Metadata(BaseXmlModel, tag="metadata", search_mode='unordered', nsmap=PACK
 
 
 # https://www.w3.org/TR/epub-33/#sec-item-elem
-class Item(BaseXmlModel, tag="item", nsmap=PACKAGE_NS_MAP):
+class Item(BasePackageModel, tag="item"):
     id: str = attr(name="id")
     href: str = attr(name="href")
     media_type: str = attr(name="media-type")
@@ -87,14 +96,14 @@ class Item(BaseXmlModel, tag="item", nsmap=PACKAGE_NS_MAP):
 
 
 # https://www.w3.org/TR/epub-33/#sec-pkg-manifest
-class Manifest(BaseXmlModel, tag="manifest", nsmap=PACKAGE_NS_MAP):
+class Manifest(BasePackageModel, tag="manifest"):
     id: Optional[str] = attr(name="id", default=None)
 
     item: List[Item] = element(tag="item")
 
 
 # https://www.w3.org/TR/epub-33/#sec-itemref-elem
-class ItemRef(BaseXmlModel, tag="itemref", nsmap=PACKAGE_NS_MAP):
+class ItemRef(BasePackageModel, tag="itemref"):
     id: Optional[str] = attr(name="id", default=None)
     linear: Optional[str] = attr(name="linear", default=None)
     properties: Optional[str] = attr(name="properties", default=None)
@@ -103,7 +112,7 @@ class ItemRef(BaseXmlModel, tag="itemref", nsmap=PACKAGE_NS_MAP):
 
 
 # https://www.w3.org/TR/epub-33/#dfn-spine
-class Spine(BaseXmlModel, tag="spine", nsmap=PACKAGE_NS_MAP):
+class Spine(BasePackageModel, tag="spine"):
     id: Optional[str] = attr(name="id", default=None)
     page_progression_direction: Optional[str] = attr(name="page-progression-direction", default=None)
     toc: Optional[str] = attr(name="toc", default=None)
@@ -111,18 +120,18 @@ class Spine(BaseXmlModel, tag="spine", nsmap=PACKAGE_NS_MAP):
     items: List[ItemRef] = element(tag="itemref")
 
 
-class Guide(BaseXmlModel, tag="guide", nsmap=PACKAGE_NS_MAP):
+class Guide(BasePackageModel, tag="guide"):
     # Legacy element, ignoring it for now.
     pass
 
 
-class Bindings(BaseXmlModel, tag="bindings", nsmap=PACKAGE_NS_MAP):
+class Bindings(BasePackageModel, tag="bindings"):
     # Deprecated element, ignoring it for now.
     pass
 
 
 # https://www.w3.org/TR/epub-33/#sec-collection-elem
-class Collection(BaseXmlModel, tag="collection", nsmap=PACKAGE_NS_MAP):
+class Collection(BasePackageModel, tag="collection"):
     id: Optional[str] = attr(name="id", default=None)
     lang: Optional[str] = attr(name="lang", ns=NS_XML, default=None)
     dir: Optional[str] = attr(name="dir", default=None)
@@ -135,7 +144,7 @@ class Collection(BaseXmlModel, tag="collection", nsmap=PACKAGE_NS_MAP):
 
 
 # https://www.w3.org/TR/epub-33/#sec-package-elem
-class Package(BaseXmlModel, tag="package", nsmap=PACKAGE_NS_MAP):
+class Package(BasePackageModel, tag="package"):
     # Attributes
     version: str = attr(name="version")
     unique_identifier: str = attr(name="unique-identifier")
