@@ -25,7 +25,7 @@ class BasePackageModel(BaseXmlModel, nsmap=PACKAGE_NS_MAP):
 
 
 class Identifier(BasePackageModel, tag="identifier", ns=NS_DC):
-    id: str = attr(name="id")
+    id: Optional[str] = attr(name="id", default=None)
 
     value: Annotated[str, StringConstraints(strip_whitespace=True)]
 
