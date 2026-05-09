@@ -1,3 +1,4 @@
+"""Model definition for Open Container Format."""
 from typing import List
 
 from pydantic_xml import BaseXmlModel, element, attr
