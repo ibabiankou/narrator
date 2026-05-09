@@ -65,7 +65,6 @@ if __name__ == "__main__":
     all_books = all_files(dir_with_books)
     LOG.info("Found %s books: \n  %s", len(all_books), "\n  ".join(all_books))
 
-    # Start processing each file
     for book_file in all_books:
         LOG.info("Processing: %s", book_file)
         with ZipFile(book_file) as epubf:
@@ -73,5 +72,9 @@ if __name__ == "__main__":
             with epubf.open(CONTAINER_XML) as containerf:
                 root_files = get_root_files(containerf.read())
                 LOG.info("Got %s root files %s", len(root_files), root_files)
+                # TODO: If there are more than one root file, default to the first one.
+
+            # Parse the root file.
+
 
     print("Done...")
