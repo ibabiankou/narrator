@@ -2,10 +2,16 @@ import os
 
 dir_with_books = "../../out/epub"
 
-if __name__ == "__main__":
-    for filename in os.listdir(dir_with_books):
+def all_files(dir: str) -> list[str]:
+    files = []
+    for filename in os.listdir(dir):
         if filename.endswith(".epub"):
-            print(f"Found EPUB file: {filename}")
+            abs_file_path = os.path.abspath(os.path.join(dir, filename))
+            files.append(abs_file_path)
+    return files
 
+if __name__ == "__main__":
+    all_books = all_files(dir_with_books)
+    print(f"Found {len(all_books)} books: \n  {"\n  ".join(all_books)}")
 
     print("Done...")
