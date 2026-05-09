@@ -60,7 +60,7 @@ class Meta(BasePackageModel, tag="meta"):
     name: Optional[str] = attr(name="name", default=None)
     content: Optional[str] = attr(name="content", default=None)
 
-    value: Annotated[Optional[str], StringConstraints(strip_whitespace=True)]
+    value: Annotated[Optional[str], StringConstraints(strip_whitespace=True)] = None
 
 
 class Link(BasePackageModel, tag="link"):
