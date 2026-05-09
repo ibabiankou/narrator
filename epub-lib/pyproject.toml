@@ -20,6 +20,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.1"
+xmldiff = "^2.7.0"
 
 [tool.pytest.ini_options]
 addopts = [
