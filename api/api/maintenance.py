@@ -2,7 +2,7 @@ import logging
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from sqlalchemy.exc import NoResultFound
 
 from api.models import db
@@ -84,3 +84,13 @@ def check_orphan_files(
                 if cleanup:
                     LOG.warning("Deleting file %s.", file)
                     files_service.delete_file(file)
+
+
+@maintenance_router.get("/debug-headers")
+async def debug_headers(request: Request, admin: AdminUser):
+    return {
+        "headers": dict(request.headers),
+        "client_host": request.client.host,
+        "scope_type": request.scope.get("type"),
+        "scheme": request.scope.get("scheme"),  # This is what Uvicorn thinks the protocol is
+    }
