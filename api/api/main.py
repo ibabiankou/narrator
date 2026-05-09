@@ -2,6 +2,7 @@ import asyncio
 import os
 from contextlib import asynccontextmanager
 
+import fastapi
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -121,6 +122,14 @@ def health_check():
 def get_current_user(user: UserDep):
     return user
 
+@app.get("/debug-headers")
+async def debug_headers(request: fastapi.Request, user: UserDep):
+    return {
+        "headers": dict(request.headers),
+        "client_host": request.client.host,
+        "scope_type": request.scope.get("type"),
+        "scheme": request.scope.get("scheme"),  # This is what Uvicorn thinks the protocol is
+    }
 
 base_url_router.include_router(files_router, prefix="/files")
 base_url_router.include_router(books_router, prefix="/books")
