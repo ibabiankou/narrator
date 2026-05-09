@@ -1,0 +1,27 @@
+[project]
+name = "narrator-epub"
+version = "0.1.0"
+description = "Model and utilities to process EPUB files."
+authors = [
+    {name = "Ivan Babiankou",email = "ivan.babiankou@gmail.com"}
+]
+
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic-xml (>=2.20.0,<3.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "epub_lib"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.1"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
