@@ -27,6 +27,12 @@ class TestPackage:
         assert actual.property == "dcterms:modified"
         assert actual.value == "2011-01-01T12:00:00Z"
 
+    def test_parse_meta_coverimage(self):
+        xml_str = """<meta xmlns="http://www.idpf.org/2007/opf" content="coverimage" name="cover"/>"""
+        actual = Meta.from_xml(xml_str)
+        assert actual.content == "coverimage"
+        assert actual.name == "cover"
+
     def test_write_identifier(self):
         identifier = Identifier(id="pub-id", value="urn:uuid:64593003-b09e-40e7-817a-4a67f0f0c7e2")
         actual_xml_str = identifier.to_xml(exclude_none=True).decode()
