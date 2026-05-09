@@ -21,8 +21,8 @@ if __name__ == "__main__":
     # Start processing each file
     for book_file in all_books:
         print("Processing:", book_file)
-        with ZipFile(book_file) as epubf:
-            pass
+        # with ZipFile(book_file) as epubf:
+        #     pass
 
 
     print("Done...")
