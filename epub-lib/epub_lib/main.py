@@ -4,8 +4,8 @@ from logging.config import dictConfig
 from typing import List
 from zipfile import ZipFile
 
-from epub_lib.container import Container
-from epub_lib.package import Package
+from epub_lib.model.container import Container
+from epub_lib.model.package import Package
 
 LOGGING_CONFIG = {
     'version': 1,
