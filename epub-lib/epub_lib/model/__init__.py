@@ -1,0 +1,8 @@
+NS_OPF_URL = "http://www.idpf.org/2007/opf"
+NS_OPF = "opf"
+NS_DC_URL = "http://purl.org/dc/elements/1.1/"
+NS_DC = "dc"
+NS_XSI_URL = "http://www.w3.org/2001/XMLSchema-instance"
+NS_XSI = "xsi"
+NS_XML_URL = "http://www.w3.org/XML/1998/namespace"
+NS_XML = "xml"

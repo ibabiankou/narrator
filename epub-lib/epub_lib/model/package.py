@@ -4,44 +4,20 @@ from typing import List, Optional, Annotated
 from pydantic import StringConstraints
 from pydantic_xml import BaseXmlModel, element, attr
 
-NS_OPF_URL = "http://www.idpf.org/2007/opf"
-NS_OPF = "opf"
-NS_DC_URL = "http://purl.org/dc/elements/1.1/"
-NS_DC = "dc"
-NS_XSI_URL = "http://www.w3.org/2001/XMLSchema-instance"
-NS_XSI = "xsi"
-NS_XML_URL = "http://www.w3.org/XML/1998/namespace"
-NS_XML = "xml"
+from epub_lib.model import NS_OPF_URL, NS_OPF, NS_DC, NS_DC_URL, NS_XSI, NS_XSI_URL, NS_XML, NS_XML_URL
+from epub_lib.model.dcmi import Identifier, Title, Language
+
 PACKAGE_NS_MAP = {
     "": NS_OPF_URL,
     NS_OPF: NS_OPF_URL,
     NS_DC: NS_DC_URL,
-    NS_XSI: NS_DC_URL,
+    NS_XSI: NS_XSI_URL,
     NS_XML: NS_XML_URL,
 }
 
 class BasePackageModel(BaseXmlModel, nsmap=PACKAGE_NS_MAP):
     pass
 
-
-class Identifier(BasePackageModel, tag="identifier", ns=NS_DC):
-    id: Optional[str] = attr(name="id", default=None)
-
-    value: Annotated[str, StringConstraints(strip_whitespace=True)]
-
-
-class Title(BasePackageModel, tag="title", ns=NS_DC):
-    id: Optional[str] = attr(name="id", default=None)
-    lang: Optional[str] = attr(name="lang", ns=NS_XML, default=None)
-    dir: Optional[str] = attr(name="dir", default=None)
-
-    value: Annotated[str, StringConstraints(strip_whitespace=True)]
-
-
-class Language(BasePackageModel, tag="language", ns=NS_DC):
-    id: Optional[str] = attr(name="id", default=None)
-
-    value: Annotated[str, StringConstraints(strip_whitespace=True)]
 
 # This is a combination of EPUB3 and EPUB2 meta element.
 # https://www.w3.org/TR/epub-33/#sec-meta-elem
