@@ -1,12 +1,7 @@
-from xmldiff.main import diff_texts
-
-from epub_lib.model.package import Meta, Identifier, Title, Language, Metadata, Item, Manifest, Spine, ItemRef, Link, \
+from epub_lib.model.dcmi import Identifier, Title, Language
+from epub_lib.model.package import Meta, Metadata, Item, Manifest, Spine, ItemRef, Link, \
     Collection, Package
-
-
-# noinspection PyTypeChecker
-def assert_no_diff(left, right):
-    assert len(diff_texts(left, right)) == 0
+from tests.model import assert_no_diff
 
 
 class TestPackage:
@@ -17,7 +12,7 @@ class TestPackage:
         expected_xml_str = """<meta xmlns="http://www.idpf.org/2007/opf" 
                                     xmlns:opf="http://www.idpf.org/2007/opf" 
                                     xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                    xmlns:xsi="http://purl.org/dc/elements/1.1/" 
+                                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
                                     property="dcterms:modified">2011-01-01T12:00:00Z</meta>"""
         assert_no_diff(actual_xml_str, expected_xml_str)
 
@@ -34,58 +29,13 @@ class TestPackage:
         assert actual.content == "coverimage"
         assert actual.name == "cover"
 
-    def test_write_identifier(self):
-        identifier = Identifier(id="pub-id", value="urn:uuid:64593003-b09e-40e7-817a-4a67f0f0c7e2")
-        actual_xml_str = identifier.to_xml(exclude_none=True).decode()
-        expected_xml_str = """<dc:identifier xmlns="http://www.idpf.org/2007/opf" 
-                                             xmlns:opf="http://www.idpf.org/2007/opf" 
-                                             xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                             xmlns:xsi="http://purl.org/dc/elements/1.1/"
-                                             id="pub-id">urn:uuid:64593003-b09e-40e7-817a-4a67f0f0c7e2</dc:identifier>"""
-        assert_no_diff(actual_xml_str, expected_xml_str)
-
-    def test_parse_identifier(self):
-        xml_str = """<dc:identifier xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                    id="pub-id">urn:uuid:64593003-b09e-40e7-817a-4a67f0f0c7e2</dc:identifier>"""
-        actual = Identifier.from_xml(xml_str)
-        assert actual.id == "pub-id"
-        assert actual.value == "urn:uuid:64593003-b09e-40e7-817a-4a67f0f0c7e2"
-
-    def test_write_title(self):
-        title = Title(value="My Book Title")
-        actual_xml_str = title.to_xml(exclude_none=True).decode()
-        expected_xml_str = """<dc:title xmlns="http://www.idpf.org/2007/opf" 
-                                 xmlns:opf="http://www.idpf.org/2007/opf" 
-                                 xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                 xmlns:xsi="http://purl.org/dc/elements/1.1/">My Book Title</dc:title>"""
-        assert_no_diff(actual_xml_str, expected_xml_str)
-
-    def test_parse_title(self):
-        xml_str = """<dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">My Book Title</dc:title>"""
-        actual = Title.from_xml(xml_str)
-        assert actual.value == "My Book Title"
-
-    def test_write_language(self):
-        language = Language(value="en-US")
-        actual_xml_str = language.to_xml(exclude_none=True).decode()
-        expected_xml_str = """<dc:language xmlns="http://www.idpf.org/2007/opf" 
-                                 xmlns:opf="http://www.idpf.org/2007/opf" 
-                                 xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                 xmlns:xsi="http://purl.org/dc/elements/1.1/">en-US</dc:language>"""
-        assert_no_diff(actual_xml_str, expected_xml_str)
-
-    def test_parse_language(self):
-        xml_str = """<dc:language xmlns:dc="http://purl.org/dc/elements/1.1/">en-US</dc:language>"""
-        actual = Language.from_xml(xml_str)
-        assert actual.value == "en-US"
-
     def test_write_link(self):
         link = Link(href="link.html", rel="item", media_type="application/xhtml+xml")
         actual_xml_str = link.to_xml(exclude_none=True).decode()
         expected_xml_str = """<link xmlns="http://www.idpf.org/2007/opf" 
                                     xmlns:opf="http://www.idpf.org/2007/opf" 
                                     xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                    xmlns:xsi="http://purl.org/dc/elements/1.1/"
+                                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                                     media-type="application/xhtml+xml" rel="item" href="link.html"/>"""
         assert_no_diff(actual_xml_str, expected_xml_str)
 
@@ -107,7 +57,7 @@ class TestPackage:
         expected_xml_str = """<metadata xmlns="http://www.idpf.org/2007/opf" 
                                  xmlns:opf="http://www.idpf.org/2007/opf" 
                                  xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                 xmlns:xsi="http://purl.org/dc/elements/1.1/">
+                                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                                 <dc:identifier id="pub-id">id-val</dc:identifier>
                                 <dc:title>title-val</dc:title>
                                 <dc:language>lang-val</dc:language>
@@ -136,7 +86,7 @@ class TestPackage:
         expected_xml_str = """<item xmlns="http://www.idpf.org/2007/opf"
                                     xmlns:opf="http://www.idpf.org/2007/opf" 
                                     xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                    xmlns:xsi="http://purl.org/dc/elements/1.1/"  
+                                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  
                                     id="item-id" href="item.html" media-type="application/xhtml+xml"/>"""
         assert_no_diff(actual_xml_str, expected_xml_str)
 
@@ -155,7 +105,7 @@ class TestPackage:
         expected_xml_str = """<manifest xmlns="http://www.idpf.org/2007/opf"
                                        xmlns:opf="http://www.idpf.org/2007/opf" 
                                        xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                       xmlns:xsi="http://purl.org/dc/elements/1.1/">
+                                       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                               <item id="item1" href="item1.html" media-type="application/xhtml+xml"/>
                               <item id="item2" href="item2.html" media-type="application/xhtml+xml"/>
                             </manifest>"""
@@ -178,7 +128,7 @@ class TestPackage:
         expected_xml_str = """<itemref xmlns="http://www.idpf.org/2007/opf"
                                        xmlns:opf="http://www.idpf.org/2007/opf" 
                                        xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                       xmlns:xsi="http://purl.org/dc/elements/1.1/"
+                                       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                                        linear="yes" idref="item-id"/>"""
         assert_no_diff(actual_xml_str, expected_xml_str)
 
@@ -194,7 +144,7 @@ class TestPackage:
         expected_xml_str = """<spine xmlns="http://www.idpf.org/2007/opf"
                                      xmlns:opf="http://www.idpf.org/2007/opf" 
                                      xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                     xmlns:xsi="http://purl.org/dc/elements/1.1/"
+                                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                                      toc="ncx"><itemref idref="item1"/><itemref idref="item2"/></spine>"""
         assert_no_diff(actual_xml_str, expected_xml_str)
 
@@ -219,7 +169,7 @@ class TestPackage:
                                              xmlns="http://www.idpf.org/2007/opf"
                                              xmlns:opf="http://www.idpf.org/2007/opf" 
                                              xmlns:dc="http://purl.org/dc/elements/1.1/" 
-                                             xmlns:xsi="http://purl.org/dc/elements/1.1/"
+                                             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                                              role="mo-assets">
                                         <link media-type="application/xhtml+xml" rel="item" href="item1.html"/>
                                         <link media-type="application/xhtml+xml" rel="item" href="item2.html"/>
