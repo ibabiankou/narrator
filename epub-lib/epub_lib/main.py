@@ -91,6 +91,8 @@ if __name__ == "__main__":
 
             # Parse the default root file.
             package = get_package(epubf, root_files[0])
+            # TODO: Log a few small bits and pieces: EPUB Version,
             LOG.info("Got '%s'", [t.value for t in package.metadata.title])
+            LOG.debug(package.metadata.model_dump_json(indent=2, exclude_none=True))
 
     print("Done...")

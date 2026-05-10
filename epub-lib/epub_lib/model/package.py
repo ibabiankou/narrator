@@ -56,6 +56,19 @@ class Metadata(BasePackageModel, tag="metadata", search_mode='unordered'):
 
     link: List[Link] = element(tag="link", default=[])
 
+    contributor: List[Element] = element(tag="contributor", default=[])
+    coverage: List[Element] = element(tag="coverage", default=[])
+    creator: List[Element] = element(tag="creator", default=[])
+    date: List[Element] = element(tag="date", default=[])
+    description: List[Element] = element(tag="description", default=[])
+    format: List[Element] = element(tag="format", default=[])
+    publisher: List[Element] = element(tag="publisher", default=[])
+    relation: List[Element] = element(tag="relation", default=[])
+    rights: List[Element] = element(tag="rights", default=[])
+    source: List[Element] = element(tag="source", default=[])
+    subject: List[Element] = element(tag="subject", default=[])
+    type: List[Element] = element(tag="type", default=[])
+
 
 # https://www.w3.org/TR/epub-33/#sec-item-elem
 class Item(BasePackageModel, tag="item"):
