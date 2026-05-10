@@ -1,12 +1,13 @@
 from xmldiff.main import diff_texts
 
-from epub_lib.package import Meta, Identifier, Title, Language, Metadata, Item, Manifest, Spine, ItemRef, Link, \
+from epub_lib.model.package import Meta, Identifier, Title, Language, Metadata, Item, Manifest, Spine, ItemRef, Link, \
     Collection, Package
 
 
 # noinspection PyTypeChecker
 def assert_no_diff(left, right):
     assert len(diff_texts(left, right)) == 0
+
 
 class TestPackage:
     def test_write_meta(self):

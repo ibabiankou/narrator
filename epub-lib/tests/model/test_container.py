@@ -1,4 +1,4 @@
-from epub_lib.container import Container, RootFile, RootFiles
+from epub_lib.model.container import Container, RootFile, RootFiles
 
 
 class TestContainer:
