@@ -22,51 +22,48 @@ class BasePackageModel(BaseXmlModel, nsmap=PACKAGE_NS_MAP):
 # This is a combination of EPUB3 and EPUB2 meta element.
 # https://www.w3.org/TR/epub-33/#sec-meta-elem
 class Meta(BasePackageModel, tag="meta"):
-    # https://www.w3.org/TR/epub-33/#sec-property-datatype
-    property: Optional[str] = attr(name="property", default=None)
-
+    content: Optional[str] = attr(name="content", default=None)
+    dir: Optional[str] = attr(name="dir", default=None)
+    http_equiv: Optional[str] = attr(name="http-equiv", default=None)
     id: Optional[str] = attr(name="id", default=None)
     lang: Optional[str] = attr(name="lang", ns=NS_XML, default=None)
-    dir: Optional[str] = attr(name="dir", default=None)
+    name: Optional[str] = attr(name="name", default=None)
+    # https://www.w3.org/TR/epub-33/#sec-property-datatype
+    property: Optional[str] = attr(name="property", default=None)
     refines: Optional[str] = attr(name="refines", default=None)
     scheme: Optional[str] = attr(name="scheme", default=None)
-
-    #
-    http_equiv: Optional[str] = attr(name="http-equiv", default=None)
-    name: Optional[str] = attr(name="name", default=None)
-    content: Optional[str] = attr(name="content", default=None)
 
     value: Annotated[Optional[str], StringConstraints(strip_whitespace=True)] = None
 
 
 class Link(BasePackageModel, tag="link"):
+    href: str = attr(name="href")
+    rel: str = attr(name="rel")
+
     href_lang: Optional[str] = attr(name="hreflang", default=None)
     id: Optional[str] = attr(name="id", default=None)
     media_type: Optional[str] = attr(name="media-type", default=None)
     properties: Optional[str] = attr(name="properties", default=None)
     refines: Optional[str] = attr(name="refines", default=None)
 
-    rel: str = attr(name="rel")
-    href: str = attr(name="href")
-
 
 # https://www.w3.org/TR/epub-33/#sec-metadata-elem
 class Metadata(BasePackageModel, tag="metadata", search_mode='unordered'):
     identifier: List[Identifier] = element(tag="identifier", ns=NS_DC)
-    title: List[Title] = element(tag="title", ns=NS_DC)
     language: List[Language] = element(tag="language", ns=NS_DC)
-
     meta: List[Meta] = element(tag="meta")
+    title: List[Title] = element(tag="title", ns=NS_DC)
+
     link: List[Link] = element(tag="link", default=[])
 
 
 # https://www.w3.org/TR/epub-33/#sec-item-elem
 class Item(BasePackageModel, tag="item"):
-    id: str = attr(name="id")
     href: str = attr(name="href")
+    id: str = attr(name="id")
     media_type: str = attr(name="media-type")
-    fallback: Optional[str] = attr(name="fallback", default=None)
 
+    fallback: Optional[str] = attr(name="fallback", default=None)
     media_overlay: Optional[str] = attr(name="media-overlay", default=None)
     properties: Optional[str] = attr(name="properties", default=None)
 
@@ -108,11 +105,12 @@ class Bindings(BasePackageModel, tag="bindings"):
 
 # https://www.w3.org/TR/epub-33/#sec-collection-elem
 class Collection(BasePackageModel, tag="collection"):
+    role: str = attr(name="role")
+
+    dir: Optional[str] = attr(name="dir", default=None)
     id: Optional[str] = attr(name="id", default=None)
     lang: Optional[str] = attr(name="lang", ns=NS_XML, default=None)
-    dir: Optional[str] = attr(name="dir", default=None)
 
-    role: str = attr(name="role")
 
     metadata: Optional[Metadata] = element(tag="metadata", default=None)
     collections: List['Collection'] = element(tag="collection", default=[])
@@ -122,13 +120,12 @@ class Collection(BasePackageModel, tag="collection"):
 # https://www.w3.org/TR/epub-33/#sec-package-elem
 class Package(BasePackageModel, tag="package"):
     # Attributes
-    version: str = attr(name="version")
     unique_identifier: str = attr(name="unique-identifier")
+    version: str = attr(name="version")
 
+    dir: Optional[str] = attr(name="dir", default=None)
     id: Optional[str] = attr(name="id", default=None)
     lang: Optional[str] = attr(name="lang", ns="xml", default=None)
-    dir: Optional[str] = attr(name="dir", default=None)
-
     prefix: Optional[str] = attr(name="prefix", default=None)
 
     # Content

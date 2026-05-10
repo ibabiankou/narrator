@@ -59,9 +59,9 @@ class TestPackage:
                                  xmlns:dc="http://purl.org/dc/elements/1.1/" 
                                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                                 <dc:identifier id="pub-id">id-val</dc:identifier>
-                                <dc:title>title-val</dc:title>
                                 <dc:language>lang-val</dc:language>
                                 <meta property="meta-prop">meta-val</meta>
+                                <dc:title>title-val</dc:title>
                               </metadata>"""
         assert_no_diff(actual_xml_str, expected_xml_str)
 
