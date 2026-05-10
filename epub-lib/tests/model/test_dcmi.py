@@ -1,4 +1,4 @@
-from epub_lib.model.package import Identifier, Title, Language
+from epub_lib.model.dcmi import Element, Identifier, Language
 from tests.model import assert_no_diff
 
 
@@ -17,15 +17,15 @@ class TestDcmi:
         assert actual.id == "pub-id"
         assert actual.value == "urn:uuid:64593003-b09e-40e7-817a-4a67f0f0c7e2"
 
-    def test_write_title(self):
-        title = Title(value="My Book Title")
+    def test_write_element(self):
+        title = Element(value="My Book Title")
         actual_xml_str = title.to_xml(exclude_none=True).decode()
-        expected_xml_str = """<dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">My Book Title</dc:title>"""
+        expected_xml_str = """<dc:element xmlns:dc="http://purl.org/dc/elements/1.1/">My Book Title</dc:element>"""
         assert_no_diff(actual_xml_str, expected_xml_str)
 
-    def test_parse_title(self):
-        xml_str = """<dc:title xmlns:dc="http://purl.org/dc/elements/1.1/">My Book Title</dc:title>"""
-        actual = Title.from_xml(xml_str)
+    def test_parse_element(self):
+        xml_str = """<dc:element xmlns:dc="http://purl.org/dc/elements/1.1/">My Book Title</dc:element>"""
+        actual = Element.from_xml(xml_str)
         assert actual.value == "My Book Title"
 
     def test_write_language(self):

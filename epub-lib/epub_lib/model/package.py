@@ -5,7 +5,7 @@ from pydantic import StringConstraints
 from pydantic_xml import BaseXmlModel, element, attr
 
 from epub_lib.model import NS_OPF_URL, NS_OPF, NS_DC, NS_DC_URL, NS_XSI, NS_XSI_URL, NS_XML, NS_XML_URL
-from epub_lib.model.dcmi import Identifier, Title, Language
+from epub_lib.model.dcmi import Identifier, Element, Language
 
 PACKAGE_NS_MAP = {
     "": NS_OPF_URL,
@@ -52,7 +52,7 @@ class Metadata(BasePackageModel, tag="metadata", search_mode='unordered'):
     identifier: List[Identifier] = element(tag="identifier", ns=NS_DC)
     language: List[Language] = element(tag="language", ns=NS_DC)
     meta: List[Meta] = element(tag="meta")
-    title: List[Title] = element(tag="title", ns=NS_DC)
+    title: List[Element] = element(tag="title", ns=NS_DC)
 
     link: List[Link] = element(tag="link", default=[])
 
