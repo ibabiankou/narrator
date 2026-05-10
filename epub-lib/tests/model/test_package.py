@@ -1,4 +1,4 @@
-from epub_lib.model.dcmi import Identifier, Title, Language
+from epub_lib.model.dcmi import Identifier, Language, Element
 from epub_lib.model.package import Meta, Metadata, Item, Manifest, Spine, ItemRef, Link, \
     Collection, Package
 from tests.model import assert_no_diff
@@ -48,7 +48,7 @@ class TestPackage:
 
     def test_write_metadata(self):
         identifier = Identifier(id="pub-id", value="id-val")
-        title = Title(value="title-val")
+        title = Element(value="title-val")
         language = Language(value="lang-val")
         meta = Meta(property="meta-prop", value="meta-val")
         metadata = Metadata(identifier=[identifier], title=[title], language=[language], meta=[meta])

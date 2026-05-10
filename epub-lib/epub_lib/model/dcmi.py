@@ -22,7 +22,8 @@ class Identifier(BaseDcmiModel, tag="identifier", ns=NS_DC):
     value: Annotated[str, StringConstraints(strip_whitespace=True)]
 
 
-class Title(BaseDcmiModel, tag="title", ns=NS_DC):
+class Element(BaseDcmiModel, tag="element", ns=NS_DC):
+    """A generalized definition of DCMI elements to be used in EPUB model."""
     id: Optional[str] = attr(name="id", default=None)
     lang: Optional[str] = attr(name="lang", ns=NS_XML, default=None)
     dir: Optional[str] = attr(name="dir", default=None)
