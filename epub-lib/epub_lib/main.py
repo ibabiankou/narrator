@@ -5,6 +5,7 @@ from typing import List
 from zipfile import ZipFile
 
 from epub_lib.container import Container
+from epub_lib.package import Package
 
 LOGGING_CONFIG = {
     'version': 1,
@@ -50,15 +51,32 @@ def all_files(dir: str) -> list[str]:
     return files
 
 
-def get_root_files(container_xml) -> List[str]:
-    try:
-        container = Container.from_xml(container_xml)
-        if len(container.root_files.items) > 1:
-            LOG.warning("Got a book with %s root files in container.xml", len(container.root_files.items))
-        return [i.full_path for i in container.root_files.items]
-    except Exception as e:
-        LOG.error("Failed to parse containers.xml", e)
-        return []
+def get_root_files(epub: ZipFile) -> List[str]:
+    LOG.debug("Reading and parsing %s", CONTAINER_XML)
+    with epub.open(CONTAINER_XML) as container_file:
+        try:
+            container = Container.from_xml(container_file.read())
+            root_files = [i.full_path for i in container.root_files.items]
+            if len(root_files) > 1:
+                LOG.warning("'%s' has %s root files in container.xml: %s",
+                            epubf.filename,
+                            len(root_files),
+                            root_files)
+            return root_files
+        except Exception as e:
+            LOG.error("Failed to parse containers.xml", e)
+            return []
+
+
+def get_package(epub: ZipFile, root_file: str) -> Package:
+    with epub.open(root_file) as package_file:
+        try:
+            package_xml = package_file.read()
+            return Package.from_xml(package_xml)
+        except Exception as e:
+            LOG.error("Failed to parse root_file of %s", epub.filename, e)
+            LOG.error("Raw content of %s:\n%s", root_file, package_xml.decode("utf-8"))
+            raise e
 
 
 if __name__ == "__main__":
@@ -68,13 +86,11 @@ if __name__ == "__main__":
     for book_file in all_books:
         LOG.info("Processing: %s", book_file)
         with ZipFile(book_file) as epubf:
-            LOG.info("Reading and parsing %s", CONTAINER_XML)
-            with epubf.open(CONTAINER_XML) as containerf:
-                root_files = get_root_files(containerf.read())
-                LOG.info("Got %s root files %s", len(root_files), root_files)
-                # TODO: If there are more than one root file, default to the first one.
+            # Get the root files from the META-INF/container.xml
+            root_files = get_root_files(epubf)
 
-            # Parse the root file.
-
+            # Parse the default root file.
+            package = get_package(epubf, root_files[0])
+            LOG.info("Got '%s'", [t.value for t in package.metadata.title])
 
     print("Done...")
