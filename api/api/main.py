@@ -18,6 +18,7 @@ from api.metadata import metadata_router
 from api.models.auth import UserDep, map_user
 from api.openlibrary.service import OpenlibraryService
 from api.processing import processing_router
+from api.procurement import procurement_router, ProcurementService
 from api.sections import sections_router
 from api.services.audiotracks import AudioTrackService
 from api.services.books import BookService
@@ -55,6 +56,7 @@ async def lifespan(app: FastAPI):
     section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc, db_factory=narrator_db)
     openlibrary_svc = OpenlibraryService(files_svc, db_factory=openlibrary_db)
     books_svc = BookService(files_svc, section_svc, progress_svc, openlibrary_svc, db_factory=narrator_db)
+    procurement_svc = ProcurementService(db_factory=narrator_db)
 
     # Start background processing tasks.
     start_narration_task = asyncio.create_task(books_svc.start_narration_maybe())
@@ -127,6 +129,7 @@ base_url_router.include_router(metadata_router, prefix="/books/{book_id}/metadat
 base_url_router.include_router(processing_router, prefix="/processing")
 base_url_router.include_router(sections_router, prefix="/sections")
 base_url_router.include_router(settings_router, prefix="/settings")
+base_url_router.include_router(procurement_router)
 base_url_router.include_router(maintenance_router, prefix="/maintenance")
 base_url_router.include_router(experimental_router, prefix="/experimental")
 app.include_router(base_url_router)
