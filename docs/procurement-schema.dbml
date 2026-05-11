@@ -1,0 +1,106 @@
+Table procurement.epub_files {
+  id integer [primary key]
+  file_name varchar [not null]
+  file_size_bytes integer [not null]
+  epub_metadata jsonb [not null]
+  id_matches jsonb
+  image_matches jsonb
+  content_matches jsonb
+  decision varchar
+  decision_date datetime
+  duplicate_of integer [ref: > "procurement"."epub_files"."id"]
+  asset_id integer
+}
+
+Table procurement.metadata_ids {
+  id integer [primary key]
+  source_file integer [not null, ref: > "procurement"."epub_files"."id"]
+  metadata_id_raw varchar [not null]
+  metadata_id_normal varchar [not null]
+
+  Indexes {
+    metadata_id_normal [name:"idx_metadata_id"]
+  }
+}
+
+Table procurement.image_phashes {
+  id integer [primary key]
+  source_file integer [not null, ref: > "procurement"."epub_files"."id"]
+  image_name varchar [not null]
+  phash bit(64) [not null]
+
+  // Indexes {
+  //   ((substring(phash from 1 for 16))) [name:"idx_phash_band_1"]
+  //   ((substring(phash from 17 for 16))) [name:"idx_phash_band_2"]
+  //   ((substring(phash from 33 for 16))) [name:"idx_phash_band_3"]
+  //   ((substring(phash from 49 for 16))) [name:"idx_phash_band_4"]
+  // }
+}
+
+// SELECT source_file
+//       (1 - (bit_count(phash # :new_phash)::float / 64)) AS confidence
+//FROM procurement.image_phashes
+//WHERE bit_count(phash # :new_phash) < 10 -- Only show close matches
+//ORDER BY confidence DESC;
+
+// WITH search_hash AS (
+//     SELECT '1100101011001010111100001111000010101010101010100000111100001111'::bit(64) as val
+// ),
+// candidates AS (
+//     -- This part uses the indexes to find a small shortlist
+//     SELECT c.source_file, b.phash
+//     FROM procurement.image_phashes c, search_hash s
+//     WHERE substring(c.phash from 1 for 16)  = substring(s.val from 1 for 16)
+//        OR substring(c.phash from 17 for 16) = substring(s.val from 17 for 16)
+//        OR substring(c.phash from 33 for 16) = substring(s.val from 33 for 16)
+//        OR substring(c.phash from 49 for 16) = substring(s.val from 49 for 16)
+// )
+// -- This part calculates the final confidence for the shortlist
+// SELECT source_file,
+//        (1.0 - (bit_count(phash # (SELECT val FROM search_hash))::float / 64)) AS confidence
+// FROM candidates
+// WHERE bit_count(phash # (SELECT val FROM search_hash)) <= 10 -- Hamming distance threshold
+// ORDER BY confidence DESC;
+
+Table procurement.content_signatures {
+  id integer [primary key]
+  source_file integer [not null, ref: > "procurement"."epub_files"."id"]
+  // The 128 hashes
+  full_signature integer[] [not null]
+  // Pre-computed bands for fast lookup
+  band1 integer[] [not null]
+  band2 integer[] [not null]
+  band3 integer[] [not null]
+  band4 integer[] [not null]
+  band5 integer[] [not null]
+  band6 integer[] [not null]
+  band7 integer[] [not null]
+  band8 integer[] [not null]
+  band9 integer[] [not null]
+  band10 integer[] [not null]
+  band11 integer[] [not null]
+  band12 integer[] [not null]
+  band13 integer[] [not null]
+  band14 integer[] [not null]
+  band15 integer[] [not null]
+  band16 integer[] [not null]
+
+  Indexes {
+    band1 [name:"idx_band1"]
+    band2 [name:"idx_band2"]
+    band3 [name:"idx_band3"]
+    band4 [name:"idx_band4"]
+    band5 [name:"idx_band5"]
+    band6 [name:"idx_band6"]
+    band7 [name:"idx_band7"]
+    band8 [name:"idx_band8"]
+    band9 [name:"idx_band9"]
+    band10 [name:"idx_band10"]
+    band11 [name:"idx_band11"]
+    band12 [name:"idx_band12"]
+    band13 [name:"idx_band13"]
+    band14 [name:"idx_band14"]
+    band15 [name:"idx_band15"]
+    band16 [name:"idx_band16"]
+  }
+}
