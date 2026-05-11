@@ -6,7 +6,7 @@ from pydantic_xml import BaseXmlModel, element, attr
 
 NS_CONTAINER = "urn:oasis:names:tc:opendocument:xmlns:container"
 CONTAINER_NS_MAP = {"": NS_CONTAINER}
-
+CONTAINER_XML = "META-INF/container.xml"
 
 class RootFile(BaseXmlModel, nsmap=CONTAINER_NS_MAP):
     full_path: str = attr(name="full-path")
