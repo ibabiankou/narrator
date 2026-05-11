@@ -11,10 +11,12 @@ class TestDcmi:
         assert_no_diff(actual_xml_str, expected_xml_str)
 
     def test_parse_identifier(self):
-        xml_str = """<dc:identifier xmlns:dc="http://purl.org/dc/elements/1.1/" 
+        xml_str = """<dc:identifier xmlns:dc="http://purl.org/dc/elements/1.1/"
+                                    random="attribute" 
                                     id="pub-id">urn:uuid:64593003-b09e-40e7-817a-4a67f0f0c7e2</dc:identifier>"""
         actual = Identifier.from_xml(xml_str)
         assert actual.id == "pub-id"
+        assert actual.unmapped_attributes.get("random") == "attribute"
         assert actual.value == "urn:uuid:64593003-b09e-40e7-817a-4a67f0f0c7e2"
 
     def test_write_element(self):

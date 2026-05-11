@@ -1,4 +1,5 @@
 from epub_lib.model.container import Container, RootFile, RootFiles
+from tests.model import assert_no_diff
 
 
 class TestContainer:
@@ -6,7 +7,13 @@ class TestContainer:
         root_file = RootFile(full_path="EPUB/My_Crazy_Life.opf", media_type="application/oebps-package+xml")
         root_files = RootFiles(items=[root_file])
         container = Container(root_files=root_files)
-        print("\n", container.to_xml(pretty_print=True).decode())
+        actual_xml_str = container.to_xml(pretty_print=True).decode()
+        expected_xml_str = """<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
+                                <rootfiles>
+                                  <rootfile full-path="EPUB/My_Crazy_Life.opf" media-type="application/oebps-package+xml"/>
+                                </rootfiles>
+                              </container>"""
+        assert_no_diff(actual_xml_str, expected_xml_str)
 
     def test_basic_container(self):
         xml_str = """<?xml version="1.0"?>
