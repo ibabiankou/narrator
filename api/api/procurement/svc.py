@@ -3,6 +3,7 @@ from io import BytesIO
 from typing import Annotated, Optional
 
 from blake3 import blake3
+from pydantic import ValidationError
 from sqlalchemy import select
 
 from api.procurement.domain import IdMatch
@@ -38,11 +39,17 @@ class ProcurementService(Service):
         id_matches = []
         for id in epub.package.metadata.identifier:
             # TODO: Do something smarter here.
+            if id.value is None:
+                LOG.debug("Got identifier without value. Skipping it.")
+                continue
             normal_id = id.value.lower()
-            normal_ids.add(normal_id)
             metadata_id_maybe = self._find_metadata_id(normal_id)
             if metadata_id_maybe is not None:
+                # If matched with a known ID, store the match information and continue.
                 id_matches.append(IdMatch(matched_id=normal_id, other_book_id=metadata_id_maybe.source_file))
+            else:
+                # Only store normalized ID if it was not matched to an existing ID.
+                normal_ids.add(normal_id)
 
         epub_file = EpubFile(file_name=filename,
                              file_hash=file_hash,
