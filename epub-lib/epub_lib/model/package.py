@@ -48,12 +48,12 @@ class Link(BasePackageModel, tag="link"):
 
 
 # https://www.w3.org/TR/epub-33/#sec-metadata-elem
+# Relax EPUB3 spec and make all fields optional to support EPUB2.
 class Metadata(BasePackageModel, tag="metadata", search_mode='unordered'):
-    identifier: List[Identifier] = element(tag="identifier", ns=NS_DC)
-    language: List[Language] = element(tag="language", ns=NS_DC)
-    # Relax EPUB3 spec and make it optional to support EPUB2.
+    identifier: List[Identifier] = element(tag="identifier", ns=NS_DC, default=[])
+    language: List[Language] = element(tag="language", ns=NS_DC, default=[])
     meta: List[Meta] = element(tag="meta", default=[])
-    title: List[Element] = element(tag="title", ns=NS_DC)
+    title: List[Element] = element(tag="title", ns=NS_DC, default=[])
 
     link: List[Link] = element(tag="link", default=[])
 
