@@ -1,8 +1,14 @@
 import logging
+from io import BytesIO
 from os import PathLike
-from typing import IO, List
+from pathlib import Path
+from typing import IO, List, Optional, Tuple
 from zipfile import ZipFile
 
+import imagehash
+from PIL import Image
+from bs4 import BeautifulSoup
+from lxml.etree import XMLSyntaxError
 from pydantic import ValidationError
 
 from epub_lib.model.container import CONTAINER_XML, Container
@@ -12,13 +18,14 @@ LOG = logging.getLogger(__name__)
 
 
 class Epub:
-    def __init__(self, file: str | PathLike[str] | IO[bytes]):
+    def __init__(self, file: str | PathLike[str] | IO[bytes], filename: str = None):
+        self.filename = filename
         self.zip_file = ZipFile(file)
         self.root_files = self._get_root_files(self.zip_file)
-        self.package = self._get_package(
-            self.zip_file,
-            self.root_files[0]
-        )
+        self.root_file = self.root_files[0]
+        self.root_file_dir: Path = Path(self.root_file).parent
+        self.package = self._get_package(self.zip_file, self.root_file)
+        self.manifest_item_dict = {i.id: i for i in self.package.manifest.item}
         # TODO: Clean up by removing empty values.
 
     def _get_root_files(self, epub: ZipFile) -> List[str]:
@@ -38,6 +45,108 @@ class Epub:
             package_xml = package_file.read()
             try:
                 return Package.from_xml(package_xml)
+            except XMLSyntaxError as e:
+                LOG.debug("Raw contents of %s :\n%s", root_file, package_xml.decode())
+                raise e
             except ValidationError as e:
                 LOG.debug("Raw contents of %s :\n%s", root_file, package_xml.decode())
                 raise e
+
+    def get_cover_phash(self) -> Optional[Tuple[str, str]]:
+        """Returns path to cover image and its phash. None, if no cover image found."""
+        cover_image_maybe = self.get_cover_image()
+        if cover_image_maybe is None:
+            return None
+        image_name, mime_type, image_bytes = cover_image_maybe
+
+        # Handle cover item being an html page.
+        if "html" in mime_type:
+            html_img_src = self._first_image_on_page(image_bytes.decode())
+            if html_img_src is not None:
+                LOG.debug("Assuming %s is the cover image.", html_img_src)
+                with self.zip_file.open(self._resource_path(html_img_src)) as cover_file:
+                    with Image.open(cover_file) as pil_image:
+                        return html_img_src, str(imagehash.phash(pil_image))
+
+        # Handle cover item being an image.
+        if mime_type.startswith("image/"):
+            with Image.open(BytesIO(image_bytes)) as pil_image:
+                return image_name, str(imagehash.phash(pil_image))
+
+        raise ValueError(f"Failed to find cover image corresponding to manifest item href: {image_name}, mime: {mime_type}")
+
+    def _first_image_on_page(self, html_source: str) -> Optional[str]:
+        soup = BeautifulSoup(html_source, "lxml")
+        img_tags = soup.find_all("img")
+        if len(img_tags) > 0:
+            if len(img_tags) > 1:
+                LOG.debug("Found %s images on page. Using the first with src.", len(img_tags))
+
+            img_src_list = [t.get("src") for t in img_tags if t.has_attr("src")]
+            # noinspection PyTypeChecker
+            return img_src_list[0]
+
+        image_tags = soup.find_all("image")
+        if len(image_tags) > 0:
+            if len(image_tags) > 1:
+                LOG.debug("Found %s images on page. Using the first with href.", len(image_tags))
+            for t in image_tags:
+                for k, v in t.attrs.items():
+                    if "href" in k:
+                        # noinspection PyTypeChecker
+                        return v
+
+        return None
+
+    def get_cover_image(self) -> Optional[Tuple[str, str, bytes]]:
+        """Returns the path to the cover image, media type, and content bytes."""
+        if self.package.version.startswith("2"):
+            cover_image_maybe = self._v2_cover_image()
+            if cover_image_maybe is None:
+                return None
+
+            cover_image, media_type = cover_image_maybe
+            with self.zip_file.open(self._resource_path(cover_image)) as cover_file:
+                LOG.debug("Found cover item %s of type %s", cover_image, media_type)
+                return cover_image, media_type, cover_file.read()
+
+        elif self.package.version.startswith("3"):
+            # EPUB3 Suposed to have a manifest item with property containing "cover-image".
+            for item in self.manifest_item_dict.values():
+                if item.properties is not None and "cover-image" in item.properties:
+                    with self.zip_file.open(self._resource_path(item.href)) as cover_file:
+                        LOG.debug("Found cover item %s of type %s", item.href, item.media_type)
+                        return item.href, item.media_type, cover_file.read()
+            LOG.debug("No cover manifest item found.")
+            return None
+        else:
+            LOG.debug("Unexpected EPUB version: %s.", self.package.version)
+            return None
+
+    def _resource_path(self, path: str) -> str:
+        """Returns an absolute path to the resource within the zip file."""
+        return str(self.root_file_dir.joinpath(path))
+
+    def _v2_cover_image(self) -> Optional[Tuple[str, str]]:
+        # EPUB2 Should have a meta tag with the name "cover" referencing a cover manifest item.
+        cover_meta = [m for m in self.package.metadata.meta if m.name and m.name == "cover"]
+        if cover_meta:
+            if len(cover_meta) > 1:
+                LOG.debug(
+                    "Multiple cover meta tags found. Will use the first with content. %s",
+                    cover_meta
+                )
+            cover_references = [m.content for m in cover_meta if m.content is not None]
+            if not cover_references:
+                LOG.debug("No cover meta tags with content found: %s", cover_meta)
+                return None
+            cover_reference = cover_references[0]
+
+            cover_item_maybe = self.manifest_item_dict.get(cover_reference)
+            if cover_item_maybe is None:
+                LOG.debug("Cover item not found in manifest: %s", cover_reference)
+                return None
+            return cover_item_maybe.href, cover_item_maybe.media_type
+        else:
+            LOG.debug("No cover meta tags found: %s", self.package.metadata.meta)
+            return None
