@@ -19,6 +19,7 @@ class Epub:
             self.zip_file,
             self.root_files[0]
         )
+        # TODO: Clean up by removing empty values.
 
     def _get_root_files(self, epub: ZipFile) -> List[str]:
         LOG.debug("Reading and parsing %s", CONTAINER_XML)

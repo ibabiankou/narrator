@@ -16,7 +16,7 @@ class EpubFile(ProcurementBase):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
     file_name: Mapped[str]
-    file_hash: Mapped[str]
+    file_hash: Mapped[str] = mapped_column(unique=True)
     file_size_bytes: Mapped[int]
 
     raw_metadata: Mapped[dict] = mapped_column(type_=JSONB)
@@ -29,4 +29,5 @@ class MetadataId(ProcurementBase):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     source_file: Mapped[int] = mapped_column(ForeignKey("procurement.epub_files.id"))
+    type: Mapped[str]
     value: Mapped[str] = mapped_column(unique=True)

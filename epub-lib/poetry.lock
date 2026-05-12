@@ -450,6 +450,21 @@ tomli = {version = ">=1", markers = "python_version < \"3.11\""}
 dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "requests", "setuptools", "xmlschema"]
 
 [[package]]
+name = "python-stdnum"
+version = "2.2"
+description = "Python module to handle standardized numbers and codes"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "python_stdnum-2.2-py3-none-any.whl", hash = "sha256:bdf98fd117a0ca152e4047aa8ad254bae63853d4e915ddd4e0effb33ba0e9260"},
+    {file = "python_stdnum-2.2.tar.gz", hash = "sha256:e95fcfa858a703d4a40130cb3eaac133c60d8808a7f3c98efeedac968c2479b9"},
+]
+
+[package.extras]
+soap = ["zeep"]
+
+[[package]]
 name = "setuptools"
 version = "82.0.1"
 description = "Most extensible Python build backend with support for C/C++ extension modules"
@@ -578,4 +593,4 @@ devenv = ["black", "coverage", "flake8", "zest.releaser[recommended]"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "35e7498506ae4a4daeb63cc745d0e0a072a419e88fea313c75098455086e3296"
+content-hash = "b2672dfddfaa801a21cf28174d3b003b804d94989f7d2d998a5a3579ee311e93"
