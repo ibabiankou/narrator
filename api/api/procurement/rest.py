@@ -1,4 +1,5 @@
 from io import BytesIO
+from zipfile import BadZipFile
 
 from fastapi import APIRouter, UploadFile, BackgroundTasks, HTTPException
 
@@ -16,4 +17,7 @@ def upload(file: UploadFile,
     if file.size > 15 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large")
 
-    procurement_service.upload(file.filename, BytesIO(file.file.read()))
+    try:
+        procurement_service.upload(file.filename, BytesIO(file.file.read()))
+    except BadZipFile:
+        raise HTTPException(status_code=400, detail="Invalid zip file")
