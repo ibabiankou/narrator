@@ -37,6 +37,11 @@ loggers:
     handlers:
       - default
     propagate: no
+  epub_lib.epub:
+    level: DEBUG
+    handlers:
+      - default
+    propagate: no
   fastapi_keycloak_middleware.middleware:
     level: WARN
     handlers:
