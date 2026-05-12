@@ -3,7 +3,6 @@ from io import BytesIO
 from typing import Annotated, Optional
 
 from blake3 import blake3
-from pydantic import ValidationError
 from sqlalchemy import select
 
 from api.procurement.domain import IdMatch
@@ -11,6 +10,7 @@ from api.procurement.models import EpubFile, MetadataId
 from common_lib.db import transactional
 from common_lib.service import Service
 from epub_lib import Epub
+from epub_lib.util.id import normalize_identifier
 
 LOG = logging.getLogger(__name__)
 
@@ -35,21 +35,29 @@ class ProcurementService(Service):
         metadata: dict = epub.package.metadata.model_dump(exclude_none=True)
 
         # search for ID matches
-        normal_ids = set()
+        ids_to_store = {}
         id_matches = []
         for id in epub.package.metadata.identifier:
-            # TODO: Do something smarter here.
             if id.value is None:
-                LOG.debug("Got identifier without value. Skipping it.")
+                LOG.debug("Skipping identifier without value.")
                 continue
-            normal_id = id.value.lower()
-            metadata_id_maybe = self._find_metadata_id(normal_id)
+
+            id_type, id_value = normalize_identifier(id.value)
+            if id_type == "calibre":
+                LOG.debug("Skipping calibre ID, assuming they are not global. Book: '%s', ID: '%s'",
+                          filename, id_value)
+                continue
+            if id_value in ids_to_store:
+                LOG.debug("Skipping already processed ID: %s.", id_value)
+                continue
+
+            metadata_id_maybe = self._find_metadata_id(id_type, id_value)
             if metadata_id_maybe is not None:
                 # If matched with a known ID, store the match information and continue.
-                id_matches.append(IdMatch(matched_id=normal_id, other_book_id=metadata_id_maybe.source_file))
+                id_matches.append(IdMatch(type=id_type, value=id_value, other_book_id=metadata_id_maybe.source_file))
             else:
                 # Only store normalized ID if it was not matched to an existing ID.
-                normal_ids.add(normal_id)
+                ids_to_store[id_value] = MetadataId(type=id_type, value=id_value)
 
         epub_file = EpubFile(file_name=filename,
                              file_hash=file_hash,
@@ -59,15 +67,18 @@ class ProcurementService(Service):
                              )
         self.db.add(epub_file)
         self.db.flush()
-        self.db.add_all([MetadataId(source_file=epub_file.id, value=id) for id in normal_ids])
+
+        for i in ids_to_store.values():
+            i.source_file = epub_file.id
+        self.db.add_all(ids_to_store.values())
 
     def _find_file_by_hash(self, file_hash: str) -> Optional[EpubFile]:
         stmt = select(EpubFile).where(EpubFile.file_hash == file_hash)
         # noinspection PyTypeChecker
         return self.db.scalars(stmt).first()
 
-    def _find_metadata_id(self, normal_id: str) -> Optional[MetadataId]:
-        stmt = select(MetadataId).where(MetadataId.value == normal_id)
+    def _find_metadata_id(self, id_type: str, id_value: str) -> Optional[MetadataId]:
+        stmt = select(MetadataId).where(MetadataId.type == id_type).where(MetadataId.value == id_value)
         # noinspection PyTypeChecker
         return self.db.scalars(stmt).first()
 
