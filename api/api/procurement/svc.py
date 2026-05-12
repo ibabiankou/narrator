@@ -1,6 +1,6 @@
 import logging
 from io import BytesIO
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Tuple, List, Dict
 
 from blake3 import blake3
 from sqlalchemy import select
@@ -31,33 +31,10 @@ class ProcurementService(Service):
             return
 
         # Extract metadata
-        epub = Epub(body)
+        epub = Epub(body, filename=filename)
         metadata: dict = epub.package.metadata.model_dump(exclude_none=True)
 
-        # search for ID matches
-        ids_to_store = {}
-        id_matches = []
-        for id in epub.package.metadata.identifier:
-            if id.value is None:
-                LOG.debug("Skipping identifier without value.")
-                continue
-
-            id_type, id_value = normalize_identifier(id.value)
-            if id_type == "calibre":
-                LOG.debug("Skipping calibre ID, assuming they are not global. Book: '%s', ID: '%s'",
-                          filename, id_value)
-                continue
-            if id_value in ids_to_store:
-                LOG.debug("Skipping already processed ID: %s.", id_value)
-                continue
-
-            metadata_id_maybe = self._find_metadata_id(id_type, id_value)
-            if metadata_id_maybe is not None:
-                # If matched with a known ID, store the match information and continue.
-                id_matches.append(IdMatch(type=id_type, value=id_value, other_book_id=metadata_id_maybe.source_file))
-            else:
-                # Only store normalized ID if it was not matched to an existing ID.
-                ids_to_store[id_value] = MetadataId(type=id_type, value=id_value)
+        id_matches, ids_to_store = self._match_identifiers(epub)
 
         epub_file = EpubFile(file_name=filename,
                              file_hash=file_hash,
@@ -71,6 +48,32 @@ class ProcurementService(Service):
         for i in ids_to_store.values():
             i.source_file = epub_file.id
         self.db.add_all(ids_to_store.values())
+
+    def _match_identifiers(self, epub) -> Tuple[List[IdMatch], Dict[str, MetadataId]]:
+        ids_to_store = {}
+        id_matches = []
+        for id in epub.package.metadata.identifier:
+            if id.value is None:
+                LOG.debug("Skipping identifier without value.")
+                continue
+
+            id_type, id_value = normalize_identifier(id.value)
+            if id_type == "calibre":
+                LOG.debug("Skipping calibre ID, assuming they are not global. Book: '%s', ID: '%s'",
+                          epub.filename, id_value)
+                continue
+            if id_value in ids_to_store:
+                LOG.debug("Skipping already processed ID: %s.", id_value)
+                continue
+
+            metadata_id_maybe = self._find_metadata_id(id_type, id_value)
+            if metadata_id_maybe is not None:
+                # If matched with a known ID, store the match information and continue.
+                id_matches.append(IdMatch(type=id_type, value=id_value, other_book_id=metadata_id_maybe.source_file))
+            else:
+                # Only store normalized ID if it was not matched to an existing ID.
+                ids_to_store[id_value] = MetadataId(type=id_type, value=id_value)
+        return id_matches, ids_to_store
 
     def _find_file_by_hash(self, file_hash: str) -> Optional[EpubFile]:
         stmt = select(EpubFile).where(EpubFile.file_hash == file_hash)
