@@ -137,7 +137,7 @@ class AudioTrack(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"))
-    section_id: Mapped[int] = mapped_column(ForeignKey("sections.id"))
+    section_id: Mapped[int] = mapped_column(ForeignKey("sections.id"), unique=True)
     playlist_order: Mapped[int]
 
     status: Mapped[str] = mapped_column(default=AudioStatus.missing.value)
