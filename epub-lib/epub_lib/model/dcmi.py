@@ -21,7 +21,7 @@ class Identifier(BaseDcmiModel, tag="identifier", ns=NS_DC):
 
     unmapped_attributes: Dict[str, str] = Field(exclude=True, default={})
 
-    value: Annotated[str, StringConstraints(strip_whitespace=True)]
+    value: Annotated[Optional[str], StringConstraints(strip_whitespace=True)] = None
 
 
 class Element(BaseDcmiModel, tag="element", ns=NS_DC):
@@ -40,4 +40,4 @@ class Language(BaseDcmiModel, tag="language", ns=NS_DC):
 
     unmapped_attributes: Dict[str, str] = {}
 
-    value: Annotated[str, StringConstraints(strip_whitespace=True)]
+    value: Annotated[Optional[str], StringConstraints(strip_whitespace=True)] = None
