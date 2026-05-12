@@ -51,7 +51,8 @@ class Link(BasePackageModel, tag="link"):
 class Metadata(BasePackageModel, tag="metadata", search_mode='unordered'):
     identifier: List[Identifier] = element(tag="identifier", ns=NS_DC)
     language: List[Language] = element(tag="language", ns=NS_DC)
-    meta: List[Meta] = element(tag="meta")
+    # Relax EPUB3 spec and make it optional to support EPUB2.
+    meta: List[Meta] = element(tag="meta", default=[])
     title: List[Element] = element(tag="title", ns=NS_DC)
 
     link: List[Link] = element(tag="link", default=[])
