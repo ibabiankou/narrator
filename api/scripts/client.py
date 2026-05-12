@@ -6,8 +6,8 @@ from requests import JSONDecodeError, HTTPError
 from api.models import api
 from scripts.auth import session
 
-logging.basicConfig(level=logging.INFO)
 LOG = logging.getLogger(__name__)
+
 
 class NNarrator:
     def __init__(self, base_url: str = "https://nnarrator.eu/api"):
@@ -28,7 +28,6 @@ class NNarrator:
         except JSONDecodeError as e:
             LOG.error("Failed to parse JSON from response. Status: %s %s", response.status_code, response.reason)
             raise e
-
 
     def get_all_books(self, page_size: int = 100) -> list[api.BookOverview]:
         books = []
@@ -65,3 +64,9 @@ class NNarrator:
                 LOG.warning("Request URL: %s", response.request.url)
                 LOG.warning("Request Headers: %s", response.request.headers)
                 raise e
+
+    def procurement_upload(self, file_path: str):
+        with open(file_path, 'rb') as f:
+            files = {'file': f}
+            response = self.session.post("procurement/upload", files=files)
+            response.raise_for_status()
