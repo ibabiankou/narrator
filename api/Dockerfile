@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y media-types && rm -rf /var/lib/apt/list
 COPY --from=builder /app/requirements.txt .
 COPY api/log_conf.yaml .
 COPY common-lib ./common-lib
+COPY epub-lib ./epub-lib
 
 RUN pip install --no-cache-dir -r requirements.txt
 

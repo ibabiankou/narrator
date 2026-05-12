@@ -26,6 +26,7 @@ fastapi-keycloak-middleware = "^1.6.0"
 google-genai = "^1.73.1"
 tenacity = "^9.1.4"
 blake3 = "^1.0.8"
+narrator-epub = { path = "../epub-lib", develop = true }
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

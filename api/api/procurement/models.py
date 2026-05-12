@@ -1,5 +1,9 @@
+from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
 
+from api.procurement.domain import IdMatch
+from api.utils.db import PydanticList
 
 
 class ProcurementBase(DeclarativeBase):
@@ -15,4 +19,14 @@ class EpubFile(ProcurementBase):
     file_hash: Mapped[str]
     file_size_bytes: Mapped[int]
 
-    # TODO Which model to use for metadata? Simple dictionary? Something more specific?
+    raw_metadata: Mapped[dict] = mapped_column(type_=JSONB)
+
+    id_matches: Mapped[list[IdMatch]] = mapped_column(type_=PydanticList(IdMatch))
+
+
+class MetadataId(ProcurementBase):
+    __tablename__ = "metadata_ids"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    source_file: Mapped[int] = mapped_column(ForeignKey("procurement.epub_files.id"))
+    value: Mapped[str] = mapped_column(unique=True)
