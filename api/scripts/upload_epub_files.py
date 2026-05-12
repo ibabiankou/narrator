@@ -1,5 +1,8 @@
+import json
 import logging
 import os
+
+from requests import HTTPError
 
 from scripts.client import NNarrator
 
@@ -24,13 +27,24 @@ if __name__ == "__main__":
     all_books = []
     all_books.extend(all_files("../../out/epub"))
     all_books.extend(all_files("~/data"))
+    all_books.sort()
 
-    subset = all_books[:50]
+    subset = all_books
 
     LOG.info("Found %s books but will process only %s.", len(all_books), len(subset))
     LOG.info("  %s", "\n  ".join(all_books))
     for book in subset:
         LOG.info("Uploading %s", book)
-        narrator.procurement_upload(book)
+        book_size = os.path.getsize(book)
+        if book_size > 15 * 1024 * 1024:
+            LOG.info("Skipping too large book '%s'. Actual size: %sMB", book, book_size / 1024 / 1024)
+            continue
+        try:
+            narrator.procurement_upload(book)
+        except HTTPError as e:
+            if e.response.status_code == 400:
+                LOG.error(json.dumps(e.response.json(), indent=2))
+                continue
+            raise e
 
-    print("Done...")
+    LOG.info("Done...")
