@@ -14,3 +14,9 @@ class ImageMatch(BaseModel):
     image_name: str = Field(description="Name of the image within this book.")
     confidence: float = Field(description="Confidence of the match (closeness of images).")
     other_image_id: int = Field(description="ID of the image this one matched with.")
+
+class ContentMatch(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    confidence: float = Field(description="Confidence of the match (similarity of content).")
+    other_book_id: int = Field(description="ID of the other book.")

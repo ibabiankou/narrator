@@ -1,4 +1,5 @@
 import logging
+import re
 from io import BytesIO
 from os import PathLike
 from pathlib import Path
@@ -8,6 +9,7 @@ from zipfile import ZipFile
 import imagehash
 from PIL import Image
 from bs4 import BeautifulSoup
+from datasketch import MinHash
 from lxml.etree import XMLSyntaxError
 from pydantic import ValidationError
 
@@ -20,7 +22,7 @@ LOG = logging.getLogger(__name__)
 class Epub:
     def __init__(self, file: str | PathLike[str] | IO[bytes], filename: str = None):
         self.filename = filename
-        self.zip_file = ZipFile(file)
+        self.zip_file: ZipFile = ZipFile(file)
         self.root_files = self._get_root_files(self.zip_file)
         self.root_file = self.root_files[0]
         self.root_file_dir: Path = Path(self.root_file).parent
@@ -73,7 +75,8 @@ class Epub:
             with Image.open(BytesIO(image_bytes)) as pil_image:
                 return image_name, str(imagehash.phash(pil_image))
 
-        raise ValueError(f"Failed to find cover image corresponding to manifest item href: {image_name}, mime: {mime_type}")
+        raise ValueError(
+            f"Failed to find cover image corresponding to manifest item href: {image_name}, mime: {mime_type}")
 
     def _first_image_on_page(self, html_source: str) -> Optional[str]:
         soup = BeautifulSoup(html_source, "lxml")
@@ -150,3 +153,69 @@ class Epub:
         else:
             LOG.debug("No cover meta tags found: %s", self.package.metadata.meta)
             return None
+
+    def calculate_minhash(self, num_samples=34, sample_size=300, num_perm=128) -> List[int]:
+        # Go through spine and extract all the text.
+        all_words = []
+        for itemref in self.package.spine.items:
+            idref = itemref.idref
+            item = self.manifest_item_dict[idref]
+            content_file_path = item.href
+            try:
+                with self.zip_file.open(self._resource_path(content_file_path)) as html_file:
+                    words = self._extract_clean_text(html_file)
+                    LOG.debug("Extracted %s words from %s", len(words), content_file_path)
+                    all_words.extend(words)
+            except KeyError:
+                LOG.debug("Manifest item '%s' not found in zip file. Skipping it.", content_file_path)
+        LOG.debug(
+            "Extracted %s words from %s items.",
+            len(all_words),
+            len(self.package.spine.items))
+
+        # Select samples.
+        sample = self._get_stride_sample(all_words, num_samples, sample_size)
+
+        # Calculate minhash
+        return self._calculate_minhash(sample, num_perm)
+
+    def _extract_clean_text(self, html_file: IO[bytes]):
+        """Strip HTML and normalize text."""
+        soup = BeautifulSoup(html_file, "lxml")
+        text = soup.get_text(separator=" ")
+
+        # Remove non-alphanumeric and lowercase
+        text = re.sub(r'\W+', ' ', text).lower()
+        return text.split()
+
+    def _get_stride_sample(self, words: List[str], num_samples: int, sample_size: int):
+        """Grab `num_samples` samples of `sample_size` words from across the book."""
+        if len(words) <= (num_samples * sample_size):
+            # Book is too short, use everything
+            return words
+
+        # Skip first 2% and last 5% (fluff/ads)
+        # TODO: Use EPUB metadata to omit fluff more reliably.
+        start_idx = int(len(words) * 0.02)
+        end_idx = int(len(words) * 0.95)
+        core_words = words[start_idx:end_idx]
+
+        stride = (len(core_words) - sample_size) // (num_samples - 1)
+        sample = []
+        for i in range(num_samples):
+            pos = i * stride
+            sample.extend(core_words[pos: pos + sample_size])
+        return sample
+
+    def _calculate_minhash(self, words: List[str], num_perm: int = 128) -> List[int]:
+        """Create the MinHash signature."""
+        m = MinHash(num_perm=num_perm, seed=42)
+        # Use 3-word shingles for better precision
+        for i in range(len(words) - 2):
+            shingle = " ".join(words[i: i + 3])
+            m.update(shingle.encode('utf8'))
+
+        # Get the 128 integers
+        # noinspection PyUnresolvedReferences
+        signature = m.hashvalues.tolist()
+        return signature
