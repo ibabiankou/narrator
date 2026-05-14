@@ -7,6 +7,7 @@ from sqlalchemy import pool
 
 from alembic import context
 
+from api.metadata.db import MetadataBase
 from api.models.db import Base
 from api.procurement.models import ProcurementBase
 
@@ -23,7 +24,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = [Base.metadata, ProcurementBase.metadata]
+target_metadata = [Base.metadata, ProcurementBase.metadata, MetadataBase.metadata]
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -37,7 +38,7 @@ config.set_section_option(section, "sqlalchemy.url", pg_url)
 
 
 def include_object(object, name, type_, reflected, compare_to):
-    if type_ == "table" and object.schema not in [None, "public", "procurement"]:
+    if type_ == "table" and object.schema not in [None, "public", "procurement", "metadata"]:
         return False
     return True
 
