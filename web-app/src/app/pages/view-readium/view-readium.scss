@@ -1,7 +1,16 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  box-sizing: border-box;
+}
+
 .reader-viewport {
   position: relative;
+  flex-grow: 1;
   width: 100% !important;
-  height: 90vh;
+  max-width: var(--app-container-width);
+  margin: 0 auto;
 
   ::ng-deep iframe {
     width: 100%;

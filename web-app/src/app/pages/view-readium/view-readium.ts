@@ -11,14 +11,13 @@ import {
   FrameClickEvent,
   SuspiciousActivityEvent
 } from '@readium/navigator-html-injectables';
+import { ThemeService } from '../../core/services/theme.service';
 
 // noinspection JSUnusedLocalSymbols
 const listeners: EpubNavigatorListeners = {
   frameLoaded: (wnd: Window) => {
-    console.log('frameLoaded:', wnd);
   },
   positionChanged: (locator: Locator) => {
-    console.log('Position changed:', locator);
   },
   tap: (e: FrameClickEvent) => {
     return true
@@ -38,18 +37,14 @@ const listeners: EpubNavigatorListeners = {
     return true
   },
   textSelected: (selection: BasicTextSelection) => {
-    console.log('text selected:', selection);
   },
   contentProtection: (type: string, data: SuspiciousActivityEvent) => {
   },
   contextMenu: (data: ContextMenuEvent) => {
-    console.log('contextMenu:', data);
   },
   peripheral: (data: KeyboardPeripheralEventData) => {
-    console.log('peripheral:', data);
   }
 }
-
 
 @Component({
   selector: 'app-view-readium',
@@ -62,6 +57,7 @@ const listeners: EpubNavigatorListeners = {
 })
 export class ViewReadium implements OnDestroy {
   httpClient = inject(HttpClient);
+  themeService = inject(ThemeService);
 
   file = input.required<string>();
 
@@ -95,8 +91,8 @@ export class ViewReadium implements OnDestroy {
             undefined,
             {
               preferences: {
-                backgroundColor: "#666",
-                scroll: true
+                backgroundColor: this.getStyle("background-color"),
+                textColor: this.getStyle("color")
               },
               defaults: {}
             }
@@ -108,6 +104,32 @@ export class ViewReadium implements OnDestroy {
         }
       }
     });
+
+    this.themeService.isDark$.subscribe(
+      {
+        next: () => {
+          // Wait a bit for css to be updated.
+          setTimeout(() => {
+            this.updatePreferences();
+          }, 50);
+        }
+      }
+    );
+  }
+
+  private getStyle(variableName: string, target: HTMLElement = document.body): string {
+    return getComputedStyle(target).getPropertyValue(variableName).trim();
+  }
+
+  private updatePreferences() {
+    if (!this.navigator) return;
+
+    const editor = this.navigator.preferencesEditor;
+
+    editor.backgroundColor.value = this.getStyle("background-color");
+    editor.textColor.value = this.getStyle("color");
+
+    this.navigator.submitPreferences(editor.preferences);
   }
 
   @HostListener("document:keydown.arrowright", [])
