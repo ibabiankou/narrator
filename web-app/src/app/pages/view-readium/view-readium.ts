@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, input, OnDestroy, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, input, OnDestroy, ViewChild } from '@angular/core';
 import { BreadcrumbContentDirective, ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { EpubNavigator, EpubNavigatorListeners, KeyboardPeripheralEventData } from '@readium/navigator';
 import { HttpFetcher, Locator, Manifest, Publication } from '@readium/shared';
@@ -107,6 +107,22 @@ export class ViewReadium implements OnDestroy {
           console.error('Failed to initialize Readium Navigator:', error);
         }
       }
+    });
+  }
+
+  @HostListener("document:keydown.arrowright", [])
+  next() {
+    console.log("right");
+    this.navigator?.goForward(false, (ok) => {
+      console.log("goForward callback", ok);
+    });
+  }
+
+  @HostListener("document:keydown.arrowleft", [])
+  prev() {
+    console.log("left");
+    this.navigator?.goBackward(false, (ok) => {
+      console.log("goBackward callback", ok);
     });
   }
 
