@@ -158,3 +158,19 @@ services:
       imgproxy:
         condition: service_started
         restart: true
+
+
+  streamer:
+    image: ghcr.io/readium/readium:0.7.1
+    command:
+      - serve
+      - --scheme
+      - file
+      - --file-directory
+      - /epub
+      - --address
+      - 0.0.0.0
+    volumes:
+      - "./out/epub:/epub"
+    ports:
+      - "15080:15080"
