@@ -2,8 +2,7 @@ import { Component, inject, output } from '@angular/core';
 import { BookMetadata } from '../../core/models/books.dto';
 import { MatButtonModule, MatIconButton } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogActions, MatDialogClose, MatDialogContent } from '@angular/material/dialog';
-import { FileAsBlobPipe } from '../../core/fileAsBlobPipe';
-import { AsyncPipe, NgOptimizedImage } from '@angular/common';
+import { NgOptimizedImage } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatLabel } from '@angular/material/input';
 
@@ -11,8 +10,6 @@ import { MatLabel } from '@angular/material/input';
 @Component({
   selector: 'app-book-details-dialog',
   imports: [
-    AsyncPipe,
-    FileAsBlobPipe,
     MatButtonModule,
     MatIconButton,
     MatDialogActions,
