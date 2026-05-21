@@ -70,7 +70,7 @@ export class ViewReadium implements OnDestroy {
     toObservable(this.file).pipe(
       filter(fileParam => !!fileParam),
       switchMap((filePath) => {
-        const base64EncodedPath = btoa(filePath);
+        const base64EncodedPath = btoa(filePath).replace(/=+$/, '');
         this.baseUrl = `http://localhost:15080/webpub/${base64EncodedPath}/`;
         const manifestUrl = `${this.baseUrl}manifest.json`;
         return this.httpClient.get(manifestUrl);
@@ -83,16 +83,18 @@ export class ViewReadium implements OnDestroy {
       next: async (manifest) => {
         try {
           const fetcher = new HttpFetcher(window.fetch.bind(window), this.baseUrl);
+          const publication = new Publication({manifest: manifest, fetcher: fetcher});
           this.navigator = new EpubNavigator(
             this.readerContainer.nativeElement,
-            new Publication({manifest: manifest, fetcher: fetcher}),
+            publication,
             listeners,
             [],
             undefined,
             {
               preferences: {
                 backgroundColor: this.getStyle("background-color"),
-                textColor: this.getStyle("color")
+                textColor: this.getStyle("color"),
+                scroll: true
               },
               defaults: {}
             }
@@ -134,17 +136,13 @@ export class ViewReadium implements OnDestroy {
 
   @HostListener("document:keydown.arrowright", [])
   next() {
-    console.log("right");
-    this.navigator?.goForward(false, (ok) => {
-      console.log("goForward callback", ok);
+    this.navigator?.goForward(false, () => {
     });
   }
 
   @HostListener("document:keydown.arrowleft", [])
   prev() {
-    console.log("left");
-    this.navigator?.goBackward(false, (ok) => {
-      console.log("goBackward callback", ok);
+    this.navigator?.goBackward(false, () => {
     });
   }
 
