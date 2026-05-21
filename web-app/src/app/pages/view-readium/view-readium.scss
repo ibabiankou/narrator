@@ -1,0 +1,11 @@
+.reader-viewport {
+  position: relative;
+  width: 100% !important;
+  height: 90vh;
+
+  ::ng-deep iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+}
