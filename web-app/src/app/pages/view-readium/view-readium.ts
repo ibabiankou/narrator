@@ -1,9 +1,9 @@
-import { Component, ElementRef, HostListener, inject, input, OnDestroy, ViewChild } from '@angular/core';
-import { BreadcrumbContentDirective, ToolbarComponent } from '../../components/toolbar/toolbar.component';
+import { Component, ElementRef, HostListener, inject, input, model, OnDestroy, ViewChild } from '@angular/core';
+import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { EpubNavigator, EpubNavigatorListeners, KeyboardPeripheralEventData } from '@readium/navigator';
 import { HttpFetcher, Locator, Manifest, Publication } from '@readium/shared';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { filter, map, switchMap } from 'rxjs';
+import { filter, interval, map, switchMap, take } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import {
   BasicTextSelection,
@@ -50,7 +50,6 @@ const listeners: EpubNavigatorListeners = {
   selector: 'app-view-readium',
   imports: [
     ToolbarComponent,
-    BreadcrumbContentDirective,
   ],
   templateUrl: './view-readium.html',
   styleUrl: './view-readium.scss',
@@ -65,6 +64,8 @@ export class ViewReadium implements OnDestroy {
 
   private navigator?: EpubNavigator;
   private baseUrl?: string;
+
+  title = model<string>("");
 
   constructor() {
     toObservable(this.file).pipe(
@@ -84,6 +85,9 @@ export class ViewReadium implements OnDestroy {
         try {
           const fetcher = new HttpFetcher(window.fetch.bind(window), this.baseUrl);
           const publication = new Publication({manifest: manifest, fetcher: fetcher});
+          const lang = publication.metadata.languages![0];
+          this.title.set(publication.metadata.title.getTranslation(lang))
+
           this.navigator = new EpubNavigator(
             this.readerContainer.nativeElement,
             publication,
@@ -94,13 +98,49 @@ export class ViewReadium implements OnDestroy {
               preferences: {
                 backgroundColor: this.getStyle("background-color"),
                 textColor: this.getStyle("color"),
-                scroll: true
+                scroll: true,
+                selectionBackgroundColor: "#4e70ff"
               },
-              defaults: {}
+              defaults: {
+                scroll: true,
+                selectionBackgroundColor: "#4e70ff"
+              }
             }
           );
 
           await this.navigator.load();
+
+          // TOC as defined by the authors.
+          console.log("TOC:", this.navigator.publication.toc);
+          // Spine of the publication.
+          console.log("Manifest Reading Order:", this.navigator.publication.manifest.readingOrder);
+
+          // TODO: Scroll through all pages from the spine.
+          // interval(2000).pipe(
+          //   take(31) // 0 to 30 inclusive
+          // ).subscribe(i => {
+          //   if (!this.navigator) return;
+          //   console.log(`Observable iteration: ${i}`);
+          //
+          //   const locator = this.navigator.publication.manifest.readingOrder!.items[i].locator;
+          //   // Navigate to some chapter.
+          //   this.navigator.go(locator, false, () => {
+          //     if (!this.navigator) return;
+          //     // TODO: Scroll to a specific fragment within the currently rendered page.
+          //     // const bookDoc = this.navigator.pool.currentFrames[0]!.iframe.contentWindow!.document;
+          //     // // Scroll fragment into view.
+          //     // const fragmentId = "f001461";
+          //     // const element = bookDoc.getElementById(fragmentId);
+          //     // console.log("Doc location:", bookDoc.location);
+          //     // if (element) {
+          //     //   element.classList.add("epub-media-overlay-active");
+          //     //   element.scrollIntoView({behavior: "smooth", block: "center"});
+          //     // } else {
+          //     //   console.warn(`Failed to find fragment ${fragmentId} in the owner window.`);
+          //     // }
+          //   });
+          // });
+
         } catch (error) {
           console.error('Failed to initialize Readium Navigator:', error);
         }

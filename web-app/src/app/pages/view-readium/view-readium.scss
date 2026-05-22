@@ -5,6 +5,11 @@
   box-sizing: border-box;
 }
 
+.title {
+  text-align: center;
+  margin: 0 auto;
+}
+
 .reader-viewport {
   position: relative;
   flex-grow: 1;
