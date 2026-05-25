@@ -106,9 +106,9 @@ export class BooksPage implements OnInit {
       startIn: "downloads",
       types: [
         {
-          description: "PDF Documents",
+          description: "EPUB Books",
           accept: {
-            "application/pdf": [".pdf"],
+            "application/epub+zip": [".epub"],
           },
         },
       ],
@@ -162,8 +162,8 @@ export class BooksPage implements OnInit {
 
       // Validate it's a PDF file
       const file = files[0];
-      if (file.type !== "application/pdf") {
-        this.notificationService.showError("Invalid file type. Only PDF files are supported.");
+      if (file.type !== "application/epub+zip") {
+        this.notificationService.showError("Invalid file type. Only EPUB files are supported.");
         return;
       }
 
