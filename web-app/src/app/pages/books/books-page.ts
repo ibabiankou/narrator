@@ -177,6 +177,8 @@ export class BooksPage implements OnInit {
         return ['/books', book.id, 'edit-details'];
       case BookStatus.ready_for_content_review:
         return ['/books', book.id, 'edit'];
+      case BookStatus.ready_for_toc_review:
+        return ['/books', book.id, 'select-for-narration'];
     }
     return ['/books', book.id];
   }

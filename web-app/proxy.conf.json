@@ -11,6 +11,12 @@
     "changeOrigin": true,
     "logLevel": "debug"
   },
+  "/webpub": {
+    "target": "http://localhost:15080",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
   "/docs": {
     "target": "http://localhost:8000",
     "secure": false,

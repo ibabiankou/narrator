@@ -83,6 +83,16 @@ def get_book_with_content(book_id: uuid.UUID,
     return api.BookWithContent(overview=overview, stats=stats, pages=pages)
 
 
+@books_router.get("/{book_id}/details")
+def get_book_details(book_id: uuid.UUID,
+                     book_service: BookServiceDep,
+                     ) -> api.BookDetails:
+    try:
+        return book_service.get_book_details(book_id)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+
 @books_router.get("/{book_id}/images")
 def list_images(book_id: uuid.UUID, file_service: FilesServiceDep) -> list[str]:
     return file_service.list_files(f"{book_id}/images")

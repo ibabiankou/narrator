@@ -93,6 +93,26 @@ class BookWithContent(BaseModel):
     pages: list[BookPage]
 
 
+class BookDetails(BookMetadata):
+    id: uuid.UUID
+    owner_id: uuid.UUID
+    source_file_key: str
+    status: str
+
+    @classmethod
+    def from_orm(cls, book: db.Book):
+        return BookDetails(id=book.id,
+                           owner_id=book.owner_id,
+                           source_file_key=f"{book.id}/{book.file_name}",
+                           status=book.status,
+                           cover=book.cover,
+                           title=book.title,
+                           series=book.series,
+                           description=book.description,
+                           authors=[] if book.authors is None else list(book.authors),
+                           isbns=[] if book.isbns is None else list(book.isbns))
+
+
 class AudioTrack(BaseModel):
     book_id: uuid.UUID
     section_id: int

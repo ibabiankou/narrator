@@ -520,5 +520,9 @@ class BookService(Service):
             LOG.info("Narration of book %s completed.", book_id)
             self._set_status(book_id, db.BookStatus.ready)
 
+    @transactional
+    def get_book_details(self, book_id: uuid.UUID) -> api.BookDetails:
+        return api.BookDetails.from_orm(self.db.get_one(db.Book, book_id))
+
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

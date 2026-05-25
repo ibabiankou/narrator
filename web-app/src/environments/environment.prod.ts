@@ -3,4 +3,5 @@ export const environment = {
   // api_base_url: 'https://narrator.in.ggnt.eu/api'
   api_base_url: '/api',
   auth_url_pattern: /^(https:\/\/nnarrator.eu)?(\/api)(\/.*)?$/i,
+  readium_base_url: '/webpub'
 };

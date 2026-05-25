@@ -8,6 +8,9 @@ export enum BookStatus {
   /** Book metadata is reviewed, so it's time to review the content extracted from the PDF. */
   ready_for_content_review = "ready_for_content_review",
 
+  /** Book is stored, user can proceed to select the content to be narrated. */
+  ready_for_toc_review = "ready_for_toc_review",
+
   /** The book is ready to be narrated, but waiting in the queue. */
   queued = "queued",
 
@@ -22,9 +25,10 @@ const BookStatusRank: Record<BookStatus, number> = {
   [BookStatus.processing]: 1,
   [BookStatus.ready_for_metadata_review]: 2,
   [BookStatus.ready_for_content_review]: 3,
-  [BookStatus.queued]: 4,
-  [BookStatus.narrating]: 5,
-  [BookStatus.ready]: 6,
+  [BookStatus.ready_for_toc_review]: 4,
+  [BookStatus.queued]: 5,
+  [BookStatus.narrating]: 6,
+  [BookStatus.ready]: 7,
 };
 
 export namespace BookStatus {
@@ -52,6 +56,10 @@ export interface BookOverview extends BookMetadata {
   pdf_file_name: string;
   number_of_pages: number;
   status: BookStatus;
+}
+
+export interface BookDetails extends BookOverview {
+  source_file_key: string;
 }
 
 export interface BookStats {

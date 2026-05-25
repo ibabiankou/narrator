@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  BookDetails,
   BookMetadata,
   BookMetadataForReview,
   BookOverview,
@@ -21,6 +22,7 @@ export class BooksService {
   private apiUrl = `${environment.api_base_url}/books`;
   private playbackInfoCache: IndexDBCache<PlaybackInfo>;
   private booksCache: IndexDBCache<BookWithContent>;
+  private bookDetailsCache: IndexDBCache<BookDetails>;
 
   constructor(private http: HttpClient,
               private connectionService: ConnectionService) {
@@ -33,6 +35,10 @@ export class BooksService {
       this.connectionService,
       "books",
       (url: string) => this.http.get<BookWithContent>(url));
+    this.bookDetailsCache = new IndexDBCache(
+      this.connectionService,
+      "book-details",
+      (url: string) => this.http.get<BookDetails>(url));
   }
 
   getBookWithContent(bookId: string): Observable<BookWithContent> {
@@ -46,6 +52,15 @@ export class BooksService {
             page.file_url = `${environment.api_base_url}/files/${bookId}/pages/${page.file_name}`
           });
         }));
+  }
+
+  getBookDetails(bookId: string): Observable<BookDetails> {
+    const url = `${this.apiUrl}/${bookId}/details`;
+    return this.bookDetailsCache.get(url)
+      .pipe(
+        switchMap(bookMaybe =>
+          bookMaybe ? of(bookMaybe) : throwError(() => new Error('Unable to load the book details'))),
+        );
   }
 
   listBooks(pageIndex?: number, size?: number): Observable<PageResponse<BookOverview>> {
