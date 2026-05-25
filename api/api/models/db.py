@@ -49,6 +49,9 @@ class BookStatus(StrEnum):
     # Book metadata is reviewed, so it's time to review the content extracted from the PDF.
     ready_for_content_review = "ready_for_content_review"
 
+    # Book is stored, user can proceed to select the content to be narrated.
+    ready_for_toc_review = "ready_for_toc_review"
+
     # The book is ready to be narrated, but waiting in the queue.
     queued = "queued"
 

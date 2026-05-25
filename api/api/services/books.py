@@ -25,6 +25,7 @@ from api.utils.text import LineReader, CleanupPipeline, pages_to_paragraphs, \
     paragraphs_to_sections
 from common_lib.db import transactional
 from common_lib.service import Service
+from epub_lib import Epub
 
 LOG = logging.getLogger(__name__)
 
@@ -49,29 +50,51 @@ class BookService(Service):
     @transactional
     def create_book(self, user_id: uuid.UUID, file_name: str, file_bytes: BytesIO,
                     background_tasks: BackgroundTasks):
-        # TODO: Validate language. Fail book creation if language is not supported.
-
         book_id = uuid.uuid4()
         file_key = f"{book_id}/{file_name}"
+
+        # Extract metadata
+        # TODO: handle parsing errors...
+        epub = Epub(file_bytes, filename=file_name)
+        titles = epub.package.metadata.get_title()
+        authors = epub.package.metadata.get_authors()
+        descriptions = epub.package.metadata.get_descriptions()
+
+        if not epub.package.metadata.has_english_language():
+            raise ValueError("Only English language is supported at the moment.")
+
+        # TODO: process identifiers.
+
+        cover_image_maybe = epub.get_cover_image()
+        cover_thumbnail_path = None
+        if cover_image_maybe is not None:
+            image_name, mime_type, image_bytes = cover_image_maybe
+            # TODO: compress image right away.
+            cover_image_key = f"{book_id}/images/{image_name}"
+            self.files_service.upload_file(cover_image_key, image_bytes)
+            cover_thumbnail_path = self.img_proxy.build_url(cover_image_key)
 
         file_bytes.seek(0)
         self.files_service.upload_file(file_key, file_bytes)
 
         file_bytes.seek(0)
-        pdf_document = pymupdf.open(stream=file_bytes, filetype="application/pdf")
-
         book = db.Book(id=book_id,
                        owner_id=user_id,
                        file_name=file_name,
                        created_time=datetime.now(UTC),
-                       number_of_pages=pdf_document.page_count,
-                       status=db.BookStatus.processing)
+                       status=db.BookStatus.ready_for_toc_review,
+                       cover=cover_thumbnail_path,
+                       title=titles[0],
+                       authors=authors,
+                       description=descriptions[0] if len(descriptions) > 0 else None
+                       )
 
         self.db.add(book)
 
-        background_tasks.add_task(self.extract_metadata, book_id, file_name)
-        background_tasks.add_task(self.split_pages, book_id, file_name)
-        background_tasks.add_task(self.extract_text, book_id, file_name)
+        # TODO: clean up PDF code
+        # background_tasks.add_task(self.extract_metadata, book_id, file_name)
+        # background_tasks.add_task(self.split_pages, book_id, file_name)
+        # background_tasks.add_task(self.extract_text, book_id, file_name)
 
         return api.BookOverview.from_orm(book)
 

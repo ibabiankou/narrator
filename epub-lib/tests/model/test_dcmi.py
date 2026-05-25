@@ -40,3 +40,14 @@ class TestDcmi:
         xml_str = """<dc:language xmlns:dc="http://purl.org/dc/elements/1.1/">en-US</dc:language>"""
         actual = Language.from_xml(xml_str)
         assert actual.value == "en-US"
+
+    def test_is_english(self):
+        eng_values = ["en", "eng", "en-US", "en-GB", "en-Latn", "en-uk"]
+        for val in eng_values:
+            language = Language(value=val)
+            assert language.is_english()
+
+        non_eng_values = ["fr", "nl", "zh-cmn-hans-cn", "invalid-tag-12345"]
+        for val in non_eng_values:
+            language = Language(value=val)
+            assert not language.is_english()

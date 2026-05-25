@@ -14,7 +14,7 @@ from api.books import books_router
 from api.experimental import experimental_router
 from api.files import files_router
 from api.maintenance import maintenance_router
-from api.metadata import metadata_router
+from api.metadata.rest import metadata_router
 from api.models.auth import UserDep, map_user
 from api.openlibrary.service import OpenlibraryService
 from api.processing import processing_router

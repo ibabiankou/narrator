@@ -123,6 +123,23 @@ files = [
 ]
 
 [[package]]
+name = "langcodes"
+version = "3.5.1"
+description = "Tools for labeling human languages with IETF language tags"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "langcodes-3.5.1-py3-none-any.whl", hash = "sha256:b6a9c25c603804e2d169165091d0cdb23934610524a21d226e4f463e8e958a72"},
+    {file = "langcodes-3.5.1.tar.gz", hash = "sha256:40bff315e01b01d11c2ae3928dd4f5cbd74dd38f9bd912c12b9a3606c143f731"},
+]
+
+[package.extras]
+build = ["build", "twine"]
+data = ["language-data (>=1.2)"]
+test = ["pytest", "pytest-cov"]
+
+[[package]]
 name = "lxml"
 version = "6.1.0"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
@@ -963,4 +980,4 @@ devenv = ["black", "coverage", "flake8", "zest.releaser[recommended]"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "2a71291c8358db30d6a9677b5cbb9072493afff62597d0110cf09de073048d07"
+content-hash = "28f157f6edf34626031cf4cab767aa06edc50e2242f7454567f4774e7ada724a"

@@ -70,6 +70,24 @@ class Metadata(BasePackageModel, tag="metadata", search_mode='unordered'):
     subject: List[Element] = element(tag="subject", default=[])
     type: List[Element] = element(tag="type", default=[])
 
+    def get_title(self) -> List[str]:
+        if len(self.title) == 0:
+            # Should never happen because title is mandatory.
+            raise ValueError("No title found in metadata")
+        return [t.value for t in self.title if t.value is not None]
+
+    def get_authors(self) -> List[str]:
+        return [c.value for c in self.creator if c.value is not None]
+
+    def get_descriptions(self) -> List[str]:
+        return [c.value for c in self.description if c.value is not None]
+
+    def has_english_language(self):
+        for lang in self.language:
+            if lang.is_english():
+                return True
+        return False
+
 
 # https://www.w3.org/TR/epub-33/#sec-item-elem
 class Item(BasePackageModel, tag="item"):

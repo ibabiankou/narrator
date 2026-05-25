@@ -12,7 +12,8 @@ dependencies = [
     "python-stdnum (>=2.2,<3.0)",
     "imagehash (>=4.3.2,<5.0.0)",
     "beautifulsoup4 (>=4.14.3,<5.0.0)",
-    "datasketch (>=1.10.0,<2.0.0)"
+    "datasketch (>=1.10.0,<2.0.0)",
+    "langcodes (>=3.5.1,<4.0.0)"
 ]
 
 [tool.poetry]

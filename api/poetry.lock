@@ -1399,6 +1399,23 @@ cryptography = ">=3.4"
 typing-extensions = ">=4.5.0"
 
 [[package]]
+name = "langcodes"
+version = "3.5.1"
+description = "Tools for labeling human languages with IETF language tags"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "langcodes-3.5.1-py3-none-any.whl", hash = "sha256:b6a9c25c603804e2d169165091d0cdb23934610524a21d226e4f463e8e958a72"},
+    {file = "langcodes-3.5.1.tar.gz", hash = "sha256:40bff315e01b01d11c2ae3928dd4f5cbd74dd38f9bd912c12b9a3606c143f731"},
+]
+
+[package.extras]
+build = ["build", "twine"]
+data = ["language-data (>=1.2)"]
+test = ["pytest", "pytest-cov"]
+
+[[package]]
 name = "lxml"
 version = "6.1.0"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
@@ -1714,6 +1731,7 @@ develop = true
 beautifulsoup4 = ">=4.14.3,<5.0.0"
 datasketch = ">=1.10.0,<2.0.0"
 imagehash = ">=4.3.2,<5.0.0"
+langcodes = ">=3.5.1,<4.0.0"
 pydantic-xml = {version = ">=2.20.0,<3.0.0", extras = ["lxml"]}
 python-stdnum = ">=2.2,<3.0"
 
