@@ -165,12 +165,15 @@ services:
     command:
       - serve
       - --scheme
-      - file
-      - --file-directory
-      - /epub
+      - s3
+      - --s3-endpoint
+      - http://s3:4566
+      - --s3-access-key
+      - test
+      - --s3-secret-key
+      - test
+      - --s3-use-path-style
       - --address
       - 0.0.0.0
-    volumes:
-      - "./out/epub:/epub"
     ports:
       - "15080:15080"
