@@ -1,13 +1,16 @@
-import { Component, effect, inject, input, model } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
-import { switchMap, tap } from 'rxjs';
+import { filter, switchMap } from 'rxjs';
 import { BooksService } from '../../core/services/books.service';
 import { ReadiumService } from '../../core/services/readium.service';
+import { ReadiumEpub } from '../../components/readium-epub/readium-epub';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-select-for-narration',
   imports: [
     ToolbarComponent,
+    ReadiumEpub,
   ],
   templateUrl: './select-for-narration.html',
   styleUrl: './select-for-narration.scss',
@@ -17,21 +20,14 @@ export class SelectForNarration {
   private readiumService = inject(ReadiumService);
 
   bookId = input.required<string>();
+  bookDetails = toSignal(toObservable(this.bookId).pipe(
+    switchMap(bookId => this.booksService.getBookDetails(bookId))
+  ));
+  publication = toSignal(toObservable(this.bookDetails).pipe(
+    filter(bookDetails => !!bookDetails),
+    switchMap(bookDetails => {
+      return this.readiumService.getPublication(bookDetails.source_file_key)
+    })));
 
-  title = model<string>("");
-
-  constructor() {
-    effect(() => {
-      // Fetch book overview.
-      this.booksService.getBookDetails(this.bookId()).pipe(
-        // Switch to publication.
-        switchMap(bookDetails => this.readiumService.getPublication(bookDetails.source_file_key)),
-        tap(publication => {
-          const lang = publication.metadata.languages![0];
-          this.title.set(publication.metadata.title.getTranslation(lang));
-        })
-        // TODO Render the book.
-      ).subscribe();
-    });
-  }
+  title = computed(() => this.bookDetails()?.title ?? "Loading...");
 }

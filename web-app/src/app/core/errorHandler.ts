@@ -3,8 +3,17 @@ import { ErrorHandler, Injectable } from '@angular/core';
 @Injectable()
 export class GlobalErrorHandler implements ErrorHandler {
   handleError(error: any): void {
+    // Extract the raw message if it's wrapped in an ErrorEvent or Error object
+    const message = error?.message || error?.toString() || '';
+
+    // Suppress the harmless ResizeObserver loop warning
+    if (message.includes('ResizeObserver loop completed with undelivered notifications') ||
+      message.includes('ResizeObserver loop limit exceeded')) {
+      return;
+    }
+
     const errorLog = {
-      message: error.message || error.toString(),
+      message: message,
       stack: error.stack || '',
       time: new Date().toISOString(),
       url: window.location.href
