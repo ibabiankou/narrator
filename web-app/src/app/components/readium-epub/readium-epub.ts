@@ -1,6 +1,6 @@
 import { Component, ElementRef, inject, input, OnDestroy, ViewChild } from '@angular/core';
 import { EpubNavigator } from '@readium/navigator';
-import { Publication } from '@readium/shared';
+import { Link, Publication } from '@readium/shared';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { NOOP_EPUB_LISTENERS } from '../../core/models/readium';
 import { ThemeService } from '../../core/services/theme.service';
@@ -77,6 +77,12 @@ export class ReadiumEpub implements OnDestroy {
     editor.backgroundColor.value = this.getStyle("background-color");
     editor.textColor.value = this.getStyle("color");
     this.navigator.submitPreferences(editor.preferences);
+  }
+
+  navigate(link: Link) {
+    if (!this.navigator) return;
+
+    this.navigator.go(link.locator, false, () => {});
   }
 
   ngOnDestroy() {

@@ -2,4 +2,19 @@
   <h1 center class="title">{{ title() }}</h1>
 </app-toolbar>
 
-<app-readium-epub [publication]="publication()"></app-readium-epub>
+<mat-sidenav-container>
+  <mat-sidenav mode="side" opened>
+    <h3>Table of Content</h3>
+    <div class="toc">
+      @for (item of publication()?.toc?.items; track $index) {
+        <div class="toc-item">
+          <div><a href="#" (click)="$event.preventDefault(); navigate(item)">{{item.title}}</a></div>
+          <div><mat-checkbox (change)="toggleItem($event)" /></div>
+        </div>
+      }
+    </div>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <app-readium-epub #readiumEpub [publication]="publication()"></app-readium-epub>
+  </mat-sidenav-content>
+</mat-sidenav-container>

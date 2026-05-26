@@ -10,6 +10,29 @@
   margin: 0 auto;
 }
 
+mat-sidenav {
+  min-width: 150px;
+  max-width: 300px;
+  padding: 8px 16px;
+  border-right: 1px solid var(--mat-sys-outline-variant);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  overflow: auto;
+  box-sizing: border-box;
+
+  .toc-item {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+  }
+}
+
+mat-sidenav-content {
+  height: 100dvh;
+}
+
 .reader-viewport {
   position: relative;
   flex-grow: 1;
