@@ -2,9 +2,11 @@ import os
 import uuid
 from io import BytesIO
 
+import pytest
+
 from api.services.books import BookService
 
-
+@pytest.mark.skip(reason="Requires a file to present. To be deleted later")
 def test_extract_images():
     pdf_file_path = "/Users/ibabiankou/Downloads/_OceanofPDF.com_Awakening_-_Sarah_Hawke.pdf"
     pdf_bytes = BytesIO(open(pdf_file_path, "rb").read())
