@@ -14,7 +14,7 @@ from lxml.etree import XMLSyntaxError
 from pydantic import ValidationError
 
 from epub_lib.model.container import CONTAINER_XML, Container
-from epub_lib.model.nav import TocItem, TableOfContent
+from epub_lib.model.nav import TocItem, TableOfContent, TocBuilder
 from epub_lib.model.ncx import NavigationControl
 from epub_lib.model.package import Package
 
@@ -57,6 +57,48 @@ class Epub:
                 raise e
 
     def get_table_of_content(self):
+        # Merge spine, ncx and toc items.
+        toc_builder = TocBuilder()
+        for spine_item in self.package.spine.items:
+            if toc_builder.contains(spine_item.idref):
+                LOG.debug("Got a duplicate idref in spine: %s", spine_item.idref)
+            else:
+                manifest_item_maybe = self.manifest_item_dict.get(spine_item.idref)
+                if manifest_item_maybe is None:
+                    LOG.warning("Spine references item '%s' missing in manifest", spine_item.idref)
+                    continue
+
+                toc_builder.add_manifest_item(manifest_item_maybe)
+
+        # Feed TOC and NCX items to the builder
+        epub_toc_maybe = self._get_table_of_content()
+        if epub_toc_maybe is not None:
+            for toc_item in epub_toc_maybe.items:
+                toc_builder.add_toc_item(toc_item)
+
+        ncx_maybe = self._get_navigation_control()
+        if ncx_maybe is not None:
+            for nav_point in ncx_maybe.nav_map.points:
+                toc_builder.add_nav_point(nav_point)
+
+        # Iterate over all items, parse the file, fill in missing details.
+        for item_builder in toc_builder.items:
+            with self.zip_file.open(self._resource_path(item_builder.path_only_href)) as item_file:
+                soup = BeautifulSoup(item_file, "lxml")
+
+                if not item_builder.title:
+                    title_maybe = soup.find("title")
+                    if title_maybe:
+                        item_builder.title = title_maybe.text
+
+                elements = soup.find_all(attrs={"epub:type": True})
+                if len(elements) == 1:
+                    item_builder.epub_type = elements[0].get("epub:type")
+
+        return toc_builder.build()
+
+
+    def _get_table_of_content(self) -> Optional[TableOfContent]:
         """Load EPUB 3 table of contents. None, if not available."""
         nav_item = self.package.manifest.get_item_by_property("nav")
         if nav_item:
@@ -80,7 +122,7 @@ class Epub:
         LOG.warning("Failed to find manifest item with property 'nav'.")
         return None
 
-    def get_navigation_control(self) -> Optional[NavigationControl]:
+    def _get_navigation_control(self) -> Optional[NavigationControl]:
         """Load EPUB 2 navigation control. None, if not available."""
         if self.package.spine.toc:
             toc_item = self.package.manifest.get_item_by_id(self.package.spine.toc)

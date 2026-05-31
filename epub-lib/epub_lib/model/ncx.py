@@ -41,6 +41,6 @@ class NavMap(BaseNcxModel, tag="navMap"):
 # https://www.daisy.org/z3986/2005/Z3986-2005.html#NCX
 class NavigationControl(BaseNcxModel, tag="ncx", search_mode='unordered'):
     version: str = attr()
-    lang: str = attr(name="lang", ns=NS_XML)
+    lang: Optional[str] = attr(name="lang", ns=NS_XML, default=None)
 
     nav_map: NavMap = element(tag="navMap")
