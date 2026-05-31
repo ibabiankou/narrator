@@ -14,6 +14,7 @@ from lxml.etree import XMLSyntaxError
 from pydantic import ValidationError
 
 from epub_lib.model.container import CONTAINER_XML, Container
+from epub_lib.model.nav import TocItem, TableOfContent
 from epub_lib.model.ncx import NavigationControl
 from epub_lib.model.package import Package
 
@@ -60,8 +61,24 @@ class Epub:
         nav_item = self.package.manifest.get_item_by_property("nav")
         if nav_item:
             with self.zip_file.open(self._resource_path(nav_item.href)) as nav_file:
-                # TODO: Parse nav file
-                return None
+                soup = BeautifulSoup(nav_file, "lxml")
+                nav_toc = soup.find("nav", attrs={"epub:type": "toc"})
+
+                if not nav_toc:
+                    LOG.warning("Failed to find nav tag in '%s'.", nav_item.href)
+                    return None
+
+                toc_items = []
+                for link in nav_toc.find_all("a"):
+                    toc_items.append(TocItem(
+                        href=link.get("href"),
+                        title=link.text
+                    ))
+
+                return TableOfContent(items=toc_items)
+
+        LOG.warning("Failed to find manifest item with property 'nav'.")
+        return None
 
     def get_navigation_control(self) -> Optional[NavigationControl]:
         """Load EPUB 2 navigation control. None, if not available."""
