@@ -14,6 +14,7 @@ from lxml.etree import XMLSyntaxError
 from pydantic import ValidationError
 
 from epub_lib.model.container import CONTAINER_XML, Container
+from epub_lib.model.ncx import NavigationControl
 from epub_lib.model.package import Package
 
 LOG = logging.getLogger(__name__)
@@ -53,6 +54,27 @@ class Epub:
             except ValidationError as e:
                 LOG.debug("Raw contents of %s :\n%s", root_file, package_xml.decode())
                 raise e
+
+    def get_table_of_content(self):
+        """Load EPUB 3 table of contents. None, if not available."""
+        nav_item = self.package.manifest.get_item_by_property("nav")
+        if nav_item:
+            with self.zip_file.open(self._resource_path(nav_item.href)) as nav_file:
+                # TODO: Parse nav file
+                return None
+
+    def get_navigation_control(self) -> Optional[NavigationControl]:
+        """Load EPUB 2 navigation control. None, if not available."""
+        if self.package.spine.toc:
+            toc_item = self.package.manifest.get_item_by_id(self.package.spine.toc)
+            if toc_item:
+                with self.zip_file.open(self._resource_path(toc_item.href)) as ncx_file:
+                    return NavigationControl.from_xml(ncx_file.read())
+            else:
+                LOG.warning("Failed to get navigation item '%s' from manifest.", toc_item)
+
+        LOG.debug("Navigation control not found.")
+        return None
 
     def get_cover_phash(self) -> Optional[Tuple[str, str]]:
         """Returns path to cover image and its phash. None, if no cover image found."""

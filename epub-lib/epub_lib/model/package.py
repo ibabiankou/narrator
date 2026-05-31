@@ -106,6 +106,18 @@ class Manifest(BasePackageModel, tag="manifest"):
 
     item: List[Item] = element(tag="item")
 
+    def get_item_by_id(self, item_id: str) -> Optional[Item]:
+        for item in self.item:
+            if item.id == item_id:
+                return item
+        return None
+
+    def get_item_by_property(self, prop: str) -> Optional[Item]:
+        for item in self.item:
+            if item.properties is not None and prop in item.properties:
+                return item
+        return None
+
 
 # https://www.w3.org/TR/epub-33/#sec-itemref-elem
 class ItemRef(BasePackageModel, tag="itemref"):
