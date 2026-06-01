@@ -8,9 +8,9 @@ services:
       PYTHONUNBUFFERED: yes
       PG_URL: postgresql://narrator:narrator@pg:5432/narrator
       OL_PG_URL: postgresql://narrator:${NN_PG_PWD}@pgpool.mng.ggnt.eu:5432/openlibrary
-      S3_ENDPOINT: http://s3:4566
+      S3_ENDPOINT: http://s3:9000
       S3_ACCESS: test
-      S3_SECRET: test
+      S3_SECRET: testtest
       KOKORO_BASEURL: http://speech:8001
       RMQ_HOST: rmq
       RMQ_PORT: 5672
@@ -38,6 +38,9 @@ services:
       imgnginx:
         condition: service_started
         restart: true
+      streamer:
+        condition: service_started
+        restart: true
     ports:
       - "8000:8000"
   pg:
@@ -52,18 +55,24 @@ services:
     ports:
       - "5432:5432"
   s3:
-    image: localstack/localstack:s3-latest
+    image: minio/minio:latest
     ports:
-      - "4566:4566"            # LocalStack Gateway
-    environment:
-      - DEBUG=${DEBUG:-0}
+      - "9000:9000"
+      - "9001:9001"
+    entrypoint: sh
+    command: -c 'mkdir -p /export/narrator && /usr/bin/minio server /export --console-address ":9001"'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
-      retries: 5
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+    environment:
+      MINIO_ROOT_USER: "test"
+      MINIO_ROOT_PASSWORD: "testtest"
+
     volumes:
-      - "./scripts/init-s3.py:/etc/localstack/init/ready.d/init-s3.py"
-      - "./volumes/s3:/var/lib/localstack"
-      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./volumes/s3:/export"
+    deploy:
+      restart_policy:
+        condition: on-failure
+
   rmq:
     image: rabbitmq:4.2-management-alpine
     ports:
@@ -85,9 +94,9 @@ services:
       - "8001:8001"
     environment:
       PYTHONUNBUFFERED: yes
-      S3_ENDPOINT: http://s3:4566
+      S3_ENDPOINT: http://s3:9000
       S3_ACCESS: test
-      S3_SECRET: test
+      S3_SECRET: testtest
       RMQ_HOST: rmq
       RMQ_PORT: 5672
       RMQ_USERNAME: narrator
@@ -127,14 +136,14 @@ services:
     image: ghcr.io/imgproxy/imgproxy:v3.31.3
     environment:
       IMGPROXY_USE_S3: "true"
-      IMGPROXY_S3_ENDPOINT: "http://s3:4566"
+      IMGPROXY_S3_ENDPOINT: "http://s3:9000"
       IMGPROXY_S3_ENDPOINT_USE_PATH_STYLE: "true"
       IMGPROXY_BASE64_URL_INCLUDES_FILENAME: "true"
       IMGPROXY_BASE_URL: "s3://narrator"
       IMGPROXY_USE_ETAG: "true"
       IMGPROXY_USE_LAST_MODIFIED: "true"
       AWS_ACCESS_KEY_ID: "test"
-      AWS_SECRET_ACCESS_KEY: "test"
+      AWS_SECRET_ACCESS_KEY: "testtest"
       IMGPROXY_KEY: ""
       IMGPROXY_SALT: ""
     ports:
@@ -167,11 +176,11 @@ services:
       - --scheme
       - s3
       - --s3-endpoint
-      - http://s3:4566
+      - http://s3:9000
       - --s3-access-key
       - test
       - --s3-secret-key
-      - test
+      - testtest
       - --s3-use-path-style
       - --address
       - 0.0.0.0
