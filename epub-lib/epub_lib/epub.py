@@ -59,7 +59,7 @@ class Epub:
     def get_publication_content(self) -> PublicationContent:
         """Returns a combination of physical and logical content of the book."""
         # Merge spine, ncx and toc items.
-        builder = PublicationContentBuilder()
+        builder = PublicationContentBuilder(self.root_file_dir)
         for spine_item in self.package.spine.items:
             if builder.contains(spine_item.idref):
                 LOG.debug("Got a duplicate idref in spine: %s", spine_item.idref)

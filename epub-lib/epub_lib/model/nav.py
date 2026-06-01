@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Optional, List, Dict, Set
 
 from pydantic import BaseModel
@@ -42,7 +43,8 @@ class PublicationContent(BaseModel):
 
 
 class PublicationContentBuilder:
-    def __init__(self):
+    def __init__(self, base_path: Path):
+        self.base_path: Optional[str] = None if base_path == Path(".") else str(base_path)
         self.spine_items: List[SpineItem] = []
         self.href_map: Dict[str, SpineItem] = {}
         self.processed_manifest_ids: Set[str] = set()
@@ -82,4 +84,7 @@ class PublicationContentBuilder:
             LOG.warning("Navigation item '%s' is referencing unknown spine item.", href)
 
     def build(self) -> PublicationContent:
+        if self.base_path:
+            for spine_item in self.spine_items:
+                spine_item.href = f"{self.base_path}/{spine_item.href}"
         return PublicationContent(spine_items=self.spine_items)
