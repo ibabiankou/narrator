@@ -17,7 +17,6 @@ mat-sidenav {
   border-right: 1px solid var(--mat-sys-outline-variant);
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
-  overflow: auto;
   box-sizing: border-box;
 
   .toc-item {
@@ -27,6 +26,17 @@ mat-sidenav {
     gap: 1rem;
     align-items: center;
   }
+
+  ::ng-deep .mat-drawer-inner-container {
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
 }
 
 mat-sidenav-content {
