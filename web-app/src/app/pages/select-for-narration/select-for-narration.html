@@ -8,7 +8,7 @@
       @for (item of tocItems(); track $index) {
         <div class="toc-item">
           <div><a href="#" (click)="$event.preventDefault(); navigate(item)">{{item.title}}</a></div>
-          <div><mat-checkbox (change)="toggleItem(item, $event)" checked="{{item.narrate}}" /></div>
+          <div><mat-checkbox (change)="toggleItem(item, $index, $event)" checked="{{item.narrate}}" /></div>
         </div>
       }
     </div>

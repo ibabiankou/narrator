@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, input, model, viewChild } from '@angular/core';
 import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { filter, switchMap } from 'rxjs';
 import { BooksService } from '../../core/services/books.service';
@@ -39,9 +39,17 @@ export class SelectForNarration {
 
   title = computed(() => this.bookDetails()?.title ?? "Loading...");
 
-  tocItems = toSignal(toObservable(this.bookId).pipe(
-    switchMap(bookId => this.booksService.getTableOfContent(bookId))
-  ));
+  tocItems = model<TocItem[]>();
+
+  constructor() {
+    effect(() => {
+      this.booksService.getTableOfContent(this.bookId()).subscribe({
+        next: tocItems => {
+          this.tocItems.set(tocItems);
+        },
+      });
+    });
+  }
 
   protected navigate(item: TocItem) {
     console.log("Navigate to ", item);
@@ -49,9 +57,76 @@ export class SelectForNarration {
     this.readiumEpub()!.navigate(link);
   }
 
-  protected toggleItem(item: TocItem, event: MatCheckboxChange) {
-    // TODO: Implement "smarter" toggle logic.
+  protected toggleItem(item: TocItem, index: number, event: MatCheckboxChange) {
     item.narrate = event.checked;
-    console.log("Items: ", this.tocItems());
+    const allItems = this.tocItems()!;
+
+    // Ensure there is a single sublist of consecutive enabled checkboxes.
+    if (event.checked) {
+      // Select everything between current item and the first selected behind.
+      for (let i = index - 1; i >= 0; i--) {
+        if (allItems[i].narrate) {
+          for (let j = i + 1; j < index; j++) {
+            allItems[j].narrate = true;
+          }
+          break;
+        }
+      }
+
+      // Select everything between current item and the first selected ahead.
+      for (let i = index + 1; i < allItems.length; i++) {
+        if (allItems[i].narrate) {
+          for (let j = index + 1; j < i; j++) {
+            allItems[j].narrate = true;
+          }
+          break;
+        }
+      }
+    } else {
+      // If this results into two subsets of selected elements, unselect all elements in the smaller subset.
+
+      let selectedBehind = 0;
+      for (let i = index - 1; i >= 0; i--) {
+        if (allItems[i].narrate) {
+          selectedBehind++;
+        } else {
+          break;
+        }
+      }
+
+      let selectedAhead = 0;
+      for (let i = index + 1; i < allItems.length; i++) {
+        if (allItems[i].narrate) {
+          selectedAhead++;
+        } else {
+          break;
+        }
+      }
+
+      // If there are selected items behind and ahead, then unselect smaller subset.
+      if (selectedBehind && selectedAhead) {
+        if (selectedBehind <= selectedAhead) {
+          // unselect all behind
+          for (let i = index - 1; i >= 0; i--) {
+            if (allItems[i].narrate) {
+              allItems[i].narrate = false;
+            } else {
+              break;
+            }
+          }
+        } else {
+          // unselect all ahead
+          for (let i = index + 1; i < allItems.length; i++) {
+            if (allItems[i].narrate) {
+              allItems[i].narrate = false;
+            } else {
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    this.tocItems.set([...allItems]);
   }
 }
