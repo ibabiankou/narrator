@@ -8,6 +8,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatCheckbox, MatCheckboxChange } from '@angular/material/checkbox';
 import { Link } from '@readium/shared';
+import { TocItem } from '../../core/models/books.dto';
 
 @Component({
   selector: 'app-select-for-narration',
@@ -38,13 +39,19 @@ export class SelectForNarration {
 
   title = computed(() => this.bookDetails()?.title ?? "Loading...");
 
-  protected navigate(link: Link) {
-    // Open the link in epub reader.
-    console.log("Navigate to ", link);
+  tocItems = toSignal(toObservable(this.bookId).pipe(
+    switchMap(bookId => this.booksService.getTableOfContent(bookId))
+  ));
+
+  protected navigate(item: TocItem) {
+    console.log("Navigate to ", item);
+    const link = new Link({href: item.href});
     this.readiumEpub()!.navigate(link);
   }
 
-  protected toggleItem(event: MatCheckboxChange) {
-    //
+  protected toggleItem(item: TocItem, event: MatCheckboxChange) {
+    // TODO: Implement "smarter" toggle logic.
+    item.narrate = event.checked;
+    console.log("Items: ", this.tocItems());
   }
 }

@@ -130,3 +130,9 @@ export interface DownloadInfo {
 export interface Settings {
   [key: string]: any
 }
+
+export interface TocItem {
+  href: string;
+  title?: string;
+  narrate: boolean;
+}

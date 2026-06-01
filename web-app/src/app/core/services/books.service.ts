@@ -8,7 +8,8 @@ import {
   BookMetadataForReview,
   BookOverview,
   BookWithContent,
-  PlaybackInfo
+  PlaybackInfo,
+  TocItem
 } from '../models/books.dto';
 import { IndexDBCache } from './indexDBCache';
 import { ConnectionService } from './connection.service';
@@ -136,5 +137,9 @@ export class BooksService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<string>(`${this.apiUrl}/${bookId}/metadata/upload-cover`, formData);
+  }
+
+  getTableOfContent(bookId: string) {
+    return this.http.get<TocItem[]>(`${this.apiUrl}/${bookId}/table-of-contents`);
   }
 }
