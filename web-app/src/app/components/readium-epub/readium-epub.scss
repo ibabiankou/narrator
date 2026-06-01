@@ -1,18 +1,19 @@
 :host {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100%;
   background-color: var(--mat-sys-surface);
 }
 
 .reader-viewport {
   position: relative;
   flex-grow: 1;
-  padding-top: 24px;
 
   ::ng-deep iframe {
     width: 100%;
     height: 100%;
     border: none;
+
+    background-color: var(--mat-sys-surface);
   }
 }

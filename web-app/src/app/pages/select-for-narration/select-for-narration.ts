@@ -9,6 +9,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatCheckbox, MatCheckboxChange } from '@angular/material/checkbox';
 import { TocItem } from '../../core/models/books.dto';
 import { NgClass } from '@angular/common';
+import { MatButton } from '@angular/material/button';
 
 @Component({
   selector: 'app-select-for-narration',
@@ -18,6 +19,7 @@ import { NgClass } from '@angular/common';
     MatSidenavModule,
     MatCheckbox,
     NgClass,
+    MatButton,
   ],
   templateUrl: './select-for-narration.html',
   styleUrl: './select-for-narration.scss',
