@@ -16,6 +16,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, wait_random
 
 from api.models import api, db, domain
 from api.openlibrary.service import OpenlibraryServiceDep
+from api.services.epub import EpubServiceDep
 from api.services.experimental import identify_book
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
@@ -39,11 +40,13 @@ class BookService(Service):
                  sections_service: SectionServiceDep,
                  playback_progress_service: PlaybackProgressServiceDep,
                  openlibrary_service: OpenlibraryServiceDep,
+                 epub_service: EpubServiceDep,
                  **kwargs):
         self.files_service = files_service
         self.sections_service = sections_service
         self.playback_progress_service = playback_progress_service
         self.openlibrary_service = openlibrary_service
+        self.epub_service = epub_service
 
         self.img_proxy = ImgProxy()
 
@@ -52,6 +55,11 @@ class BookService(Service):
                     background_tasks: BackgroundTasks):
         book_id = uuid.uuid4()
         file_key = f"{book_id}/{file_name}"
+
+        # Pre-process file:
+        #   Compress images;
+        #   Remove undesired content.
+        file_bytes = self.epub_service.remove_links(file_bytes)
 
         # Extract metadata
         # TODO: handle parsing errors...

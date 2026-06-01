@@ -22,6 +22,7 @@ from api.procurement import procurement_router, ProcurementService
 from api.sections import sections_router
 from api.services.audiotracks import AudioTrackService
 from api.services.books import BookService
+from api.services.epub import EpubService
 from api.services.files import FilesService
 from api.services.progress import PlaybackProgressService
 from api.services.sections import SectionService
@@ -51,11 +52,12 @@ async def lifespan(app: FastAPI):
     progress_svc = PlaybackProgressService(db_factory=narrator_db)
     settings_svc = SettingsService(db_factory=narrator_db)
 
+    epub_svc = EpubService()
     rmq_client = RMQClient(Topology.default_exchange)
     audiotrack_svc = AudioTrackService(files_svc, rmq_client, db_factory=narrator_db)
     section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc, db_factory=narrator_db)
     openlibrary_svc = OpenlibraryService(files_svc, db_factory=openlibrary_db)
-    books_svc = BookService(files_svc, section_svc, progress_svc, openlibrary_svc, db_factory=narrator_db)
+    books_svc = BookService(files_svc, section_svc, progress_svc, openlibrary_svc, epub_svc, db_factory=narrator_db)
     procurement_svc = ProcurementService(db_factory=narrator_db)
 
     # Start background processing tasks.

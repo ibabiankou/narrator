@@ -56,6 +56,13 @@ class Epub:
                 LOG.debug("Raw contents of %s :\n%s", root_file, package_xml.decode())
                 raise e
 
+    def get_spine_files(self) -> List[str]:
+        items = []
+        for spine_item in self.package.spine.items:
+            item = self.package.manifest.get_item_by_id(spine_item.idref)
+            items.append(self._resource_path(item.href))
+        return items
+
     def get_publication_content(self) -> PublicationContent:
         """Returns a combination of physical and logical content of the book."""
         # Merge spine, ncx and toc items.
