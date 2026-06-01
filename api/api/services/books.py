@@ -5,7 +5,7 @@ import uuid
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime, UTC
 from io import BytesIO
-from typing import Annotated
+from typing import Annotated, List
 
 import pymupdf
 from fastapi import BackgroundTasks
@@ -523,6 +523,15 @@ class BookService(Service):
     @transactional
     def get_book_details(self, book_id: uuid.UUID) -> api.BookDetails:
         return api.BookDetails.from_orm(self.db.get_one(db.Book, book_id))
+
+    @transactional
+    def get_table_of_contents(self, book_id: uuid.UUID) -> List[api.TableOfContentsItem]:
+        book = self.get_book(book_id)
+        file_bytes = self.files_service.get_book_file(book.id, book.file_name)
+        epub = Epub(file_bytes, filename=book.file_name)
+        epub_toc = epub.get_table_of_content()
+
+        return [api.TableOfContentsItem(href=i.href, title=i.title) for i in epub_toc.items]
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

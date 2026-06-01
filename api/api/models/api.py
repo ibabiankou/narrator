@@ -128,3 +128,9 @@ class PlaybackInfo(BaseModel):
 
 class SetCover(BaseModel):
     file_path: str
+
+
+class TableOfContentsItem(BaseModel):
+    href: str
+    title: Optional[str] = None
+    narrate: bool = True

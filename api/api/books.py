@@ -1,6 +1,7 @@
 import logging
 import uuid
 from io import BytesIO
+from typing import List
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Response, Depends, UploadFile
 from sqlalchemy.exc import NoResultFound
@@ -89,6 +90,16 @@ def get_book_details(book_id: uuid.UUID,
                      ) -> api.BookDetails:
     try:
         return book_service.get_book_details(book_id)
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+
+@books_router.get("/{book_id}/table-of-contents")
+def get_table_of_contents(book_id: uuid.UUID,
+                          book_service: BookServiceDep,
+                          ) -> List[api.TableOfContentsItem]:
+    try:
+        return book_service.get_table_of_contents(book_id)
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Book not found")
 
