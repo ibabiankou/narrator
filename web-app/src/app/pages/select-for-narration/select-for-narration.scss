@@ -13,7 +13,7 @@
 mat-sidenav {
   min-width: 150px;
   max-width: 300px;
-  padding: 8px 16px;
+  padding: 16px 0;
   border-right: 1px solid var(--mat-sys-outline-variant);
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
@@ -25,6 +25,15 @@ mat-sidenav {
     justify-content: space-between;
     gap: 1rem;
     align-items: center;
+    padding: 4px 16px;
+
+    .title {
+      font-weight: bold;
+    }
+
+    &:hover, &.selected {
+      background-color: light-dark(#dddddd, rgb(255, 255, 255, 0.1));
+    }
   }
 
   ::ng-deep .mat-drawer-inner-container {
@@ -35,24 +44,5 @@ mat-sidenav {
     &::-webkit-scrollbar {
       display: none;
     }
-  }
-
-}
-
-mat-sidenav-content {
-  height: 100dvh;
-}
-
-.reader-viewport {
-  position: relative;
-  flex-grow: 1;
-  width: 100% !important;
-  max-width: var(--app-container-width);
-  margin: 0 auto;
-
-  ::ng-deep iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
   }
 }

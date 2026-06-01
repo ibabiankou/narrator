@@ -2,11 +2,13 @@
   display: flex;
   flex-direction: column;
   height: 100dvh;
+  background-color: var(--mat-sys-surface);
 }
 
 .reader-viewport {
   position: relative;
   flex-grow: 1;
+  padding-top: 24px;
 
   ::ng-deep iframe {
     width: 100%;

@@ -7,8 +7,8 @@ import { ReadiumEpub } from '../../components/readium-epub/readium-epub';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatCheckbox, MatCheckboxChange } from '@angular/material/checkbox';
-import { Link } from '@readium/shared';
 import { TocItem } from '../../core/models/books.dto';
+import { NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-select-for-narration',
@@ -17,6 +17,7 @@ import { TocItem } from '../../core/models/books.dto';
     ReadiumEpub,
     MatSidenavModule,
     MatCheckbox,
+    NgClass,
   ],
   templateUrl: './select-for-narration.html',
   styleUrl: './select-for-narration.scss',
@@ -40,6 +41,7 @@ export class SelectForNarration {
   title = computed(() => this.bookDetails()?.title ?? "Loading...");
 
   tocItems = model<TocItem[]>();
+  currentItem = 0;
 
   constructor() {
     effect(() => {
@@ -51,10 +53,8 @@ export class SelectForNarration {
     });
   }
 
-  protected navigate(item: TocItem) {
-    console.log("Navigate to ", item);
-    const link = new Link({href: item.href});
-    this.readiumEpub()!.navigate(link);
+  protected navigate(index: number) {
+    this.readiumEpub()!.navigate(index);
   }
 
   protected toggleItem(item: TocItem, index: number, event: MatCheckboxChange) {
@@ -126,7 +126,5 @@ export class SelectForNarration {
         }
       }
     }
-
-    this.tocItems.set([...allItems]);
   }
 }

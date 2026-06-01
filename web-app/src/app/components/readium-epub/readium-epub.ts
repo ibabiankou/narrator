@@ -1,10 +1,21 @@
-import { Component, ElementRef, HostListener, inject, input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  inject,
+  input,
+  OnDestroy,
+  OnInit,
+  output,
+  ViewChild
+} from '@angular/core';
 import { EpubNavigator } from '@readium/navigator';
 import { Link, Publication } from '@readium/shared';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { NOOP_EPUB_LISTENERS } from '../../core/models/readium';
 import { ThemeService } from '../../core/services/theme.service';
 import { filter, take } from 'rxjs';
+import { TocItem } from '../../core/models/books.dto';
 
 @Component({
   selector: 'app-readium-epub',
@@ -17,7 +28,10 @@ export class ReadiumEpub implements OnInit, OnDestroy {
 
   @ViewChild('readerContainer', {static: true}) readerContainer!: ElementRef<HTMLDivElement>;
 
-  publication = input<Publication>();
+  publication = input.required<Publication>();
+  toc = input.required<TocItem[]>();
+  private currentItem = 0;
+  currentItemChanged = output<number>();
 
   private navigator?: EpubNavigator;
   private observer!: MutationObserver;
@@ -50,7 +64,9 @@ export class ReadiumEpub implements OnInit, OnDestroy {
             }
           );
 
-          await this.navigator.load();
+          await this.navigator.load().then(() => {
+            this.navigate(0);
+          });
         } catch (error) {
           console.error('Failed to initialize Readium Navigator:', error);
         }
@@ -123,24 +139,28 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     this.navigator.submitPreferences(editor.preferences);
   }
 
-  navigate(link: Link) {
+  navigate(tocIndex: number) {
     if (!this.navigator) return;
+    if (this.currentItem === tocIndex) return;
+    if (tocIndex < 0 || tocIndex >= this.toc().length) return;
 
-    this.navigator.go(link.locator, false, () => {});
+    const link = new Link({href: this.toc()[tocIndex].href});
+    this.navigator.go(link.locator, false, (ok) => {
+      if (ok) {
+        this.currentItem = tocIndex;
+        this.currentItemChanged.emit(tocIndex);
+      }
+    });
   }
 
   @HostListener("document:keydown.arrowright", [])
   next() {
-    this.navigator?.goForward(false, () => {
-      console.log("Current locator:", this.navigator?.currentLocator.href)
-    });
+    this.navigate(this.currentItem + 1);
   }
 
   @HostListener("document:keydown.arrowleft", [])
   prev() {
-    this.navigator?.goBackward(false, () => {
-      console.log("Current locator:", this.navigator?.currentLocator.href)
-    });
+    this.navigate(this.currentItem - 1);
   }
 
   ngOnDestroy() {
