@@ -14,7 +14,7 @@ from lxml.etree import XMLSyntaxError
 from pydantic import ValidationError
 
 from epub_lib.model.container import CONTAINER_XML, Container
-from epub_lib.model.nav import TocItem, TableOfContent, TocBuilder
+from epub_lib.model.nav import TocItem, TableOfContent, PublicationContentBuilder, PublicationContent
 from epub_lib.model.ncx import NavigationControl
 from epub_lib.model.package import Package
 
@@ -56,47 +56,48 @@ class Epub:
                 LOG.debug("Raw contents of %s :\n%s", root_file, package_xml.decode())
                 raise e
 
-    def get_table_of_content(self):
+    def get_publication_content(self) -> PublicationContent:
+        """Returns a combination of physical and logical content of the book."""
         # Merge spine, ncx and toc items.
-        toc_builder = TocBuilder()
+        builder = PublicationContentBuilder()
         for spine_item in self.package.spine.items:
-            if toc_builder.contains(spine_item.idref):
+            if builder.contains(spine_item.idref):
                 LOG.debug("Got a duplicate idref in spine: %s", spine_item.idref)
             else:
                 manifest_item_maybe = self.manifest_item_dict.get(spine_item.idref)
                 if manifest_item_maybe is None:
                     LOG.warning("Spine references item '%s' missing in manifest", spine_item.idref)
                     continue
+                builder.add_manifest_item(manifest_item_maybe)
 
-                toc_builder.add_manifest_item(manifest_item_maybe)
-
-        # Feed TOC and NCX items to the builder
+        # Feed TOC items
         epub_toc_maybe = self._get_table_of_content()
         if epub_toc_maybe is not None:
             for toc_item in epub_toc_maybe.items:
-                toc_builder.add_toc_item(toc_item)
+                builder.add_navigation_item(toc_item.href, toc_item.title)
 
-        ncx_maybe = self._get_navigation_control()
-        if ncx_maybe is not None:
-            for nav_point in ncx_maybe.nav_map.points:
-                toc_builder.add_nav_point(nav_point)
+        # Only process NCX if TOC is not available.
+        if epub_toc_maybe is None:
+            # Feed NCX items
+            ncx_maybe = self._get_navigation_control()
+            if ncx_maybe is not None:
+                for nav_point in ncx_maybe.nav_map.points:
+                    builder.add_navigation_item(nav_point.content.src, nav_point.nav_label.text)
 
         # Iterate over all items, parse the file, fill in missing details.
-        for item_builder in toc_builder.items:
-            with self.zip_file.open(self._resource_path(item_builder.path_only_href)) as item_file:
+        for spine_item in builder.spine_items:
+            with self.zip_file.open(self._resource_path(spine_item.href)) as item_file:
                 soup = BeautifulSoup(item_file, "lxml")
 
-                if not item_builder.title:
+                if not spine_item.title:
                     title_maybe = soup.find("title")
                     if title_maybe:
-                        item_builder.title = title_maybe.text
+                        spine_item.title = title_maybe.text
 
                 elements = soup.find_all(attrs={"epub:type": True})
-                if len(elements) == 1:
-                    item_builder.epub_type = elements[0].get("epub:type")
+                spine_item.epub_types.extend([el.get("epub:type") for el in elements])
 
-        return toc_builder.build()
-
+        return builder.build()
 
     def _get_table_of_content(self) -> Optional[TableOfContent]:
         """Load EPUB 3 table of contents. None, if not available."""

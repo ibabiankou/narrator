@@ -502,11 +502,11 @@ class BookService(Service):
         """Update status if narration of a book is complete."""
         # select book_id, count of sections and count of finished audio tracks.
         query_text = """select b.id,
-                               (select count(*) from sections s where s.book_id = b.id)                            as section_count,
+                               (select count(*) from sections s where s.book_id = b.id) as section_count,
                                (select count(*)
                                 from audio_tracks t
                                 where t.book_id = b.id
-                                  and t.status = 'ready')                                                          as ready_track_count
+                                  and t.status = 'ready')                               as ready_track_count
                         from books b
                         where b.status = 'narrating';
                      """
@@ -529,9 +529,32 @@ class BookService(Service):
         book = self.get_book(book_id)
         file_bytes = self.files_service.get_book_file(book.id, book.file_name)
         epub = Epub(file_bytes, filename=book.file_name)
-        epub_toc = epub.get_table_of_content()
+        epub_toc = epub.get_publication_content()
 
-        return [api.TableOfContentsItem(href=i.href, title=i.title) for i in epub_toc.items]
+        # Flatten epub publication content to something consumable by UI.
+        toc_items = []
+        for spine_item in epub_toc.spine_items:
+            should_narrate = self._should_narrate(len(spine_item.navigation_items), spine_item.epub_types)
+            if spine_item.navigation_items:
+                # Add each nav item.
+                for nav_item in spine_item.navigation_items:
+                    href = f"{spine_item.href}#{nav_item.idref}"
+                    toc_items.append(api.TableOfContentsItem(
+                        href=href,
+                        title=nav_item.title,
+                        narrate=should_narrate))
+            else:
+                # Add spine item instead.
+                toc_items.append(api.TableOfContentsItem(
+                    href=spine_item.href,
+                    title=spine_item.title,
+                    narrate=should_narrate))
+
+        return toc_items
+
+    def _should_narrate(self, nav_point_num: int, epub_types: List[str]) -> bool:
+        # TODO: implement smarter logic to suggest whether to narrate the file.
+        return True
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

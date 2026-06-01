@@ -21,9 +21,9 @@ class TestEpub:
 
     def test_toc(self):
         epub = Epub("tests/test_data/Dungeon_Crawler_Carl.epub")
-        toc = epub.get_table_of_content()
+        toc = epub.get_publication_content()
         unique_spine_refs = set([i.idref for i in epub.package.spine.items])
-        assert len(toc.items) == len(unique_spine_refs)
+        assert len(toc.spine_items) == len(unique_spine_refs)
 
     @pytest.mark.skip(reason="For manual execution only.")
     def test_toc_all_files(self):
@@ -32,7 +32,7 @@ class TestEpub:
         for epub_path in epub_files:
             try:
                 epub = Epub(str(epub_path))
-                toc = epub.get_table_of_content()
+                toc = epub.get_publication_content()
                 assert toc is not None
                 print(f"Successfully processed: {epub_path.name}")
                 print(toc.model_dump_json(indent=2))
