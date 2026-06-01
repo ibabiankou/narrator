@@ -538,7 +538,7 @@ class BookService(Service):
             if spine_item.navigation_items:
                 # Add each nav item.
                 for nav_item in spine_item.navigation_items:
-                    href = f"{spine_item.href}#{nav_item.idref}"
+                    href = spine_item.href if nav_item.idref is None else f"{spine_item.href}#{nav_item.idref}"
                     toc_items.append(api.TableOfContentsItem(
                         href=href,
                         title=nav_item.title,
