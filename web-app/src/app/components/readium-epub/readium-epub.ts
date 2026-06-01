@@ -153,6 +153,9 @@ export class ReadiumEpub implements OnInit, OnDestroy {
       if (ok) {
         this.currentItem = tocIndex;
         this.currentItemChanged.emit(tocIndex);
+        console.log("Successfully navigated to", this.navigator!.currentLocator.href);
+      } else {
+        console.log("Navigation is not successful.")
       }
     });
   }
