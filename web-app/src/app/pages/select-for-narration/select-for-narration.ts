@@ -6,7 +6,7 @@ import { ReadiumService } from '../../core/services/readium.service';
 import { ReadiumEpub } from '../../components/readium-epub/readium-epub';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatCheckbox, MatCheckboxChange } from '@angular/material/checkbox';
+import { MatCheckbox } from '@angular/material/checkbox';
 import { TocItem } from '../../core/models/books.dto';
 import { NgClass } from '@angular/common';
 import { MatButton } from '@angular/material/button';
@@ -59,12 +59,13 @@ export class SelectForNarration {
     this.readiumEpub()!.navigate(index);
   }
 
-  protected toggleItem(item: TocItem, index: number, event: MatCheckboxChange) {
-    item.narrate = event.checked;
+  protected toggleItem(index: number) {
     const allItems = this.tocItems()!;
+    const item = allItems[index];
+    item.narrate = !item.narrate;
 
     // Ensure there is a single sublist of consecutive enabled checkboxes.
-    if (event.checked) {
+    if (item.narrate) {
       // Select everything between current item and the first selected behind.
       for (let i = index - 1; i >= 0; i--) {
         if (allItems[i].narrate) {

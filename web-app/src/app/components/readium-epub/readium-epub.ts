@@ -32,6 +32,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
   toc = input.required<TocItem[]>();
   private currentItem = 0;
   currentItemChanged = output<number>();
+  toggleItem = output<number>();
 
   private navigator?: EpubNavigator;
   private observer!: MutationObserver;
@@ -117,11 +118,14 @@ export class ReadiumEpub implements OnInit, OnDestroy {
 
         if (iframeDoc) {
           iframeDoc.addEventListener('keydown', (event: KeyboardEvent) => {
-            if (event.key === 'ArrowRight') {
+            if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
               this.next();
             }
-            if (event.key === 'ArrowLeft') {
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
               this.prev();
+            }
+            if (event.key === 'Space') {
+              this.toggle();
             }
           });
         }
@@ -161,13 +165,20 @@ export class ReadiumEpub implements OnInit, OnDestroy {
   }
 
   @HostListener("document:keydown.arrowright", [])
+  @HostListener("document:keydown.arrowdown", [])
   next() {
     this.navigate(this.currentItem + 1);
   }
 
   @HostListener("document:keydown.arrowleft", [])
+  @HostListener("document:keydown.arrowup", [])
   prev() {
     this.navigate(this.currentItem - 1);
+  }
+
+  @HostListener("document:keydown.space", [])
+  toggle() {
+    this.toggleItem.emit(this.currentItem);
   }
 
   ngOnDestroy() {
