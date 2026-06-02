@@ -1,9 +1,12 @@
-import os
+import logging
 import re
 import unicodedata
+from typing import Tuple
 
 import nltk
 from bs4 import BeautifulSoup
+
+LOG = logging.getLogger(__name__)
 
 
 def clean_text_for_tts(text):
@@ -11,7 +14,7 @@ def clean_text_for_tts(text):
     Cleans text for TTS only. Visual text remains untouched.
     """
     text = unicodedata.normalize('NFKC', text)
-    text = re.sub(r'\.\s\.\s\.', '...', text)
+    text = re.sub(r'\.\s*\.\s*\.', '...', text)
     text = text.replace('—', ', ').replace('–', '-')
     text = re.sub(r'(?<=[a-zA-Z])[\u2018\u2019\u0027](?=[a-zA-Z])', '___APO___', text)
     text = re.sub(r'["“”‘’\']', '', text)
@@ -23,23 +26,15 @@ def clean_text_for_tts(text):
     return re.sub(r'\s+', ' ', text).strip()
 
 
-def process_xhtml_inplace(filepath, global_id_start, css_rel_path):
-    filename = os.path.basename(filepath)
-    print(f"Processing: {filename}")
-
+def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, list, int]:
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            soup = BeautifulSoup(f, 'xml')
+        soup = BeautifulSoup(file_bytes, 'xml')
 
-        # Cleanup & CSS
+        # Cleanup links
         for tag in soup.find_all("a"):
-            if "noteref" in tag.get("class", []) or tag.get("role") == "doc-noteref": tag.decompose()
-
-        head = soup.find('head')
-        if head:
-            css_name = os.path.basename(css_rel_path)
-            if not any(css_name in l.get('href', '') for l in head.find_all('link')):
-                head.append(soup.new_tag("link", rel="stylesheet", href=css_rel_path, type="text/css"))
+            if "noteref" in tag.get("class", []) or tag.get("role") == "doc-noteref":
+                LOG.warning("Removing link: %s", tag)
+                tag.decompose()
 
         segments = []
         current_id = global_id_start
@@ -184,10 +179,7 @@ def process_xhtml_inplace(filepath, global_id_start, css_rel_path):
                 for child in list(new_soup.body.contents): tag.append(child)
 
     except Exception as e:
-        print(f"  [ERROR] Failed to process {filename}: {e}")
-        return [], global_id_start
+        LOG.error("Failed to fragment the content: %s", e, exc_info=True)
+        raise e
 
-    with open(filepath, 'w', encoding='utf-8') as f:
-        # Use str(soup) instead of prettify to prevent injecting unwanted whitespace
-        f.write(str(soup))
-    return segments, current_id
+    return soup.encode(formatter="minimal", encoding='utf-8'), segments, current_id
