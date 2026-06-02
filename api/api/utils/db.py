@@ -33,3 +33,22 @@ class PydanticList(TypeDecorator):
         if value is not None:
             return [self.model.model_validate(item) for item in value]
         return value
+
+
+class PydanticType(TypeDecorator):
+    """Serializes a single Pydantic model (and its nested data) to JSONB."""
+    impl = JSONB
+
+    def __init__(self, pydantic_type: Type[BaseModel], *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pydantic_type = pydantic_type
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return value.model_dump() if isinstance(value, BaseModel) else value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return self.pydantic_type.model_validate(value)

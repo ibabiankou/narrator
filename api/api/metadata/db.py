@@ -3,8 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from api.metadata.domain import Title, Identifier, AssetRef
-from api.models.db import PydanticType
-from api.utils.db import PydanticList
+from api.utils.db import PydanticList, PydanticType
 
 
 class MetadataBase(DeclarativeBase):

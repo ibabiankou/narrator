@@ -564,5 +564,16 @@ class BookService(Service):
         # TODO: implement smarter logic to suggest whether to narrate the file.
         return True
 
+    def narrate_book(self, book_id: uuid.UUID, narration_request: List[api.TableOfContentsItem]):
+        db_narration_request = []
+        for item in narration_request:
+            db_narration_request.append(db.TocItem(href=item.href, narrate=item.narrate))
+        self.db.execute(update(db.Book).where(db.Book.id == book_id).values(narration_request=db_narration_request))
+
+        # Extract fragments from the book.
+        # Split the fragments into tracks.
+        # Store the result in DB / Obj Store.
+        # Push into RMQ.
+
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

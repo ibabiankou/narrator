@@ -30,6 +30,20 @@ def create_book(file: UploadFile,
     return book_service.create_book(user.id, file.filename, BytesIO(file.file.read()), background_tasks)
 
 
+@books_router.post("/{book_id}/narrate")
+def narrate_book(book_id: uuid.UUID,
+                 request: List[api.TableOfContentsItem],
+                 user: UserDep,
+                 book_service: BookServiceDep):
+    is_owner = book_service.is_owner(user.id, book_id)
+    if is_owner is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    if not is_owner and not user.has_any_role(["admin"]):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    book_service.narrate_book(book_id, request)
+
+
 @books_router.get("/")
 def list_books(
         user: UserDep,

@@ -1,14 +1,15 @@
 import datetime
 import uuid
 from enum import StrEnum
-from typing import Optional, Type, List
+from typing import Optional, List
 
 from pydantic import BaseModel
-from sqlalchemy import ForeignKey, TypeDecorator, String, Enum
+from sqlalchemy import ForeignKey, String, Enum
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from api.models import domain
+from api.utils.db import PydanticType, PydanticList
 
 
 class Base(DeclarativeBase):
@@ -18,25 +19,6 @@ class Base(DeclarativeBase):
             for c in self.__mapper__.columns
             if not c.primary_key
         }
-
-
-class PydanticType(TypeDecorator):
-    """Serializes a single Pydantic model (and its nested data) to JSONB."""
-    impl = JSONB
-
-    def __init__(self, pydantic_type: Type[BaseModel], *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.pydantic_type = pydantic_type
-
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return None
-        return value.model_dump() if isinstance(value, BaseModel) else value
-
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return None
-        return self.pydantic_type.model_validate(value)
 
 
 class BookStatus(StrEnum):
@@ -86,6 +68,10 @@ class BookStatus(StrEnum):
         return NotImplemented
 
 
+class TocItem(BaseModel):
+    href: str
+    narrate: bool
+
 class Book(Base):
     __tablename__ = "books"
 
@@ -105,6 +91,8 @@ class Book(Base):
 
     metadata_candidates: Mapped[Optional[domain.MetadataCandidates]] = mapped_column(
         type_=PydanticType(domain.MetadataCandidates))
+
+    narration_request: Mapped[list[TocItem]] = mapped_column(type_=PydanticList(TocItem), default=[])
 
     # TODO: Add errors field. JSONB array of dictionaries. Any processing / validation errors encountered
     #  should be stored there and displayed in UI.
