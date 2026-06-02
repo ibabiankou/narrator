@@ -46,13 +46,13 @@ class EpubService(Service):
                     continue
 
                 if fileinfo.filename in files_to_clean:
-                    out_zip.writestr(fileinfo, self._clean_file(src_zip_file.read(fileinfo.filename)))
+                    out_zip.writestr(fileinfo.filename, self._clean_file(src_zip_file.read(fileinfo.filename)))
                 else:
-                    out_zip.writestr(fileinfo, src_zip_file.read(fileinfo.filename))
+                    out_zip.writestr(fileinfo.filename, src_zip_file.read(fileinfo.filename))
 
         out_bytes.seek(0)
         LOG.debug("Compression ratio: %s", len(out_bytes.getvalue()) / len(file_bytes.getvalue()))
-        return BytesIO(out_bytes.read())
+        return out_bytes
 
     def _clean_file(self, spine_file_bytes: bytes) -> bytes:
         soup = BeautifulSoup(spine_file_bytes, "xml")
