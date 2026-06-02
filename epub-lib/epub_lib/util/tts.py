@@ -1,18 +1,39 @@
+import enum
 import logging
 import re
 import unicodedata
-from typing import Tuple
+from typing import Tuple, List
 
 import nltk
 from bs4 import BeautifulSoup
+from pydantic import BaseModel, RootModel
 
 LOG = logging.getLogger(__name__)
 
+class FragmentType(str, enum.Enum):
+    TEXT = "text"
+    PAUSE = "pause"
+
+class FragmentBase(BaseModel):
+    id: str
+    type: FragmentType
+
+class TextFragment(FragmentBase):
+    type: FragmentType = FragmentType.TEXT
+    text: str
+
+class PauseFragment(FragmentBase):
+    type: FragmentType = FragmentType.PAUSE
+    duration: float
+
+class FragmentList(RootModel[List[TextFragment | PauseFragment]]):
+    pass
 
 def clean_text_for_tts(text):
     """
     Cleans text for TTS only. Visual text remains untouched.
     """
+    # TODO Ensure apostrophe in height measuremenets are not removed. Or replaced with words.
     text = unicodedata.normalize('NFKC', text)
     text = re.sub(r'\.\s*\.\s*\.', '...', text)
     text = text.replace('—', ', ').replace('–', '-')
@@ -25,8 +46,10 @@ def clean_text_for_tts(text):
     text = allowed.sub("", text)
     return re.sub(r'\s+', ' ', text).strip()
 
+def fid(frag_id: int) -> str:
+    return f"nn{frag_id}"
 
-def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, list, int]:
+def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:
     try:
         soup = BeautifulSoup(file_bytes, 'xml')
 
@@ -36,7 +59,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, li
                 LOG.warning("Removing link: %s", tag)
                 tag.decompose()
 
-        segments = []
+        fragments: List[TextFragment | PauseFragment] = []
         current_id = global_id_start
         block_tags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'div']
         VOID_TAGS = {'br', 'img', 'hr', 'area', 'base', 'col', 'embed', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
@@ -46,11 +69,23 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, li
 
             full_text_raw = tag.get_text()
             if not full_text_raw.strip(): continue
+            LOG.debug("Raw text:\n%s", full_text_raw)
+
+            # TODO: Add punctuation to raw text, if it does not end with one.
+            # TODO: Only send to split, if it's too long.
+            # TODO: Catch pauses here.
+            # TODO: Do guessing if it's an acronym or simply all caps... Lower if latter.
 
             # Clean for NLTK
             full_text_clean = re.sub(r'\s+', ' ', full_text_raw).strip()
             sentences_clean = nltk.sent_tokenize(full_text_clean)
             if not sentences_clean: continue
+
+            LOG.debug("NLTK sent_tokenize result:\n%s", sentences_clean)
+
+            # TODO: tweak split here. < Should I do it here or before NLTK?
+            # TODO: Further split too long sentences.
+            # TODO: Merge too short sentences.
 
             # 1. Fuzzy Boundary Calc
             split_indices = []
@@ -75,8 +110,8 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, li
             current_sent_idx = 0
             current_char_count = 0
 
-            seg_id = f"f{current_id:06d}"
-            segments.append({"id": seg_id, "text": clean_text_for_tts(sentences_clean[0])})
+            seg_id = fid(current_id)
+            fragments.append(TextFragment(id=seg_id, text=clean_text_for_tts(sentences_clean[0])))
             current_id += 1
 
             new_html_content += f'<span id="{seg_id}">'
@@ -111,9 +146,9 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, li
 
                             # Start Next (if exists)
                             if current_sent_idx < len(sentences_clean):
-                                seg_id = f"f{current_id:06d}"
+                                seg_id = fid(current_id)
                                 current_id += 1
-                                segments.append({"id": seg_id, "text": clean_text_for_tts(sentences_clean[current_sent_idx])})
+                                fragments.append(TextFragment(id=seg_id, text=clean_text_for_tts(sentences_clean[current_sent_idx])))
 
                                 new_html_content += f'<span id="{seg_id}">'
                                 for t_name, t_attrs in open_tags:
@@ -141,9 +176,9 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, li
 
                             current_sent_idx += 1
                             if current_sent_idx < len(sentences_clean):
-                                seg_id = f"f{current_id:06d}"
+                                seg_id = fid(current_id)
                                 current_id += 1
-                                segments.append({"id": seg_id, "text": clean_text_for_tts(sentences_clean[current_sent_idx])})
+                                fragments.append(TextFragment(id=seg_id, text=clean_text_for_tts(sentences_clean[current_sent_idx])))
 
                                 new_html_content += f'<span id="{seg_id}">'
                                 for t_name, t_attrs in open_tags:
@@ -182,4 +217,6 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, li
         LOG.error("Failed to fragment the content: %s", e, exc_info=True)
         raise e
 
-    return soup.encode(formatter="minimal", encoding='utf-8'), segments, current_id
+    # TODO: Split fragments into tracks of roughly the same length ~3-5min.
+
+    return soup.encode(formatter="minimal", encoding='utf-8'), FragmentList(fragments), current_id
