@@ -43,10 +43,16 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
 
         fragments: List[Fragment] = []
         current_id = global_id_start
-        block_tags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'div']
+        block_tags = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'div'}
         VOID_TAGS = {'br', 'img', 'hr', 'area', 'base', 'col', 'embed', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
 
-        for tag in soup.find_all(block_tags):
+        visited_ids = set()
+        for tag in soup.find_all():
+            if tag.get("id"):
+                tag_id: str = str(tag.get("id"))
+                visited_ids.add(tag_id)
+
+            if tag.name not in block_tags: continue
             if tag.find(block_tags): continue
 
             full_text_raw = tag.get_text()
@@ -93,7 +99,8 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
             current_char_count = 0
 
             seg_id = fid(current_id)
-            fragments.append(TextFragment(id=seg_id, text=clean_text_for_tts(sentences_clean[0])))
+            fragments.append(TextFragment(
+                id=seg_id, text=clean_text_for_tts(sentences_clean[0]), visited_ids=list(visited_ids)))
             current_id += 1
 
             new_html_content += f'<span id="{seg_id}">'
@@ -130,7 +137,11 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                             if current_sent_idx < len(sentences_clean):
                                 seg_id = fid(current_id)
                                 current_id += 1
-                                fragments.append(TextFragment(id=seg_id, text=clean_text_for_tts(sentences_clean[current_sent_idx])))
+                                fragments.append(TextFragment(
+                                    id=seg_id,
+                                    text=clean_text_for_tts(sentences_clean[current_sent_idx]),
+                                    visited_ids=list(visited_ids)
+                                ))
 
                                 new_html_content += f'<span id="{seg_id}">'
                                 for t_name, t_attrs in open_tags:
@@ -160,7 +171,11 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                             if current_sent_idx < len(sentences_clean):
                                 seg_id = fid(current_id)
                                 current_id += 1
-                                fragments.append(TextFragment(id=seg_id, text=clean_text_for_tts(sentences_clean[current_sent_idx])))
+                                fragments.append(TextFragment(
+                                    id=seg_id,
+                                    text=clean_text_for_tts(sentences_clean[current_sent_idx]),
+                                    visited_ids=list(visited_ids)
+                                ))
 
                                 new_html_content += f'<span id="{seg_id}">'
                                 for t_name, t_attrs in open_tags:

@@ -13,6 +13,7 @@ class TestTts:
 
         output_html_bytes, frags, last_id = process_xhtml_inplace(html_str.encode(), 0)
         LOG.info(output_html_bytes.decode())
+        LOG.info(frags.model_dump_json(indent=2))
 
     def test_short_no_punct(self):
         html_str = """

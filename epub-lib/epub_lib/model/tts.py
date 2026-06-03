@@ -15,6 +15,7 @@ class FragmentType(str, Enum):
 class FragmentBase(BaseModel):
     id: str
     type: FragmentType
+    visited_ids: List[str]
 
 
 class TextFragment(FragmentBase):
