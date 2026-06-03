@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from api.utils.imgproxy import ImgProxy
 from common_lib.service import Service
 from epub_lib import Epub
+from epub_lib.model.tts import FragmentList
 from epub_lib.util.tts import process_xhtml_inplace
 
 LOG = logging.getLogger(__name__)
@@ -73,7 +74,7 @@ class EpubService(Service):
 
         return soup.encode(formatter="minimal")
 
-    def inline_fragments(self, file_bytes: BytesIO) -> Tuple[BytesIO, Dict]:
+    def inline_fragments(self, file_bytes: BytesIO) -> Tuple[BytesIO, Dict[str, FragmentList]]:
         LOG.debug("Inlining fragments...")
         src_epub = Epub(file_bytes)
         content_files = src_epub.get_spine_files()

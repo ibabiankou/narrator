@@ -1,4 +1,3 @@
-import enum
 import logging
 import re
 import unicodedata
@@ -6,28 +5,11 @@ from typing import Tuple, List
 
 import nltk
 from bs4 import BeautifulSoup
-from pydantic import BaseModel, RootModel
+
+from epub_lib.model.tts import Fragment, FragmentList, TextFragment
 
 LOG = logging.getLogger(__name__)
 
-class FragmentType(str, enum.Enum):
-    TEXT = "text"
-    PAUSE = "pause"
-
-class FragmentBase(BaseModel):
-    id: str
-    type: FragmentType
-
-class TextFragment(FragmentBase):
-    type: FragmentType = FragmentType.TEXT
-    text: str
-
-class PauseFragment(FragmentBase):
-    type: FragmentType = FragmentType.PAUSE
-    duration: float
-
-class FragmentList(RootModel[List[TextFragment | PauseFragment]]):
-    pass
 
 def clean_text_for_tts(text):
     """
@@ -59,7 +41,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                 LOG.warning("Removing link: %s", tag)
                 tag.decompose()
 
-        fragments: List[TextFragment | PauseFragment] = []
+        fragments: List[Fragment] = []
         current_id = global_id_start
         block_tags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'div']
         VOID_TAGS = {'br', 'img', 'hr', 'area', 'base', 'col', 'embed', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
