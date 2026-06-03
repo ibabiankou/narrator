@@ -15,6 +15,7 @@ from sqlalchemy.sql.functions import count
 from tenacity import retry, stop_after_attempt, wait_exponential, wait_random
 
 from api.models import api, db, domain
+from api.models.narration import AudioTrack
 from api.openlibrary.service import OpenlibraryServiceDep
 from api.services.epub import EpubServiceDep
 from api.services.experimental import identify_book
@@ -53,16 +54,8 @@ class BookService(Service):
     @transactional
     def create_book(self, user_id: uuid.UUID, file_name: str, file_bytes: BytesIO,
                     background_tasks: BackgroundTasks):
-        book_id = uuid.uuid4()
-        file_key = f"{book_id}/{file_name}"
-
-        # Pre-process file:
-        #   Compress images;
-        #   Remove undesired content.
-        file_bytes = self.epub_service.remove_links(file_bytes)
 
         # Extract metadata
-        # TODO: handle parsing errors...
         epub = Epub(file_bytes, filename=file_name)
         titles = epub.package.metadata.get_title()
         authors = epub.package.metadata.get_authors()
@@ -73,6 +66,7 @@ class BookService(Service):
 
         # TODO: process identifiers.
 
+        book_id = uuid.uuid4()
         cover_image_maybe = epub.get_cover_image()
         cover_thumbnail_path = None
         if cover_image_maybe is not None:
@@ -83,7 +77,30 @@ class BookService(Service):
             cover_thumbnail_path = self.img_proxy.build_url(cover_image_key)
 
         file_bytes.seek(0)
-        self.files_service.upload_file(file_key, file_bytes)
+        self.files_service.upload_file(f"{book_id}/epub-files/source.epub", file_bytes)
+
+        file_bytes = self.epub_service.remove_links(file_bytes)
+        file_bytes, fragment_map = self.epub_service.inline_fragments(file_bytes)
+        self.files_service.upload_file(f"{book_id}/epub-files/fragmented.epub", file_bytes)
+
+        # self.files_service.upload_file(f"{book_id}/narration-manifest.json", file_bytes)
+        #
+        # # TODO: construct and store narration-manifest.json; < NOw
+        # #   - get TableOfContent from the epub.
+        # #   - Merge ToC with the fragment map.
+        # #   - Split fragments into tracks.
+        # pub_content = epub.get_publication_content()
+        # narration_manifest_items = []
+        # for spine_item in pub_content.spine_items:
+        #     for nav_item in spine_item.navigation_items:
+        #     fragments = fragment_map.get(spine_item.href, [])
+        #     tracks = AudioTrack.split_into_tracks(fragments)
+        #     # This only works for a single nav item per file... Need to modify inline_fragments to also include idrefs.
+        #
+        #     # construct ContentFile
+        #     pass
+        #
+        # # TODO: Compress images;
 
         file_bytes.seek(0)
         book = db.Book(id=book_id,
