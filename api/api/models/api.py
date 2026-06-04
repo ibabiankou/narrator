@@ -103,7 +103,7 @@ class BookDetails(BookMetadata):
     def from_orm(cls, book: db.Book):
         return BookDetails(id=book.id,
                            owner_id=book.owner_id,
-                           source_file_key=f"{book.id}/{book.file_name}",
+                           source_file_key=f"{book.id}/epub-files/source.epub",
                            status=book.status,
                            cover=book.cover,
                            title=book.title,

@@ -92,7 +92,7 @@ class Book(Base):
     metadata_candidates: Mapped[Optional[domain.MetadataCandidates]] = mapped_column(
         type_=PydanticType(domain.MetadataCandidates))
 
-    narration_request: Mapped[list[TocItem]] = mapped_column(type_=PydanticList(TocItem), default=[])
+    # narration_request: Mapped[list[TocItem]] = mapped_column(type_=PydanticList(TocItem), default=[])
 
     # TODO: Add errors field. JSONB array of dictionaries. Any processing / validation errors encountered
     #  should be stored there and displayed in UI.

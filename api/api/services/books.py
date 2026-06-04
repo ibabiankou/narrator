@@ -15,7 +15,7 @@ from sqlalchemy.sql.functions import count
 from tenacity import retry, stop_after_attempt, wait_exponential, wait_random
 
 from api.models import api, db, domain
-from api.models.narration import AudioTrack
+from api.models.narration import NarrationManifest
 from api.openlibrary.service import OpenlibraryServiceDep
 from api.services.epub import EpubServiceDep
 from api.services.experimental import identify_book
@@ -539,41 +539,26 @@ class BookService(Service):
 
     @transactional
     def get_table_of_contents(self, book_id: uuid.UUID) -> List[api.TableOfContentsItem]:
-        book = self.get_book(book_id)
-        file_bytes = self.files_service.get_book_file(book.id, book.file_name)
-        epub = Epub(file_bytes, filename=book.file_name)
-        epub_toc = epub.get_publication_content()
+        manifest_bytes = self.files_service.get_book_file(book_id, "narration-manifest.json")
+        manifest: NarrationManifest = NarrationManifest.model_validate_json(manifest_bytes.getvalue())
 
-        # Flatten epub publication content to something consumable by UI.
         toc_items = []
-        for spine_item in epub_toc.spine_items:
-            should_narrate = self._should_narrate(len(spine_item.navigation_items), spine_item.epub_types)
-            if spine_item.navigation_items:
-                # Add each nav item.
-                for nav_item in spine_item.navigation_items:
-                    href = spine_item.href if nav_item.idref is None else f"{spine_item.href}#{nav_item.idref}"
-                    toc_items.append(api.TableOfContentsItem(
-                        href=href,
-                        title=nav_item.title,
-                        narrate=should_narrate))
-            else:
-                # Add spine item instead.
+        for content_file in manifest.root:
+            for nav_item in content_file.navigation_items:
+                href = content_file.href if nav_item.idref is None else f"{content_file.href}#{nav_item.idref}"
                 toc_items.append(api.TableOfContentsItem(
-                    href=spine_item.href,
-                    title=spine_item.title,
-                    narrate=should_narrate))
+                    href=href,
+                    title=nav_item.title,
+                    narrate=nav_item.narrate))
 
         return toc_items
 
-    def _should_narrate(self, nav_point_num: int, epub_types: List[str]) -> bool:
-        # TODO: implement smarter logic to suggest whether to narrate the file.
-        return True
-
     def narrate_book(self, book_id: uuid.UUID, narration_request: List[api.TableOfContentsItem]):
-        db_narration_request = []
-        for item in narration_request:
-            db_narration_request.append(db.TocItem(href=item.href, narrate=item.narrate))
-        self.db.execute(update(db.Book).where(db.Book.id == book_id).values(narration_request=db_narration_request))
+        pass
+        # db_narration_request = []
+        # for item in narration_request:
+        #     db_narration_request.append(db.TocItem(href=item.href, narrate=item.narrate))
+        # self.db.execute(update(db.Book).where(db.Book.id == book_id).values(narration_request=db_narration_request))
 
         # Extract fragments from the book.
         # Split the fragments into tracks.
