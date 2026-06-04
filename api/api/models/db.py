@@ -10,7 +10,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from api.models import domain
 from api.utils.db import PydanticType, PydanticList
-from epub_lib.model.tts import FragmentList
+from common_lib.models.tts import FragmentList
 
 
 class Base(DeclarativeBase):

@@ -4,7 +4,7 @@ from typing import List, Optional
 import math
 from pydantic import RootModel, BaseModel
 
-from epub_lib.model.tts import FragmentList, TextFragment, PauseFragment, Fragment
+from common_lib.models.tts import FragmentList, TextFragment, PauseFragment, Fragment
 
 LOG = logging.getLogger(__name__)
 

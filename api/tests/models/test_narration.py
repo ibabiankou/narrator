@@ -1,7 +1,7 @@
 import logging
 
 from api.models.narration import AudioTrack
-from epub_lib.model.tts import TextFragment
+from common_lib.models.tts import TextFragment
 
 LOG = logging.getLogger(__name__)
 

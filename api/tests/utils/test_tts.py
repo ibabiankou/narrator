@@ -1,6 +1,6 @@
 import logging
 
-from epub_lib.util.tts import process_xhtml_inplace
+from api.utils.tts import process_xhtml_inplace
 
 LOG = logging.getLogger(__name__)
 

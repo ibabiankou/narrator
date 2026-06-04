@@ -8,11 +8,11 @@ from bs4 import BeautifulSoup
 
 from api.models.narration import NarrationManifest, ContentFile, NavigationItem, AudioTrack
 from api.utils.imgproxy import ImgProxy
+from api.utils.tts import process_xhtml_inplace
+from common_lib.models.tts import FragmentList
 from common_lib.service import Service
 from epub_lib import Epub
 from epub_lib.model.nav import PublicationContent
-from epub_lib.model.tts import FragmentList
-from epub_lib.util.tts import process_xhtml_inplace
 
 LOG = logging.getLogger(__name__)
 

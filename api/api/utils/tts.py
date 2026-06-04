@@ -6,7 +6,7 @@ from typing import Tuple
 import nltk
 from bs4 import BeautifulSoup
 
-from epub_lib.model.tts import FragmentList, FragmentListBuilder
+from common_lib.models.tts import FragmentList, FragmentListBuilder
 
 LOG = logging.getLogger(__name__)
 
