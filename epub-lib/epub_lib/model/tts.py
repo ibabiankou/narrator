@@ -1,10 +1,8 @@
 import re
 from enum import Enum
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Literal, Union, Annotated
 
-from pydantic import BaseModel, RootModel, field_serializer, field_validator
-
-type Fragment = TextFragment | PauseFragment
+from pydantic import BaseModel, RootModel, field_serializer, field_validator, Field
 
 
 class FragmentType(str, Enum):
@@ -42,13 +40,19 @@ class FragmentBase(BaseModel):
 
 
 class TextFragment(FragmentBase):
-    type: FragmentType = FragmentType.TEXT
+    type: Literal[FragmentType.TEXT] = FragmentType.TEXT
     text: str
 
 
 class PauseFragment(FragmentBase):
-    type: FragmentType = FragmentType.PAUSE
+    type: Literal[FragmentType.PAUSE] = FragmentType.PAUSE
     duration: float
+
+
+Fragment = Annotated[
+    Union[TextFragment, PauseFragment],
+    Field(discriminator='type')
+]
 
 
 class FragmentList(RootModel[List[Fragment]]):

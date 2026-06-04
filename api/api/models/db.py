@@ -10,6 +10,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from api.models import domain
 from api.utils.db import PydanticType, PydanticList
+from epub_lib.model.tts import FragmentList
 
 
 class Base(DeclarativeBase):
@@ -92,7 +93,7 @@ class Book(Base):
     metadata_candidates: Mapped[Optional[domain.MetadataCandidates]] = mapped_column(
         type_=PydanticType(domain.MetadataCandidates))
 
-    # narration_request: Mapped[list[TocItem]] = mapped_column(type_=PydanticList(TocItem), default=[])
+    narration_request: Mapped[List[TocItem]] = mapped_column(type_=PydanticList(TocItem), default=[])
 
     # TODO: Add errors field. JSONB array of dictionaries. Any processing / validation errors encountered
     #  should be stored there and displayed in UI.
@@ -157,3 +158,27 @@ class Settings(Base):
     kind: Mapped[str]
 
     data: Mapped[dict] = mapped_column(type_=JSONB)
+
+
+class NarrationQueue(Base):
+    __tablename__ = "narration_queue"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"))
+    tts_model: Mapped[str]
+    voice: Mapped[str]
+    track_base_name: Mapped[str]
+    # ID of the first fragment in the track.
+    order: Mapped[int]
+    fragments: Mapped[FragmentList] = mapped_column(type_=PydanticType(FragmentList), nullable=False)
+    # When track was added to the queue.
+    added: Mapped[datetime.datetime]
+
+    # When track was sent for narration.
+    sent: Mapped[Optional[datetime.datetime]]
+    # How long it took to narrate this track.
+    narration_time_s: Mapped[Optional[float]]
+    completed: Mapped[Optional[datetime.datetime]]
+
+    duration_s: Mapped[Optional[float]]
+    size_bytes: Mapped[Optional[int]]

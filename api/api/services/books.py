@@ -15,6 +15,7 @@ from sqlalchemy.sql.functions import count
 from tenacity import retry, stop_after_attempt, wait_exponential, wait_random
 
 from api.models import api, db, domain
+from api.models.db import NarrationQueue
 from api.models.narration import NarrationManifest
 from api.openlibrary.service import OpenlibraryServiceDep
 from api.services.epub import EpubServiceDep
@@ -553,17 +554,33 @@ class BookService(Service):
 
         return toc_items
 
+    @transactional
     def narrate_book(self, book_id: uuid.UUID, narration_request: List[api.TableOfContentsItem]):
-        pass
-        # db_narration_request = []
-        # for item in narration_request:
-        #     db_narration_request.append(db.TocItem(href=item.href, narrate=item.narrate))
-        # self.db.execute(update(db.Book).where(db.Book.id == book_id).values(narration_request=db_narration_request))
+        # TODO: allow user to select the model and voice. For now, just hardcode kokoro and michael.
+        db_narration_request = []
+        for item in narration_request:
+            db_narration_request.append(db.TocItem(href=item.href, narrate=item.narrate))
+        self.db.execute(update(db.Book).where(db.Book.id == book_id)
+                        .values(narration_request=db_narration_request, status=db.BookStatus.queued))
 
-        # Extract fragments from the book.
-        # Split the fragments into tracks.
-        # Store the result in DB / Obj Store.
-        # Push into RMQ.
+        manifest_bytes = self.files_service.get_book_file(book_id, "narration-manifest.json")
+        manifest: NarrationManifest = NarrationManifest.model_validate_json(manifest_bytes.getvalue())
+
+        items_to_enqueue = []
+        for content_file in manifest.root:
+            for nav_item in content_file.navigation_items:
+                for track in nav_item.audio_tracks:
+                    queue_item = NarrationQueue(
+                        book_id=book_id,
+                        tts_model="kokoro",
+                        voice="am_michael",
+                        track_base_name=track.name,
+                        order=track.fragments[0].id,
+                        fragments=track.fragments,
+                        added=datetime.now(UTC)
+                    )
+                    items_to_enqueue.append(queue_item)
+        self.db.add_all(items_to_enqueue)
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

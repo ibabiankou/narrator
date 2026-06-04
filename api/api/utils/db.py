@@ -39,7 +39,7 @@ class PydanticType(TypeDecorator):
     """Serializes a single Pydantic model (and its nested data) to JSONB."""
     impl = JSONB
 
-    def __init__(self, pydantic_type: Type[BaseModel], *args, **kwargs):
+    def __init__(self, pydantic_type: type[BaseModel], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pydantic_type = pydantic_type
 
