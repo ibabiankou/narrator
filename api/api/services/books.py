@@ -514,13 +514,8 @@ class BookService(Service):
     @transactional
     def _do_complete_narration_maybe(self):
         """Update status if narration of a book is complete."""
-        # select book_id, count of sections and count of finished audio tracks.
         query_text = """select b.id,
-                               (select count(*) from sections s where s.book_id = b.id) as section_count,
-                               (select count(*)
-                                from audio_tracks t
-                                where t.book_id = b.id
-                                  and t.status = 'ready')                               as ready_track_count
+                               (select count(*) from narration_queue q where q.completed is null) as pending_count
                         from books b
                         where b.status = 'narrating';
                      """
@@ -529,9 +524,10 @@ class BookService(Service):
             LOG.info("No book is being narrated, doing nothing.")
             return
 
-        book_id, section_count, ready_track_count = book_narration_stats_maybe
-        if ready_track_count == section_count:
+        book_id, pending_count = book_narration_stats_maybe
+        if pending_count == 0:
             LOG.info("Narration of book %s completed.", book_id)
+            # TODO: Implement some kind of sanity check and clean up narration_queue table.
             self._set_status(book_id, db.BookStatus.ready)
 
     @transactional
@@ -566,20 +562,28 @@ class BookService(Service):
         manifest_bytes = self.files_service.get_book_file(book_id, "narration-manifest.json")
         manifest: NarrationManifest = NarrationManifest.model_validate_json(manifest_bytes.getvalue())
 
+        should_narrate_map = {i.href: i.narrate for i in narration_request}
+
         items_to_enqueue = []
         for content_file in manifest.root:
             for nav_item in content_file.navigation_items:
-                for track in nav_item.audio_tracks:
-                    queue_item = NarrationQueue(
-                        book_id=book_id,
-                        tts_model="kokoro",
-                        voice="am_michael",
-                        track_base_name=track.name,
-                        order=track.fragments[0].id,
-                        fragments=track.fragments,
-                        added=datetime.now(UTC)
-                    )
-                    items_to_enqueue.append(queue_item)
+                href = content_file.href if nav_item.idref is None else f"{content_file.href}#{nav_item.idref}"
+                should_narrate_maybe = should_narrate_map.get(href)
+                if should_narrate_maybe is None:
+                    LOG.warning("Unknown content href '%s', default to narrating it.", href)
+
+                if should_narrate_maybe is None or should_narrate_maybe:
+                    for track in nav_item.audio_tracks:
+                        queue_item = NarrationQueue(
+                            book_id=book_id,
+                            tts_model="kokoro",
+                            voice="am_michael",
+                            track_base_name=track.name,
+                            order=track.fragments[0].id,
+                            fragments=track.fragments,
+                            added=datetime.now(UTC)
+                        )
+                        items_to_enqueue.append(queue_item)
         self.db.add_all(items_to_enqueue)
 
 

@@ -14,6 +14,8 @@ LOG = logging.getLogger(__name__)
 @dataclass
 class SystemSettings:
     speech_generation_enabled: bool = False
+    speech_generation_interval_sec: int = 30
+    speech_generation_queue_size_threshold: int = 10
 
 
 # noinspection PyTypeChecker

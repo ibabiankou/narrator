@@ -1,10 +1,8 @@
-import asyncio
 import copy
 import logging
 import os
 import random
 from collections import defaultdict
-from concurrent.futures import Future
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import partial
@@ -13,9 +11,9 @@ from threading import Thread, RLock, Event
 from typing import Optional, ClassVar, Callable, TypeVar, Any, Type
 
 from pika import BlockingConnection, ConnectionParameters, BasicProperties, PlainCredentials
+from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import ConnectionWrongStateError
 from pika.spec import Basic
-from pika.adapters.blocking_connection import BlockingChannel
 from pydantic import BaseModel
 from tenacity import retry, wait_exponential, wait_random, stop_after_attempt
 
@@ -46,6 +44,7 @@ class Topology:
     api_queue = "api"
     phonemization_queue = "phonemization"
     speech_gen_queue = "speech-generation"
+    narration_queue = "narration"
 
 
 class RMQClient(Service):

@@ -24,6 +24,7 @@ from api.services.audiotracks import AudioTrackService
 from api.services.books import BookService
 from api.services.epub import EpubService
 from api.services.files import FilesService
+from api.services.narration_queue import NarrationQueueService
 from api.services.progress import PlaybackProgressService
 from api.services.sections import SectionService
 from api.services.settings import SettingsService
@@ -59,10 +60,11 @@ async def lifespan(app: FastAPI):
     openlibrary_svc = OpenlibraryService(files_svc, db_factory=openlibrary_db)
     books_svc = BookService(files_svc, section_svc, progress_svc, openlibrary_svc, epub_svc, db_factory=narrator_db)
     procurement_svc = ProcurementService(db_factory=narrator_db)
+    narration_queue_svc = NarrationQueueService(rmq_client, settings_svc, db_factory=narrator_db)
 
     # Start background processing tasks.
     start_narration_task = asyncio.create_task(books_svc.start_narration_maybe())
-    speech_gen_task = asyncio.create_task(section_svc.generate_speech_maybe())
+    speech_gen_task = asyncio.create_task(narration_queue_svc.generate_speech_maybe())
     complete_narration_task = asyncio.create_task(books_svc.complete_narration_maybe())
 
     def configure(channel: BlockingChannel):
@@ -75,6 +77,7 @@ async def lifespan(app: FastAPI):
 
     rmq_client.set_queue_message_handler(Topology.api_queue, rmq.PhonemesResponse, section_svc.handle_phonemes_msg)
     rmq_client.set_queue_message_handler(Topology.api_queue, rmq.SpeechResponse, audiotrack_svc.handle_speech_msg)
+    # TODO: add handler for narration-[complete/response] messages
     rmq_client.start_consuming()
     yield
     start_narration_task.cancel()

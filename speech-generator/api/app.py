@@ -30,6 +30,8 @@ async def lifespan(app: FastAPI):
         channel.queue_bind(Topology.phonemization_queue, exchange, "phonemize")
         channel.queue_declare(Topology.speech_gen_queue, durable=True, arguments={"x-queue-type": "quorum"})
         channel.queue_bind(Topology.speech_gen_queue, exchange, "synthesize")
+        channel.queue_declare(Topology.narration_queue, durable=True, arguments={"x-queue-type": "quorum"})
+        channel.queue_bind(Topology.narration_queue, exchange, "narrate")
 
     rmq_client.configure(configure)
 

@@ -1,6 +1,4 @@
-import asyncio
 import logging
-import os
 import uuid
 from typing import Annotated
 
@@ -14,7 +12,6 @@ from api.services.settings import SettingsServiceDep
 from common_lib import RMQClientDep
 from common_lib.db import transactional
 from common_lib.models import rmq
-from common_lib.rmq import Topology
 from common_lib.service import Service
 
 LOG = logging.getLogger(__name__)
@@ -32,9 +29,6 @@ class SectionService(Service):
         self.progress_service = progress_service
         self.rmq_client = rmq_client
         self.settings_service = settings_service
-
-        self._speech_generation_interval_sec = int(os.getenv("SPEECH_GENERATION_INTERVAL_SEC", 30))
-        self._speech_generation_queue_size_threshold = int(os.getenv("SPEECH_GENERATION_QUEUE_SIZE_THRESHOLD", 10))
 
     @transactional
     def get_sections(self, book_id: uuid.UUID) -> list[api.BookSection]:
@@ -116,60 +110,6 @@ class SectionService(Service):
             return []
 
         return self.audiotracks_service.generate_speech([updated_section])
-
-    async def generate_speech_maybe(self):
-        while True:
-            LOG.info("Checking if need to generate some speech...")
-            try:
-                self._do_generate_speech_maybe()
-            except:
-                LOG.info("Error while triggering speech generation, will try again later.", exc_info=True)
-            await asyncio.sleep(self._speech_generation_interval_sec)
-
-    @transactional
-    def _do_generate_speech_maybe(self):
-        system_settings = self.settings_service.get_system_settings()
-        if not system_settings.speech_generation_enabled:
-            LOG.info("Speech generation is disabled. Doing nothing.")
-            return
-
-        message_num = 0
-        message_num += self.rmq_client.get_queue_size(Topology.phonemization_queue)
-        message_num += self.rmq_client.get_queue_size(Topology.speech_gen_queue)
-
-        if message_num > self._speech_generation_queue_size_threshold:
-            return
-
-        # Find a few sections per book and trigger generation for them.
-        # noinspection SqlDialectInspection
-        query_text = """WITH BooksToNarrate as (select distinct b.id, b.created_time
-                                                from books b
-                                                         join sections s on b.id = s.book_id
-                                                         left join audio_tracks t on s.id = t.section_id
-                                                where t.id is null and b.status = 'narrating'
-                                                order by b.created_time
-                                                limit 1), 
-                            MissingAudio AS (SELECT s.id, s.book_id, s.section_index,
-                                                -- Generate a rank for each section within its own book group
-                                                ROW_NUMBER() OVER (
-                                                    PARTITION BY s.book_id
-                                                    ORDER BY s.section_index ASC
-                                                ) as rank_in_book
-                                             FROM sections s
-                                                 LEFT JOIN audio_tracks a
-                                             ON s.id = a.section_id
-                                             WHERE s.book_id in (select id from BooksToNarrate)
-                                               and a.id IS NULL)
-        SELECT *
-        FROM sections
-        WHERE id in (SELECT id
-                     FROM MissingAudio
-                     WHERE rank_in_book <= 5
-                     ORDER BY book_id, section_index)"""
-
-        db_sections = self.db.scalars(select(db.Section).from_statement(text(query_text))).all()
-        if len(db_sections):
-            self.audiotracks_service.generate_speech(db_sections)
 
     @transactional
     def is_owner(self, user_id: uuid.UUID, section_id: int) -> bool:
