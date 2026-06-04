@@ -1,7 +1,7 @@
 import { HttpContextToken, HttpInterceptorFn } from '@angular/common/http';
 import { catchError, throwError, timeout, TimeoutError } from 'rxjs';
 
-export const HTTP_TIMEOUT_MS = new HttpContextToken<number>(() => 1000);
+export const HTTP_TIMEOUT_MS = new HttpContextToken<number>(() => 5000);
 
 /**
  * Adds timeout to all requests. The default value is 1s. Set to 0 to disable it.
