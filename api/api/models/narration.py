@@ -4,8 +4,7 @@ from typing import List, Optional
 import math
 from pydantic import RootModel, BaseModel
 
-from epub_lib.model.tts import FragmentList, TextFragment, PauseFragment
-
+from epub_lib.model.tts import FragmentList, TextFragment, PauseFragment, Fragment
 
 LOG = logging.getLogger(__name__)
 
@@ -15,24 +14,26 @@ class AudioTrack(BaseModel):
     fragments: FragmentList
 
     @classmethod
-    def from_fragments(cls, fragments: FragmentList):
-        text_fragments = [f for f in fragments if isinstance(f, TextFragment)]
-        if text_fragments:
-            first = text_fragments[0].id
-            last = text_fragments[-1].id
+    def from_fragments(cls, fragments: List[Fragment]) -> "AudioTrack":
+        if fragments:
+            first = fragments[0].id
+            last = fragments[-1].id
             name = f"{first}-{last}"
-            return cls(name=name, fragments=fragments)
+            # noinspection PyArgumentList
+            return cls(name=name, fragments=FragmentList(fragments))
         else:
             raise ValueError("No fragments")
 
     @staticmethod
     def split_into_tracks(
-            fragments: FragmentList,
+            fragments: List[Fragment],
             # This magic number is rough average from past data.
             # TODO: Move these magic numbers to configuration.
             target_track_duration_min: float = 3,
             chars_per_min=1000
     ) -> List["AudioTrack"]:
+        if not fragments:
+            raise ValueError("No fragments")
 
         total_len = sum([len(f.text) for f in fragments if isinstance(f, TextFragment)])
         num_tracks = max(1, math.floor(int(total_len / (target_track_duration_min * chars_per_min))))
@@ -52,8 +53,7 @@ class AudioTrack(BaseModel):
                     continue
 
                 if remaining_len <= 0:  # Got a full track
-                    # noinspection PyArgumentList
-                    result.append(AudioTrack.from_fragments(FragmentList(current_track_fragments)))
+                    result.append(AudioTrack.from_fragments(current_track_fragments))
                     current_track_fragments = []
                     remaining_len += avg_len
                     continue
@@ -66,8 +66,7 @@ class AudioTrack(BaseModel):
                 raise ValueError(f"This should never happen... :)")
 
             if current_track_fragments:
-                # noinspection PyArgumentList
-                result.append(AudioTrack.from_fragments(FragmentList(current_track_fragments)))
+                result.append(AudioTrack.from_fragments(current_track_fragments))
 
             LOG.debug("Actual number of tracks: %d", len(result))
             return result

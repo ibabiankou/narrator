@@ -59,8 +59,9 @@ class TestEpubService:
         src_dir_path = os.path.expanduser("~/Downloads/epub/")
         dest_dir_path = Path(os.path.expanduser("~/repos/narrator/out/manifest/"))
         epub_files = list(Path(src_dir_path).rglob("*.epub"))
+        epub_files.sort()
 
-        for epub_path in epub_files:
+        for epub_path in epub_files[12:13]:
             LOG.info("Processing: %s", epub_path)
 
             file_bytes = BytesIO(epub_path.read_bytes())
@@ -79,3 +80,8 @@ class TestEpubService:
             publication_content_file_name = dest_dir_path.joinpath(epub_path.stem + "_publication_content.json")
             with open(publication_content_file_name, "w") as f:
                 f.write(publication_content.model_dump_json(indent=2))
+
+            narration_manifest = svc.build_narration_manifest(publication_content, fragments)
+            narration_manifest_file_name = dest_dir_path.joinpath(epub_path.stem + "_narration_manifest.json")
+            with open(narration_manifest_file_name, "w") as f:
+                f.write(narration_manifest.model_dump_json(indent=2))

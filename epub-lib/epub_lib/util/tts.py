@@ -1,12 +1,12 @@
 import logging
 import re
 import unicodedata
-from typing import Tuple, List
+from typing import Tuple
 
 import nltk
 from bs4 import BeautifulSoup
 
-from epub_lib.model.tts import Fragment, FragmentList, TextFragment
+from epub_lib.model.tts import FragmentList, FragmentListBuilder
 
 LOG = logging.getLogger(__name__)
 
@@ -28,8 +28,6 @@ def clean_text_for_tts(text):
     text = allowed.sub("", text)
     return re.sub(r'\s+', ' ', text).strip()
 
-def fid(frag_id: int) -> str:
-    return f"nn{frag_id}"
 
 def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:
     try:
@@ -41,9 +39,8 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                 LOG.warning("Removing link: %s", tag)
                 tag.decompose()
 
-        fragments: List[Fragment] = []
-        current_id = global_id_start
-        block_tags = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'div'}
+        fragments = FragmentListBuilder(current_id=global_id_start)
+        block_tags = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'div', 'table', 'th', 'td'}
         VOID_TAGS = {'br', 'img', 'hr', 'area', 'base', 'col', 'embed', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
 
         visited_ids = set()
@@ -98,15 +95,13 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
             current_sent_idx = 0
             current_char_count = 0
 
-            seg_id = fid(current_id)
-            fragments.append(TextFragment(
-                id=seg_id, text=clean_text_for_tts(sentences_clean[0]), visited_ids=list(visited_ids)))
-            current_id += 1
+            frag = fragments.add_text(clean_text_for_tts(sentences_clean[current_sent_idx]), list(visited_ids))
+            seg_id = frag.formatted_id()
 
             new_html_content += f'<span id="{seg_id}">'
 
             def traverse(node, open_tags):
-                nonlocal new_html_content, current_char_count, current_sent_idx, current_id
+                nonlocal new_html_content, current_char_count, current_sent_idx
 
                 if isinstance(node, str):
                     text = str(node)
@@ -135,13 +130,9 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
 
                             # Start Next (if exists)
                             if current_sent_idx < len(sentences_clean):
-                                seg_id = fid(current_id)
-                                current_id += 1
-                                fragments.append(TextFragment(
-                                    id=seg_id,
-                                    text=clean_text_for_tts(sentences_clean[current_sent_idx]),
-                                    visited_ids=list(visited_ids)
-                                ))
+                                frag = fragments.add_text(clean_text_for_tts(
+                                    sentences_clean[current_sent_idx]), list(visited_ids))
+                                seg_id = frag.formatted_id()
 
                                 new_html_content += f'<span id="{seg_id}">'
                                 for t_name, t_attrs in open_tags:
@@ -169,13 +160,9 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
 
                             current_sent_idx += 1
                             if current_sent_idx < len(sentences_clean):
-                                seg_id = fid(current_id)
-                                current_id += 1
-                                fragments.append(TextFragment(
-                                    id=seg_id,
-                                    text=clean_text_for_tts(sentences_clean[current_sent_idx]),
-                                    visited_ids=list(visited_ids)
-                                ))
+                                frag = fragments.add_text(clean_text_for_tts(
+                                    sentences_clean[current_sent_idx]), list(visited_ids))
+                                seg_id = frag.formatted_id()
 
                                 new_html_content += f'<span id="{seg_id}">'
                                 for t_name, t_attrs in open_tags:
@@ -214,6 +201,4 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
         LOG.error("Failed to fragment the content: %s", e, exc_info=True)
         raise e
 
-    # TODO: Split fragments into tracks of roughly the same length ~3-5min.
-
-    return soup.encode(formatter="minimal", encoding='utf-8'), FragmentList(fragments), current_id
+    return soup.encode(formatter="minimal", encoding='utf-8'), fragments.build(), fragments.current_id

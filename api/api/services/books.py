@@ -83,24 +83,12 @@ class BookService(Service):
         file_bytes, fragment_map = self.epub_service.inline_fragments(file_bytes)
         self.files_service.upload_file(f"{book_id}/epub-files/fragmented.epub", file_bytes)
 
-        # self.files_service.upload_file(f"{book_id}/narration-manifest.json", file_bytes)
-        #
-        # # TODO: construct and store narration-manifest.json; < NOw
-        # #   - get TableOfContent from the epub.
-        # #   - Merge ToC with the fragment map.
-        # #   - Split fragments into tracks.
-        # pub_content = epub.get_publication_content()
-        # narration_manifest_items = []
-        # for spine_item in pub_content.spine_items:
-        #     for nav_item in spine_item.navigation_items:
-        #     fragments = fragment_map.get(spine_item.href, [])
-        #     tracks = AudioTrack.split_into_tracks(fragments)
-        #     # This only works for a single nav item per file... Need to modify inline_fragments to also include idrefs.
-        #
-        #     # construct ContentFile
-        #     pass
-        #
-        # # TODO: Compress images;
+        publication_content = epub.get_publication_content()
+        narration_manifest = self.epub_service.build_narration_manifest(publication_content, fragment_map)
+        narration_manifest_bytes = narration_manifest.model_dump_json(indent=2).encode()
+        self.files_service.upload_file(f"{book_id}/narration-manifest.json", narration_manifest_bytes)
+
+        # TODO: Compress images;
 
         file_bytes.seek(0)
         book = db.Book(id=book_id,
