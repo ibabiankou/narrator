@@ -54,7 +54,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
 
             full_text_raw = tag.get_text()
             if not full_text_raw.strip(): continue
-            LOG.debug("Raw text:\n%s", full_text_raw)
+            # LOG.debug("Raw text:\n%s", full_text_raw)
 
             # TODO: Add punctuation to raw text, if it does not end with one.
             # TODO: Only send to split, if it's too long.
@@ -66,7 +66,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
             sentences_clean = nltk.sent_tokenize(full_text_clean)
             if not sentences_clean: continue
 
-            LOG.debug("NLTK sent_tokenize result:\n%s", sentences_clean)
+            # LOG.debug("NLTK sent_tokenize result:\n%s", sentences_clean)
 
             # TODO: tweak split here. < Should I do it here or before NLTK?
             # TODO: Further split too long sentences.

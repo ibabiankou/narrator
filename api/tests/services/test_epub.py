@@ -61,7 +61,7 @@ class TestEpubService:
         epub_files = list(Path(src_dir_path).rglob("*.epub"))
         epub_files.sort()
 
-        for epub_path in epub_files[12:13]:
+        for epub_path in epub_files:
             LOG.info("Processing: %s", epub_path)
 
             file_bytes = BytesIO(epub_path.read_bytes())

@@ -43,10 +43,10 @@ class AudioTrack(BaseModel):
         if num_tracks == 1:
             return [AudioTrack.from_fragments(fragments)]
         else:
-            result = []
+            result: List["AudioTrack"] = []
             avg_len = total_len / num_tracks
-            remaining_len = total_len
-            current_track_fragments = []
+            remaining_len = avg_len
+            current_track_fragments: List[Fragment] = []
             for frag in fragments:
                 if isinstance(frag, PauseFragment):
                     current_track_fragments.append(frag)
@@ -56,7 +56,6 @@ class AudioTrack(BaseModel):
                     result.append(AudioTrack.from_fragments(current_track_fragments))
                     current_track_fragments = []
                     remaining_len += avg_len
-                    continue
 
                 if isinstance(frag, TextFragment):
                     current_track_fragments.append(frag)
@@ -68,7 +67,12 @@ class AudioTrack(BaseModel):
             if current_track_fragments:
                 result.append(AudioTrack.from_fragments(current_track_fragments))
 
-            LOG.debug("Actual number of tracks: %d", len(result))
+            if LOG.isEnabledFor(logging.DEBUG):
+                LOG.debug("Actual number of tracks: %d", len(result))
+                LOG.debug("Expected track length around: %d", avg_len)
+                LOG.debug("Actual track lengths: %s",
+                          [sum([len(f.text) for f in t.fragments.root if isinstance(f, TextFragment)]) for t in result])
+
             return result
 
 

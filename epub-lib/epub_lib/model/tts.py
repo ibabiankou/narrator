@@ -1,6 +1,6 @@
 import re
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Any
 
 from pydantic import BaseModel, RootModel, field_serializer, field_validator
 
@@ -15,7 +15,7 @@ class FragmentType(str, Enum):
 class FragmentBase(BaseModel):
     id: int
     type: FragmentType
-    visited_ids: List[str]
+    visited_ids: List[str] = []
 
     @field_serializer('id')
     def serialize_id(self, id_val: int) -> str:
@@ -27,7 +27,7 @@ class FragmentBase(BaseModel):
 
     @field_validator('id', mode='before')
     @classmethod
-    def deserialize_id(cls, value: any) -> int:
+    def deserialize_id(cls, value: Any) -> int:
         """Intercepts the 'n-X' string and extracts the integer before validation."""
         if isinstance(value, str):
             # Use regex to match the pattern 'n-digits'
