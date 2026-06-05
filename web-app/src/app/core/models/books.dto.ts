@@ -59,7 +59,7 @@ export interface BookOverview extends BookMetadata {
 }
 
 export interface BookDetails extends BookOverview {
-  source_file_key: string;
+  book_file_key: string;
 }
 
 export interface BookStats {

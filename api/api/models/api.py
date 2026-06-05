@@ -96,14 +96,14 @@ class BookWithContent(BaseModel):
 class BookDetails(BookMetadata):
     id: uuid.UUID
     owner_id: uuid.UUID
-    source_file_key: str
+    book_file_key: str
     status: str
 
     @classmethod
     def from_orm(cls, book: db.Book):
         return BookDetails(id=book.id,
                            owner_id=book.owner_id,
-                           source_file_key=f"{book.id}/epub-files/source.epub",
+                           book_file_key=f"{book.id}/epub-files/fragmented.epub",
                            status=book.status,
                            cover=book.cover,
                            title=book.title,

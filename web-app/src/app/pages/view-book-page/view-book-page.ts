@@ -59,7 +59,7 @@ export class ViewBookPage implements OnInit {
   publication = toSignal(toObservable(this.bookDetails).pipe(
     filter(bookDetails => !!bookDetails),
     switchMap(bookDetails => {
-      return this.readiumService.getPublication(bookDetails.source_file_key)
+      return this.readiumService.getPublication(bookDetails.book_file_key)
     })));
 
   title = computed(() => this.bookDetails()?.title ?? "Loading...");
