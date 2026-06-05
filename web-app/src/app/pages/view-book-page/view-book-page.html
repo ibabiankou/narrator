@@ -1,8 +1,8 @@
 <app-toolbar appHideIdle>
   <div breadcrumb class="title">
-    @defer (when bookWithContent()) {
+    @defer (when bookDetails()) {
       <a routerLink="/books/{{ bookId() }}">
-        <h1>{{ bookWithContent().overview.title }}</h1>
+        <h1>{{ bookDetails()!.title }}</h1>
       </a>
       <button matIconButton
               aria-label="Copy book title"
@@ -19,40 +19,21 @@
     }
   </div>
   <div actionButton>
-    @defer (when bookWithContent()) {
-      <app-book-menu [bookOverview]="bookWithContent().overview"
-                     [bookStats]="bookWithContent().stats"></app-book-menu>
+    @defer (when bookDetails()) {
+      <app-book-menu [bookOverview]="bookDetails()!"
+                     [bookStats]=""></app-book-menu>
     }
   </div>
 </app-toolbar>
 
 <div class="main-container" appHideIdle hideClass="hide-cursor">
-  @defer (when pagesWindow()) {
-    @for (page of pagesWindow(); track page.file_name) {
-      <div class="sections-only">
-        <div class="sections">
-          @for (section of page.sections; track section.id) {
-            <app-section id="section-{{section.id}}" #section
-                         [current]="section.id == currentSectionId"
-                         [section]="section"></app-section>
-          }
-        </div>
-      </div>
-      @if (page.sections.length > 0) {
-        <div class="page-number">{{ page.index + 1 }}</div>
-      }
-    } @empty {
-      <p>Strange... This book seem to be empty.</p>
-    }
-  } @placeholder (minimum 250ms) {
-    <app-skeleton class="content-skeleton"/>
-  }
+  <app-readium-epub
+    [publication]="publication()!"
+    [toc]="tocItems()!"
+  ></app-readium-epub>
 </div>
-@defer (when bookWithContent()) {
-  @if (BookStatus.ge(bookWithContent().overview.status, BookStatus.narrating)) {
-    <app-player appHideIdle
-                [bookWithContent]="bookWithContent()"
-                (sectionPlayed)="setCurrentSectionId($event)"
-    ></app-player>
+@defer (when bookDetails()) {
+  @if (BookStatus.ge(bookDetails()!.status, BookStatus.narrating)) {
+    <app-player appHideIdle [bookDetails]="bookDetails()!"></app-player>
   }
 }

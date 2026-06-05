@@ -10,7 +10,7 @@ import {
   output,
   ViewChild
 } from '@angular/core';
-import { BookWithContent, PlaybackInfo } from '../../core/models/books.dto';
+import { BookDetails, PlaybackInfo } from '../../core/models/books.dto';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import {
@@ -20,7 +20,6 @@ import {
   combineLatestWith,
   debounceTime,
   EMPTY,
-  filter,
   interval,
   map,
   of,
@@ -66,15 +65,15 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   private filesService = inject(FilesService);
   private audioPlayer: AudioPlayer;
 
-  bookWithContent = input.required<BookWithContent>();
-  private readonly $playbackInfo = toObservable(this.bookWithContent).pipe(
-    switchMap(book => this.bookService.getPlaybackInfo(book.overview.id)),
+  bookDetails = input.required<BookDetails>();
+  private readonly $playbackInfo = toObservable(this.bookDetails).pipe(
+    switchMap(book => this.bookService.getPlaybackInfo(book.id)),
     switchMap(info => {
       return info ? of(info) : throwError(() => new Error("Undefined playback info"))
     }),
     catchError(error => {
       console.warn("Failed to load playback info, falling back to default values.", error);
-      return of(<PlaybackInfo>{book_id: this.bookWithContent().overview.id, data: {}});
+      return of(<PlaybackInfo>{book_id: this.bookDetails().id, data: {}});
     })
   )
 
@@ -88,8 +87,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   handleKeyBindings = input(true);
 
   // Total duration of the narrated part.
-  private readonly $totalNarratedSeconds =
-    toObservable(this.bookWithContent).pipe(map(b => b.stats.total_narrated_seconds));
+  private readonly $totalNarratedSeconds;
 
   $isPlaying;
   $nowTime;
@@ -97,7 +95,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   $nowPercent;
   $playbackRate;
 
-  $availablePercent = toObservable(this.bookWithContent).pipe(map(b => b.stats.available_percent));
+  $availablePercent = of(100);
   $unavailablePercent = this.$availablePercent.pipe(map(availablePercent => 100 - availablePercent));
 
   $dragToPercent = new BehaviorSubject<number | undefined>(undefined);
@@ -108,6 +106,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
 
     this.$isPlaying = this.audioPlayer.$isPlaying;
     this.$playbackRate = this.audioPlayer.$playbackRate;
+    this.$totalNarratedSeconds = this.audioPlayer.$totalDuration;
 
     const dragTimeSeconds = combineLatest([this.$dragToPercent, this.$totalNarratedSeconds]).pipe(
       map(([percent, totalTime]) => {
@@ -134,16 +133,10 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
         )
       );
 
-    this.audioPlayer.$sectionId
-      .pipe(
-        filter(() => this.syncCurrentSection()),
-        takeUntil(this.$destroy)
-      ).subscribe(sectionId => this.sectionPlayed.emit(sectionId));
-
     this.$playbackInfo
       .pipe(takeUntil(this.$destroy))
       .subscribe((playbackInfo) => {
-        this.audioPlayer.initPlayer(this.bookWithContent().overview, playbackInfo);
+        this.audioPlayer.initPlayer(this.bookDetails(), playbackInfo);
       });
 
     //--- User preferences ---
@@ -376,8 +369,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     if (!newValue) {
       this.sectionPlayed.emit(0);
     } else {
-      this.audioPlayer.$sectionId.pipe(take(1))
-        .subscribe(sectionId => this.sectionPlayed.emit(sectionId));
+      // Scroll the current fragment into view.
     }
     this.settingsService.patchUserPreferences({auto_scroll: newValue});
   }

@@ -12,20 +12,6 @@ enum PlayerStatus {
   paused = "paused",
 }
 
-interface HlsSection {
-  section_id: number;
-  duration: number;
-  end_time: number;
-  playback_order: number;
-}
-
-const FIRST_SECTION: HlsSection = {
-  section_id: 0,
-  duration: 0,
-  end_time: 0,
-  playback_order: -1
-}
-
 /**
  * Responsible for playback logic: Playing each track, navigating back and forth, changing tracks.
  */
@@ -37,18 +23,10 @@ export class AudioPlayer {
   private hls: Hls | null = null;
 
   $bookDetails = new BehaviorSubject<BookOverview | null>(null);
-  // A list of sections from the HLS playlist along with their duration and end time.
-  private sectionTimeline: HlsSection[] = [];
   // Currently playing time in seconds.
   $globalProgressSeconds = new BehaviorSubject<number>(0);
   private timeDrift = -1;
-  // An index within sectionTimeline of the currently playing section.
-  private $sectionIndex = new BehaviorSubject<number>(0);
-  // An ID of the section that is being played right now.
-  $sectionId = this.$sectionIndex.pipe(
-    filter(i => i > 0),
-    map(i => this.sectionTimeline[i].section_id),
-  );
+  $totalDuration = new BehaviorSubject<number>(-1);
 
   $playbackRate = new BehaviorSubject<number>(-1);
   $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
@@ -74,31 +52,8 @@ export class AudioPlayer {
           debug: false,
         });
 
-        // Get section timeline metadata from HLS model.
-        this.hls.on(Hls.Events.LEVEL_UPDATED, (event, data) => {
-          if (data.details.dateRanges) {
-            const hlsSections: HlsSection[] = [FIRST_SECTION];
-
-            Object.values(data.details.dateRanges).forEach(range => {
-              if (!range) return;
-              hlsSections.push({
-                section_id: parseInt(range.id),
-                duration: parseFloat(range.attr["X-DURATION"]),
-                end_time: 0,
-                playback_order: parseInt(range.attr["X-ORDER"])
-              })
-            });
-
-            // Ensure the sections are sorted according to the playback order and calculate the cumulative end times.
-            hlsSections.sort((a, b) => a.playback_order - b.playback_order);
-            hlsSections.forEach((hlsSection, index) => {
-              if (index == 0) return;
-              hlsSection.end_time = hlsSections[index - 1].end_time + hlsSection.duration;
-            });
-            this.sectionTimeline = hlsSections;
-          } else {
-            console.warn("No date ranges found, unable to sync section being played.")
-          }
+        this.hls.on(Hls.Events.LEVEL_UPDATED, () => {
+          this.$totalDuration.next(this.audio.duration);
         });
 
         // Update time drift each time a new audio track is started.
@@ -111,21 +66,18 @@ export class AudioPlayer {
             } else {
               this.timeDrift = this.audio.currentTime - data.frag.playlistOffset;
             }
-
-            if (typeof data.frag.sn === "number") {
-              this.$sectionIndex.next(data.frag.sn + 1);
-            }
           } else {
             console.warn("Frag changed event data is missing.")
           }
         });
 
         // Pause once end is reached.
-        this.hls.on(Hls.Events.MEDIA_ENDED, (_, data) => {
+        this.hls.on(Hls.Events.MEDIA_ENDED, () => {
           this.pause();
         });
 
-        this.hls.loadSource(this.bookService.getPlaylistUrl(book?.id));
+        const masterPlaylistUrl = `/api/files/${book?.id}/playlists/master.m3u8`;
+        this.hls.loadSource(masterPlaylistUrl);
         this.hls.attachMedia(this.audio);
 
         this.audio.playbackRate = this.$playbackRate.value;
@@ -215,21 +167,11 @@ export class AudioPlayer {
   }
 
   next() {
-    this.$sectionIndex.pipe(take(1))
-      .subscribe(i => {
-        // Scrolling to the end time of the current section, effectively starting the next one.
-        this.setCurrentTime(this.sectionTimeline[i].end_time);
-      });
+    // TODO: Should it go to the next ToC item?
   }
 
   previous() {
-    this.$sectionIndex.pipe(take(1))
-      .subscribe(i => {
-        // The end time of the previous section is the start time of the current section, so
-        // to play the previous section, we need to go two items back.
-        // Add a few extra ms, otherwise it activates the one before previous section for a moment.
-        this.setCurrentTime(this.sectionTimeline[Math.max(i - 2, 0)].end_time + 0.05)
-      });
+    // TODO: Should it go to the previous ToC item?
   }
 
   seek(adjustment: number) {
@@ -251,7 +193,7 @@ export class AudioPlayer {
 
   adjustPlaybackRate(adjustment: number) {
     const maxValue = 2;
-    const minValue = 0.5;
+    const minValue = 0.75;
     const newRate = Math.max(Math.min(this.$playbackRate.value + adjustment, maxValue), minValue);
     this.setPlaybackRate(newRate);
   }
