@@ -1,14 +1,4 @@
-import {
-  Component,
-  ElementRef,
-  HostListener,
-  inject,
-  input,
-  OnDestroy,
-  OnInit,
-  output,
-  ViewChild
-} from '@angular/core';
+import { Component, ElementRef, inject, input, NgZone, OnDestroy, OnInit, output, ViewChild } from '@angular/core';
 import { EpubNavigator } from '@readium/navigator';
 import { Link, Publication } from '@readium/shared';
 import { toObservable } from '@angular/core/rxjs-interop';
@@ -25,6 +15,7 @@ import { TocItem } from '../../core/models/books.dto';
 })
 export class ReadiumEpub implements OnInit, OnDestroy {
   themeService = inject(ThemeService);
+  private ngZone = inject(NgZone);
 
   @ViewChild('readerContainer', {static: true}) readerContainer!: ElementRef<HTMLDivElement>;
 
@@ -32,7 +23,6 @@ export class ReadiumEpub implements OnInit, OnDestroy {
   toc = input.required<TocItem[]>();
   private currentItem = 0;
   currentItemChanged = output<number>();
-  toggleItem = output<number>();
 
   private navigator?: EpubNavigator;
   private observer!: MutationObserver;
@@ -94,19 +84,21 @@ export class ReadiumEpub implements OnInit, OnDestroy {
   }
 
   private startWatchingForIframes() {
-    this.observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node: Node) => {
-          if (node instanceof HTMLIFrameElement) {
-            this.setupIframeListener(node);
-          }
+    this.ngZone.runOutsideAngular(() => {
+      this.observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node: Node) => {
+            if (node instanceof HTMLIFrameElement) {
+              this.setupIframeListener(node);
+            }
+          });
         });
       });
-    });
 
-    this.observer.observe(this.readerContainer.nativeElement, {
-      childList: true,
-      subtree: true
+      this.observer.observe(this.readerContainer.nativeElement, {
+        childList: true,
+        subtree: true
+      });
     });
   }
 
@@ -115,18 +107,46 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     iframe.addEventListener('load', () => {
       try {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-
         if (iframeDoc) {
-          iframeDoc.addEventListener('keydown', (event: KeyboardEvent) => {
-            if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-              this.next();
-            }
-            if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-              this.prev();
-            }
-            if (event.key === 'Space') {
-              this.toggle();
-            }
+          // Forward events to the parent window to support keyboard shortcuts and hide-idle directive.
+          const eventsToForward = ['mousemove', 'keydown', 'touchstart'];
+          eventsToForward.forEach(eventName => {
+            iframeDoc.addEventListener(eventName, (e) => {
+              this.ngZone.run(() => {
+                let clonedEvent: Event;
+
+                try {
+                  // Use the specific constructor to map all original properties automatically
+                  if (eventName == "mousemove") {
+                    clonedEvent = new MouseEvent(eventName, e);
+                  } else if (eventName == "keydown") {
+                    clonedEvent = new KeyboardEvent(eventName, e);
+                  } else if (eventName == "touchstart" && e instanceof TouchEvent) {
+                    clonedEvent = new TouchEvent(eventName, {
+                      bubbles: e.bubbles,
+                      cancelable: e.cancelable,
+                      composed: e.composed,
+                      detail: e.detail,
+                      view: e.view,
+                      touches: Array.from(e.touches),
+                      targetTouches: Array.from(e.targetTouches),
+                      changedTouches: Array.from(e.changedTouches),
+                      ctrlKey: e.ctrlKey,
+                      metaKey: e.metaKey,
+                      shiftKey: e.shiftKey,
+                      altKey: e.altKey
+                    });
+                  } else {
+                    clonedEvent = new Event(eventName, e);
+                  }
+                } catch (err) {
+                  console.error(`Failed to clone event '${eventName}' for forwarding:`, err);
+                  // Fallback for older browsers or strict constructor edge cases
+                  clonedEvent = new Event(eventName, e);
+                }
+                window.dispatchEvent(clonedEvent);
+              });
+            }, { passive: true });
           });
         }
       } catch (error) {
@@ -162,23 +182,6 @@ export class ReadiumEpub implements OnInit, OnDestroy {
         console.log("Navigation is not successful.")
       }
     });
-  }
-
-  @HostListener("document:keydown.arrowright", [])
-  @HostListener("document:keydown.arrowdown", [])
-  next() {
-    this.navigate(this.currentItem + 1);
-  }
-
-  @HostListener("document:keydown.arrowleft", [])
-  @HostListener("document:keydown.arrowup", [])
-  prev() {
-    this.navigate(this.currentItem - 1);
-  }
-
-  @HostListener("document:keydown.space", [])
-  toggle() {
-    this.toggleItem.emit(this.currentItem);
   }
 
   ngOnDestroy() {

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, model, viewChild } from '@angular/core';
+import { Component, computed, effect, HostListener, inject, input, model, viewChild } from '@angular/core';
 import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { filter, switchMap } from 'rxjs';
 import { BooksService } from '../../core/services/books.service';
@@ -131,6 +131,23 @@ export class SelectForNarration {
         }
       }
     }
+  }
+
+  @HostListener("window:keydown.arrowright", [])
+  @HostListener("window:keydown.arrowdown", [])
+  next() {
+    this.navigate(this.currentItem + 1);
+  }
+
+  @HostListener("window:keydown.arrowleft", [])
+  @HostListener("window:keydown.arrowup", [])
+  prev() {
+    this.navigate(this.currentItem - 1);
+  }
+
+  @HostListener("window:keydown.space", [])
+  toggle() {
+    this.toggleItem(this.currentItem);
   }
 
   protected startNarration() {

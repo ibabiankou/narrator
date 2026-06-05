@@ -173,7 +173,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.sliderRect = this.slider.nativeElement.getBoundingClientRect();
   }
 
-  @HostListener('document:keyup.s')
+  @HostListener('window:keydown.s')
   handleKeyboardEvent() {
     if (this.trigger.menuOpen) {
       this.trigger.closeMenu();
@@ -182,7 +182,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  @HostListener("document:keydown.shift.arrowleft", ["$event"])
+  @HostListener("window:keydown.shift.arrowleft", ["$event"])
   previous(e: Event) {
     if (!this.handleKeyBindings()) {
       return;
@@ -191,7 +191,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.audioPlayer.previous();
   }
 
-  @HostListener("document:keydown.arrowleft", ["$event"])
+  @HostListener("window:keydown.arrowleft", ["$event"])
   replay(e: Event) {
     if (!this.handleKeyBindings()) {
       return;
@@ -217,7 +217,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     });
   }
 
-  @HostListener("document:keydown.arrowright", ["$event"])
+  @HostListener("window:keydown.arrowright", ["$event"])
   forward(e: Event) {
     if (!this.handleKeyBindings()) {
       return;
@@ -226,7 +226,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.audioPlayer.seek(5);
   }
 
-  @HostListener("document:keydown.shift.arrowright", ["$event"])
+  @HostListener("window:keydown.shift.arrowright", ["$event"])
   next(e: Event) {
     if (!this.handleKeyBindings()) {
       return;
@@ -235,7 +235,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.audioPlayer.next();
   }
 
-  @HostListener("document:keydown.shift.arrowup", ["$event"])
+  @HostListener("window:keydown.shift.arrowup", ["$event"])
   increasePlaybackRate(e: Event, adjustment: number = 0.05) {
     if (!this.handleKeyBindings()) {
       return;
@@ -244,7 +244,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.adjustPlaybackRate(adjustment);
   }
 
-  @HostListener("document:keydown.shift.arrowdown", ["$event"])
+  @HostListener("window:keydown.shift.arrowdown", ["$event"])
   lowerPlaybackRate(e: Event, adjustment: number = -0.05) {
     if (!this.handleKeyBindings()) {
       return;
