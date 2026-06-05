@@ -42,6 +42,9 @@ async def lifespan(app: FastAPI):
     rmq_client.set_queue_message_handler(Topology.speech_gen_queue,
                                          rmq.SynthesizeSpeech,
                                          speech_gen_svc.handle_synthesize_msg)
+    rmq_client.set_queue_message_handler(Topology.narration_queue,
+                                         rmq.NarrateRequest,
+                                         speech_gen_svc.handle_narrate_msg)
     rmq_client.start_consuming()
     yield
 

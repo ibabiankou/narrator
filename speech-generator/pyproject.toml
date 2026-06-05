@@ -47,3 +47,7 @@ build-backend = "poetry.core.masonry.api"
 addopts = [
     "--import-mode=importlib",
 ]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s,%(msecs)03d - %(name)s:%(lineno)4s - %(levelname)s - %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"

@@ -1,17 +1,20 @@
-import io
-import os
-from dataclasses import dataclass
-from typing import Annotated
-
 import av
 import boto3
+import io
 import numpy as np
+import os
 from botocore.exceptions import ClientError
+from dataclasses import dataclass
+from datetime import datetime, UTC
+from io import BytesIO
 from kokoro import KModel, KPipeline
+from typing import Annotated, Tuple, Optional, List
 
 from api import get_logger
 from common_lib import RMQClientDep
 from common_lib.models import rmq
+from common_lib.models.tts import FragmentList, Fragment, TextFragment, PauseFragment, FragmentDuration, \
+    TrackManifest
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
@@ -39,6 +42,8 @@ class SpeechGenService(Service):
             aws_secret_access_key=os.getenv("S3_SECRET")
         )
         self.bucket_name = os.getenv("S3_BUCKET", "narrator")
+        # Kokoro generates audio at 24kHz
+        self.sample_rate = 24000
 
     def phonemize(self, text: str, voice: str = "am_adam"):
         phonemes = []
@@ -61,7 +66,6 @@ class SpeechGenService(Service):
 
     def synthesize(self, phonemes: str, voice: str = "am_adam") -> GeneratedSpeech:
         audio_np = None
-        sample_rate = 24000
 
         chunks = phonemes.split("\n")
         for chunk in chunks:
@@ -73,27 +77,10 @@ class SpeechGenService(Service):
                 else:
                     audio_np = np.concatenate((audio_np, result.audio.numpy()), axis=0)
 
-        output = io.BytesIO()
-        with av.open(output, mode='w', format='adts') as container:
-            stream = container.add_stream('aac', rate=sample_rate, bit_rate=64000)
-
-            audio_np = audio_np.astype(np.float32).reshape(1, -1)
-
-            frame = av.AudioFrame.from_ndarray(audio_np, format='fltp', layout='mono')
-            frame.sample_rate = sample_rate
-
-            total_duration_pts = 0
-            for packet in stream.encode(frame):
-                container.mux(packet)
-                if packet.duration:
-                    total_duration_pts += packet.duration
-            for packet in stream.encode():
-                container.mux(packet)
-                if packet.duration:
-                    total_duration_pts += packet.duration
+        output, duration_s = self._encode_audio(audio_np)
 
         return GeneratedSpeech(content=output.getvalue(), content_type="audio/aac",
-                               duration=float(total_duration_pts * stream.time_base))
+                               duration=duration_s)
 
     def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
         LOG.debug("Synthesizing speech for track %s.", payload.track_id)
@@ -105,6 +92,99 @@ class SpeechGenService(Service):
                                      file_path=key, duration=result.duration, bytes=len(result.content))
         self.rmq_client.publish(routing_key="speech", payload=payload)
 
+    def handle_narrate_msg(self, payload: rmq.NarrateRequest):
+        start_time = datetime.now(UTC)
+        LOG.debug("Processing narration request %s.", payload.queue_id)
+        base_key = f"{payload.book_id}/audio-files/{payload.tts_model}/{payload.voice}/{payload.track_base_name}"
+
+        audio_key = f"{base_key}.aac"
+
+        audio_np, timeline = self._narrate_fragments(payload.fragments, payload.voice)
+        audio_bytes, duration_s = self._encode_audio(audio_np)
+        self._upload_file(audio_key, "audio/aac", audio_bytes.getvalue())
+
+        track_manifest_key = f"{base_key}.json"
+        manifest = TrackManifest(
+            audio_key=audio_key,
+            track_name=payload.track_base_name,
+            timeline=timeline,
+        )
+        self._upload_file(track_manifest_key, "application/json", manifest.model_dump_json().encode())
+
+        end_time = datetime.now(UTC)
+        narration_time_s = (end_time - start_time).total_seconds()
+        response_payload = rmq.NarrateResponse(
+            queue_id=payload.queue_id,
+            completed=datetime.now(UTC),
+            narration_time_s=narration_time_s,
+            duration_s=duration_s,
+            size_bytes=len(audio_bytes.getvalue())
+        )
+        self.rmq_client.publish(routing_key="narrate-response", payload=response_payload)
+
+    def _encode_audio(self, audio_np: np.ndarray) -> Tuple[BytesIO, float]:
+        output = io.BytesIO()
+        with av.open(output, mode='w', format='adts') as container:
+            stream = container.add_stream('aac', rate=self.sample_rate, bit_rate=64000)
+
+            audio_np = audio_np.astype(np.float32).reshape(1, -1)
+
+            frame = av.AudioFrame.from_ndarray(audio_np, format='fltp', layout='mono')
+            frame.sample_rate = self.sample_rate
+
+            total_duration_pts = 0
+            for packet in stream.encode(frame):
+                container.mux(packet)
+                if packet.duration:
+                    total_duration_pts += packet.duration
+            for packet in stream.encode():
+                container.mux(packet)
+                if packet.duration:
+                    total_duration_pts += packet.duration
+
+        return output, float(total_duration_pts * stream.time_base)
+
+    def _narrate_fragments(self, fragments: FragmentList, voice: str) -> Tuple[np.ndarray, List[FragmentDuration]]:
+        audio_np = None
+        timings: List[FragmentDuration] = []
+        for fragment in fragments.root:
+            frag: Fragment = fragment
+            if isinstance(frag, TextFragment):
+                result_maybe = self._narrate_fragment(frag, voice)
+                if result_maybe is None:
+                    raise RuntimeError("Failed to narrate fragment: %s", frag.id)
+                frag_audio, fragment_duration_s = result_maybe
+                audio_np = frag_audio if audio_np is None else np.concatenate((audio_np, frag_audio), axis=0)
+                timings.append(FragmentDuration(id=frag.id, duration=fragment_duration_s))
+            elif isinstance(frag, PauseFragment):
+                pause = self._silence(frag.duration)
+                audio_np = pause if audio_np is None else np.concatenate((audio_np, pause), axis=0)
+                timings.append(FragmentDuration(id=frag.id, duration=frag.duration))
+
+        # noinspection PyTypeChecker
+        return audio_np, timings
+
+    def _silence(self, duration_s: float):
+        return np.zeros(int(duration_s * self.sample_rate), dtype=np.int16)
+
+    def _narrate_fragment(self, frag: TextFragment, voice: str) -> Optional[Tuple[np.ndarray, float]]:
+        audio_np = None
+
+        for result in self.speech_pipeline(frag.text, voice):
+            LOG.debug("Graphemes: %s", result.graphemes)
+            if audio_np is None:
+                audio_np = result.audio.numpy()
+            else:
+                audio_np = np.concatenate((audio_np, result.audio.numpy()), axis=0)
+
+        if audio_np is None:
+            return None
+
+        duration_s = audio_np.size / self.sample_rate
+        LOG.debug("Total duration seconds: %s", duration_s)
+
+        return audio_np, duration_s
+
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):
         try:
             self.s3_client.put_object(
@@ -115,22 +195,6 @@ class SpeechGenService(Service):
         except ClientError as e:
             LOG.error(e)
             raise e
-
-    def _list_files(self, path_prefix: str):
-        paginator = self.s3_client.get_paginator('list_objects_v2')
-
-        keys = []
-        for page in paginator.paginate(Bucket=self.bucket_name, Prefix=path_prefix):
-            if "Contents" in page:
-                for obj in page["Contents"]:
-                    keys.append(obj["Key"])
-
-        return keys
-
-    def _load_file(self, key: str) -> bytes:
-        s3_object = self.s3_client.get_object(Bucket=self.bucket_name,
-                                              Key=key)
-        return s3_object["Body"].read()
 
 
 SpeechGenServiceDep = Annotated[SpeechGenService, SpeechGenService.dep()]

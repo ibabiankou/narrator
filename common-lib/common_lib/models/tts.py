@@ -10,10 +10,8 @@ class FragmentType(str, Enum):
     PAUSE = "pause"
 
 
-class FragmentBase(BaseModel):
+class FragmentId(BaseModel):
     id: int
-    type: FragmentType
-    visited_ids: List[str] = []
 
     @field_serializer('id')
     def serialize_id(self, id_val: int) -> str:
@@ -37,6 +35,11 @@ class FragmentBase(BaseModel):
 
         # If it's already an integer, just let it pass through
         return value
+
+
+class FragmentBase(FragmentId):
+    type: FragmentType
+    visited_ids: List[str] = []
 
 
 class TextFragment(FragmentBase):
@@ -91,3 +94,13 @@ class FragmentListBuilder(BaseModel):
     def build(self):
         # noinspection PyArgumentList
         return FragmentList(self.fragments)
+
+
+class FragmentDuration(FragmentId):
+    duration: float
+
+
+class TrackManifest(BaseModel):
+    audio_key: str
+    track_name: str
+    timeline: List[FragmentDuration]
