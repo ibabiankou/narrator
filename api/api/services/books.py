@@ -1,18 +1,19 @@
+from concurrent.futures import ProcessPoolExecutor
+
 import asyncio
 import hashlib
 import logging
-import uuid
-from concurrent.futures import ProcessPoolExecutor
-from datetime import datetime, UTC
-from io import BytesIO
-from typing import Annotated, List
-
+import m3u8
 import pymupdf
+import uuid
+from datetime import datetime, UTC
 from fastapi import BackgroundTasks
+from io import BytesIO
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import update, text, select
 from sqlalchemy.sql.functions import count
 from tenacity import retry, stop_after_attempt, wait_exponential, wait_random
+from typing import Annotated, List
 
 from api.models import api, db, domain
 from api.models.db import NarrationQueue
@@ -553,6 +554,9 @@ class BookService(Service):
     @transactional
     def narrate_book(self, book_id: uuid.UUID, narration_request: List[api.TableOfContentsItem]):
         # TODO: allow user to select the model and voice. For now, just hardcode kokoro and michael.
+        tts_model = "kokoro"
+        voice = "am_michael"
+
         db_narration_request = []
         for item in narration_request:
             db_narration_request.append(db.TocItem(href=item.href, narrate=item.narrate))
@@ -576,8 +580,8 @@ class BookService(Service):
                     for track in nav_item.audio_tracks:
                         queue_item = NarrationQueue(
                             book_id=book_id,
-                            tts_model="kokoro",
-                            voice="am_michael",
+                            tts_model=tts_model,
+                            voice=voice,
                             track_base_name=track.name,
                             order=track.fragments.root[0].id,
                             fragments=track.fragments,
@@ -585,6 +589,40 @@ class BookService(Service):
                         )
                         items_to_enqueue.append(queue_item)
         self.db.add_all(items_to_enqueue)
+
+        master_playlist = self._generate_master_playlist(book_id=book_id, model=tts_model, voice=voice)
+        master_playlist_key = f"{book_id}/playlists/master.m3u8"
+        self.files_service.upload_file(master_playlist_key, master_playlist.encode())
+
+
+    def _generate_master_playlist(self, book_id: uuid.UUID, model: str, voice: str) -> str:
+        playlist = m3u8.M3U8()
+
+        playlist.version = "4"
+
+        pl = m3u8.Playlist(
+            uri=f"/api/files/{book_id}/playlists/{model}_{voice}.m3u8",
+            stream_info={
+                "bandwidth": 96000,
+                "audio": "voices"
+            },
+            media=[],
+            base_uri="",
+        )
+        playlist.add_playlist(pl)
+
+        voice_media = m3u8.Media(
+            type="audio",
+            group_id="voices",
+            name=f"{model} {voice}",
+            default="yes",
+            autoselect="yes",
+            language="en"
+        )
+        playlist.add_media(voice_media)
+
+        return playlist.dumps()
+
 
 
 BookServiceDep = Annotated[BookService, BookService.dep()]

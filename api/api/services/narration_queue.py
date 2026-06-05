@@ -1,15 +1,20 @@
+from io import BytesIO
+
 import asyncio
 import logging
+import m3u8
 from datetime import datetime, UTC
 from typing import Sequence, List
 
 from sqlalchemy import select, text, update
 
 from api.models import db
+from api.services.files import FilesServiceDep
 from api.services.settings import SettingsServiceDep
 from common_lib import RMQClientDep
 from common_lib.db import transactional
-from common_lib.models import rmq
+from common_lib.models import rmq, tts
+from common_lib.models.tts import TrackManifest
 from common_lib.rmq import Topology
 from common_lib.service import Service
 
@@ -20,9 +25,11 @@ class NarrationQueueService(Service):
     def __init__(self,
                  rmq_client: RMQClientDep,
                  settings_service: SettingsServiceDep,
+                 files_service: FilesServiceDep,
                  **kwargs):
         self.rmq_client = rmq_client
         self.settings_service = settings_service
+        self.files_service = files_service
 
     async def generate_speech_maybe(self):
         while True:
@@ -86,3 +93,49 @@ class NarrationQueueService(Service):
                 fragments=entry.fragments
             )
             self.rmq_client.publish("narrate", msg)
+
+    @transactional
+    def handle_response_msg(self, payload: rmq.NarrateResponse):
+        LOG.info("Got response for narration request %s. Will update the playlist.", payload.queue_id)
+        db_record = self.db.get(db.NarrationQueue, payload.queue_id)
+        db_record.completed = payload.completed
+        db_record.narration_time_s = payload.narration_time_s
+        db_record.duration_s = payload.duration_s
+        db_record.size_bytes = payload.size_bytes
+
+        # Load all track manifests to generate the playlist
+        audio_dir = f"{db_record.book_id}/audio-files/{db_record.tts_model}/{db_record.voice}"
+        all_files = self.files_service.list_files(audio_dir)
+        track_manifest_files = [f for f in all_files if f.endswith(".json")]
+        track_manifests = []
+        for track_manifest_key in track_manifest_files:
+            file_data = self.files_service.get_object(track_manifest_key)
+            track_manifests.append(TrackManifest.model_validate_json(file_data.body))
+        # Ensure tracks are ordered correctly.
+        track_manifests.sort(key=lambda t: t.timeline[0].id)
+
+        # Or simply order by the first fragment ID? < Do this one for now.
+        # TODO: Might do complete cross-check upon book completion.
+
+        playlist_key = f"{db_record.book_id}/playlists/{db_record.tts_model}_{db_record.voice}.m3u8"
+        playlist = self._generate_playlist(track_manifests)
+        self.files_service.upload_file(playlist_key, BytesIO(playlist.encode()))
+
+    def _generate_playlist(self, tracks: List[tts.TrackManifest]) -> str:
+        playlist = m3u8.M3U8()
+
+        playlist.version = "4"
+        playlist.target_duration = max([sum([f.duration for f in t.timeline]) for t in tracks] or [0]) + 1
+        playlist.media_sequence = 0
+        # TODO: Set endlist to True if the book status is ready (no narration happens).
+        playlist.is_endlist = False
+
+        for track in tracks:
+            segment = m3u8.Segment(
+                uri=f"/api/files/{track.audio_key}",
+                duration=sum([f.duration for f in track.timeline]),
+                discontinuity=True
+            )
+            playlist.segments.append(segment)
+
+        return playlist.dumps()

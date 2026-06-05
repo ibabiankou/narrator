@@ -58,7 +58,7 @@ class FilesService(Service):
             raise ValueError(f"Failed to guess mimetype for '{key}'")
         self.s3_client.put_object(Body=body, Bucket=self.bucket_name, Key=key, ContentType=mime_type)
 
-    def _get_object(self, key: str, if_none_match: Optional[str] = "", range: Optional[str] = "bytes=0-") -> Optional[
+    def get_object(self, key: str, if_none_match: Optional[str] = "", range: Optional[str] = "bytes=0-") -> Optional[
         FileData]:
         try:
             s3_object = self.s3_client.get_object(Bucket=self.bucket_name,
