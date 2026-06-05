@@ -68,6 +68,9 @@ export class ViewBookPage implements OnInit {
     switchMap(bookId => this.booksService.getTableOfContent(bookId))
   ));
 
+  private preferences = toSignal(this.settingsService.userPreferences$);
+  private readAlong = computed(() => !!this.preferences()!["auto_scroll"]);
+
   ngOnInit() {
     // this.settingsService.userPreferences$
     //   .pipe(take(1))
@@ -82,4 +85,10 @@ export class ViewBookPage implements OnInit {
   }
 
   protected readonly BookStatus = BookStatus;
+
+  protected fragmentChanged(fragmentId: string) {
+    if (this.readAlong()) {
+      this.readiumEpub()!.showFragment(fragmentId);
+    }
+  }
 }

@@ -1,11 +1,24 @@
 import { BookOverview, PlaybackInfo } from '../../core/models/books.dto';
-import { BehaviorSubject, combineLatest, combineLatestWith, filter, interval, map, switchMap, take, } from 'rxjs';
+import {
+  BehaviorSubject,
+  combineLatest,
+  combineLatestWith,
+  distinct,
+  filter,
+  interval,
+  map,
+  switchMap,
+  take,
+  tap,
+} from 'rxjs';
 
-import Hls from 'hls.js';
+import Hls, { AttrList } from 'hls.js';
 import { BooksService } from '../../core/services/books.service';
 import { CachingHlsLoader } from '../../core/services/cachingHlsLoader';
 import { OSBindings } from './os-binding';
 import { FilesService } from '../../core/services/files.service';
+import { binarySearch } from '../../core/utils';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 enum PlayerStatus {
   playing = "playing",
@@ -14,7 +27,9 @@ enum PlayerStatus {
 
 interface FragmentTimelineItem {
   id: string;
+  index: number
   startTime: number;
+  endTime: number;
   duration: number;
 }
 
@@ -42,6 +57,7 @@ export class AudioPlayer {
   isPlaying$ = this.status$.pipe(map((status) => status == PlayerStatus.playing));
 
   private fragmentTimeline: FragmentTimelineItem[] = [];
+  currentFragment$ = new BehaviorSubject<FragmentTimelineItem | null>(null);
 
   constructor(private bookService: BooksService, filesService: FilesService) {
     this.osBindings = new OSBindings(this, filesService);
@@ -67,32 +83,43 @@ export class AudioPlayer {
         this.hls.on(Hls.Events.LEVEL_UPDATED, (_, data) => {
           this.totalDuration$.next(this.audio.duration);
 
-          if (data.details.dateRanges) {
+          if (data.details.fragments) {
             let cumulativeSize = 0;
             let cumulativeDuration = 0;
             let fragments: FragmentTimelineItem[] = [];
 
-            Object.values(data.details.dateRanges).forEach(range => {
-              if (!range) return;
+            data.details.fragments.forEach(fragment => {
+              fragment.tagList.forEach(tag => {
+                const tagName = tag[0];
+                const attributes = tag[1];
 
-              if (range.attr["X-DURATION"]) {
-                const frag = {
-                  id: range.id,
-                  startTime: cumulativeDuration,
-                  duration: parseFloat(range.attr["X-DURATION"]),
-                };
-                fragments.push(frag);
-                cumulativeDuration += frag.duration;
-              }
-              if (range.attr["X-SIZE"]) {
-                cumulativeSize += parseInt(range.attr["X-SIZE"]);
-              }
+                if (tagName == "EXT-X-DATERANGE") {
+                  const attr = AttrList.parseAttrList(attributes);
+                  if (attr["X-DURATION"]) {
+                    const durationNum = parseFloat(attr["X-DURATION"]);
+                    const frag = {
+                      id: attr["ID"],
+                      index: fragments.length,
+                      startTime: cumulativeDuration,
+                      endTime: cumulativeDuration + durationNum,
+                      duration: durationNum,
+                    };
+                    fragments.push(frag);
+                    cumulativeDuration = frag.endTime;
+                  }
+                  if (attr["X-SIZE"]) {
+                    cumulativeSize += parseInt(attr["X-SIZE"]);
+                  }
+                }
+              });
             });
+
             this.totalSize$.next(cumulativeSize)
             this.fragmentTimeline = fragments;
+          }
 
-          } else {
-            console.warn("No date ranges found, unable to sync section being played.")
+          if (!this.fragmentTimeline) {
+            console.warn("No date ranges found, unable to sync fragment being played.")
           }
         });
 
@@ -136,6 +163,43 @@ export class AudioPlayer {
         this.audio.playbackRate = this.playbackRate$.value;
       }
     });
+
+    this.globalProgressSeconds$.pipe(
+      map((currentTime) => {
+        const currentFragment = this.currentFragment$.value;
+        if (currentFragment) {
+          // Check current and next
+          if (currentTime >= currentFragment.startTime) {
+            if (currentTime < currentFragment.endTime) {
+              // It's still current fragment...
+              return currentFragment;
+            } else if (currentFragment.index + 1 < this.fragmentTimeline.length) {
+              // check the next fragment, assuming we are simply listening and went to the next one.
+              const nextFragment = this.fragmentTimeline[currentFragment.index + 1];
+              if (currentTime >= nextFragment.startTime && currentTime <= nextFragment.endTime) {
+                return nextFragment;
+              }
+            }
+          }
+        }
+
+        const fragmentIndex = binarySearch(this.fragmentTimeline, (i) => i.startTime, currentTime);
+        if (fragmentIndex >= 0) {
+          const fragment = this.fragmentTimeline[fragmentIndex];
+          if (currentTime >= fragment.startTime && currentTime < fragment.endTime) {
+            return fragment;
+          }
+        }
+
+        console.warn("Unable to find fragment for current time: ", currentTime);
+        return null;
+      }),
+      distinct(),
+      tap((fragment) => {
+        this.currentFragment$.next(fragment);
+      }),
+      takeUntilDestroyed()
+    ).subscribe();
 
     interval(5000)
       .pipe(

@@ -184,6 +184,14 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     });
   }
 
+  showFragment(fragmentId: string) {
+    // Figure out which ToC it belongs to.
+    // Make sure that is the current page.
+    // Scroll into view the fragment.
+    // Update styling to highlight the current fragment.
+    // Update styling to shadow the past fragments.
+  }
+
   ngOnDestroy() {
     if (this.navigator && typeof this.navigator.destroy === 'function') {
       this.navigator.resizeHandler()

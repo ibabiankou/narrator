@@ -33,6 +33,9 @@
 </div>
 @defer (when bookDetails()) {
   @if (BookStatus.ge(bookDetails()!.status, BookStatus.narrating)) {
-    <app-player appHideIdle [bookDetails]="bookDetails()!"></app-player>
+    <app-player appHideIdle
+                [bookDetails]="bookDetails()!"
+                (fragmentChanged)="fragmentChanged($event)"
+    ></app-player>
   }
 }

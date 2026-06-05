@@ -20,6 +20,7 @@ import {
   combineLatestWith,
   debounceTime,
   EMPTY,
+  filter,
   interval,
   map,
   of,
@@ -66,6 +67,8 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   private audioPlayer: AudioPlayer;
 
   bookDetails = input.required<BookDetails>();
+  fragmentChanged = output<string>();
+
   private readonly playbackInfo$ = toObservable(this.bookDetails).pipe(
     switchMap(book => this.bookService.getPlaybackInfo(book.id)),
     switchMap(info => {
@@ -105,6 +108,11 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.isPlaying$ = this.audioPlayer.isPlaying$;
     this.playbackRate$ = this.audioPlayer.playbackRate$;
     this.totalNarratedSeconds$ = this.audioPlayer.totalDuration$;
+    this.audioPlayer.currentFragment$.pipe(
+      filter(fragment => !!fragment),
+    ).subscribe((fragment) => {
+      this.fragmentChanged.emit(fragment.id);
+    });
 
     const dragTimeSeconds = combineLatest([this.dragToPercent$, this.totalNarratedSeconds$]).pipe(
       map(([percent, totalTime]) => {
