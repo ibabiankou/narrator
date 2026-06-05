@@ -6,19 +6,19 @@ import { toSignal } from '@angular/core/rxjs-interop';
   providedIn: 'root'
 })
 export class ConnectionService {
-  readonly $isOnline: Observable<boolean>;
+  readonly isOnline$: Observable<boolean>;
   readonly isOnline: Signal<boolean>;
 
   constructor() {
-    this.$isOnline = merge(
+    this.isOnline$ = merge(
       fromEvent(window, 'online').pipe(map(() => true)),
       fromEvent(window, 'offline').pipe(map(() => false))
     ).pipe(
       startWith(navigator.onLine),
       shareReplay(1)
     );
-    this.isOnline = toSignal(this.$isOnline, {initialValue: navigator.onLine});
+    this.isOnline = toSignal(this.isOnline$, {initialValue: navigator.onLine});
 
-    this.$isOnline.subscribe((online) => console.log("Online:", online ? "yes" : "no"));
+    this.isOnline$.subscribe((online) => console.log("Online:", online ? "yes" : "no"));
   }
 }

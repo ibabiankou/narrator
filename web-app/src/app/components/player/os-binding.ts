@@ -58,7 +58,7 @@ export class OSBindings {
       }
     });
 
-    this.audioPlayer.$bookDetails
+    this.audioPlayer.bookDetails$
       .pipe(
         filter(book => book != null)
       ).subscribe((book) => {

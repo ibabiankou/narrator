@@ -15,7 +15,7 @@ export class CachingHlsLoader implements Loader<LoaderContext> {
   stats: LoaderStats;
   context!: LoaderContext;
   private filesService: FilesService;
-  private $destroy = new Subject<void>();
+  private destroy$ = new Subject<void>();
 
   constructor() {
     this.stats = new LoadStats();
@@ -38,7 +38,7 @@ export class CachingHlsLoader implements Loader<LoaderContext> {
             return timer(finalDelay);
           }
         }),
-        takeUntil(this.$destroy)
+        takeUntil(this.destroy$)
       )
       .subscribe({
         next: (file) => {
@@ -57,7 +57,7 @@ export class CachingHlsLoader implements Loader<LoaderContext> {
   }
 
   destroy(): void {
-    this.$destroy.next();
-    this.$destroy.complete();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

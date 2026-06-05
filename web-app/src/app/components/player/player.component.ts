@@ -58,7 +58,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   @ViewChild('slider', {static: true}) slider!: ElementRef<HTMLDivElement>;
   @ViewChild('playbackSettingsMenuTrigger') trigger!: MatMenuTrigger;
 
-  private $destroy = new Subject<boolean>();
+  private destroy$ = new Subject<boolean>();
 
   private bookService = inject(BooksService);
   private settingsService = inject(SettingsService);
@@ -66,7 +66,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   private audioPlayer: AudioPlayer;
 
   bookDetails = input.required<BookDetails>();
-  private readonly $playbackInfo = toObservable(this.bookDetails).pipe(
+  private readonly playbackInfo$ = toObservable(this.bookDetails).pipe(
     switchMap(book => this.bookService.getPlaybackInfo(book.id)),
     switchMap(info => {
       return info ? of(info) : throwError(() => new Error("Undefined playback info"))
@@ -85,28 +85,28 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   handleKeyBindings = input(true);
 
   // Total duration of the narrated part.
-  private readonly $totalNarratedSeconds;
+  private readonly totalNarratedSeconds$;
 
-  $isPlaying;
-  $nowTime;
-  $remainingTime;
-  $nowPercent;
-  $playbackRate;
+  isPlaying$;
+  nowTime$;
+  remainingTime$;
+  nowPercent$;
+  playbackRate$;
 
-  $availablePercent = of(100);
-  $unavailablePercent = this.$availablePercent.pipe(map(availablePercent => 100 - availablePercent));
+  availablePercent$ = of(100);
+  unavailablePercent$ = this.availablePercent$.pipe(map(availablePercent => 100 - availablePercent));
 
-  $dragToPercent = new BehaviorSubject<number | undefined>(undefined);
+  dragToPercent$ = new BehaviorSubject<number | undefined>(undefined);
   private sliderRect!: DOMRect;
 
   constructor() {
     this.audioPlayer = new AudioPlayer(this.bookService, this.filesService);
 
-    this.$isPlaying = this.audioPlayer.$isPlaying;
-    this.$playbackRate = this.audioPlayer.$playbackRate;
-    this.$totalNarratedSeconds = this.audioPlayer.$totalDuration;
+    this.isPlaying$ = this.audioPlayer.isPlaying$;
+    this.playbackRate$ = this.audioPlayer.playbackRate$;
+    this.totalNarratedSeconds$ = this.audioPlayer.totalDuration$;
 
-    const dragTimeSeconds = combineLatest([this.$dragToPercent, this.$totalNarratedSeconds]).pipe(
+    const dragTimeSeconds = combineLatest([this.dragToPercent$, this.totalNarratedSeconds$]).pipe(
       map(([percent, totalTime]) => {
         if (percent === undefined) {
           return undefined;
@@ -116,23 +116,23 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
       })
     );
     const nowTimeSeconds = dragTimeSeconds.pipe(
-      switchMap(timeSeconds => timeSeconds === undefined ? this.audioPlayer.$globalProgressSeconds : of(timeSeconds))
+      switchMap(timeSeconds => timeSeconds === undefined ? this.audioPlayer.globalProgressSeconds$ : of(timeSeconds))
     );
 
-    this.$nowTime = nowTimeSeconds.pipe(
+    this.nowTime$ = nowTimeSeconds.pipe(
       map(progressSeconds => secondsToTimeFormat(progressSeconds))
     );
-    this.$remainingTime = combineLatest([nowTimeSeconds, this.$totalNarratedSeconds])
+    this.remainingTime$ = combineLatest([nowTimeSeconds, this.totalNarratedSeconds$])
       .pipe(map(([nowTime, totalTime]) => secondsToTimeFormat(nowTime - totalTime)));
-    this.$nowPercent = combineLatest([nowTimeSeconds, this.$totalNarratedSeconds, this.$availablePercent])
+    this.nowPercent$ = combineLatest([nowTimeSeconds, this.totalNarratedSeconds$, this.availablePercent$])
       .pipe(
         map(([nowTime, totalTime, availablePercent]) =>
           totalTime > 0 ? (nowTime / totalTime * availablePercent) : 0
         )
       );
 
-    this.$playbackInfo
-      .pipe(takeUntil(this.$destroy))
+    this.playbackInfo$
+      .pipe(takeUntil(this.destroy$))
       .subscribe((playbackInfo) => {
         this.audioPlayer.initPlayer(this.bookDetails(), playbackInfo);
       });
@@ -143,7 +143,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
       .subscribe(preferences => {
         this.audioPlayer.setPlaybackRate(preferences["playback_rate"]);
       });
-    this.audioPlayer.$playbackRate.pipe(
+    this.audioPlayer.playbackRate$.pipe(
       debounceTime(1000),
       switchMap(newRate => {
         if (newRate != this.preferences()!["playback_rate"]) {
@@ -151,13 +151,13 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
         }
         return EMPTY
       }),
-      takeUntil(this.$destroy)
+      takeUntil(this.destroy$)
     ).subscribe();
 
     interval(5000)
       .pipe(
-        takeUntil(this.$destroy),
-        combineLatestWith(this.$isPlaying)
+        takeUntil(this.destroy$),
+        combineLatestWith(this.isPlaying$)
       ).subscribe(async ([_, isPlaying]) => {
       if (isPlaying) {
         await this.requestWakeLock();
@@ -205,7 +205,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     }
     e.preventDefault();
 
-    this.audioPlayer.$isPlaying
+    this.audioPlayer.isPlaying$
       .pipe(take(1)).subscribe((isPlaying) => {
       if (isPlaying) {
         this.audioPlayer.pause();
@@ -280,7 +280,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     const clientX = 'clientX' in event ? event.clientX : event.touches[0].clientX;
     const percent = this.getPercentFromEvent(clientX);
 
-    this.$dragToPercent.next(percent);
+    this.dragToPercent$.next(percent);
   }
 
   @HostListener('document:mouseup')
@@ -291,12 +291,12 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     }
 
     this.isDragging = false;
-    const newPercent = this.$dragToPercent.value;
+    const newPercent = this.dragToPercent$.value;
     if (newPercent !== undefined) {
       this.seekToPercent(newPercent);
     }
     setTimeout(() => {
-      this.$dragToPercent.next(undefined);
+      this.dragToPercent$.next(undefined);
     }, 500);
   }
 
@@ -358,8 +358,8 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   ngOnDestroy(): void {
     this.audioPlayer.onDestroy();
     this.releaseWakeLock();
-    this.$destroy.next(true);
-    this.$destroy.complete();
+    this.destroy$.next(true);
+    this.destroy$.complete();
   }
 
   toggleSync() {

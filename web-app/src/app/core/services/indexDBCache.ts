@@ -39,7 +39,7 @@ export class IndexDBCache<T> {
     this.load = loader ? loader : DUMMY_LOADER;
     this.write = writer ? writer : DUMMY_WRITER;
 
-    this.connectionService.$isOnline.subscribe(online => {
+    this.connectionService.isOnline$.subscribe(online => {
       const needToSync = !this.isOnline && online;
       this.isOnline = online;
 

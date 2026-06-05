@@ -24,22 +24,22 @@ interface FragmentTimelineItem {
 export class AudioPlayer {
   private osBindings: OSBindings;
 
-  private $status = new BehaviorSubject<PlayerStatus>(PlayerStatus.paused);
+  private status$ = new BehaviorSubject<PlayerStatus>(PlayerStatus.paused);
   private readonly audio: HTMLAudioElement;
   private hls: Hls | null = null;
 
-  $bookDetails = new BehaviorSubject<BookOverview | null>(null);
+  bookDetails$ = new BehaviorSubject<BookOverview | null>(null);
   // Currently playing time in seconds.
-  $globalProgressSeconds = new BehaviorSubject<number>(0);
+  globalProgressSeconds$ = new BehaviorSubject<number>(0);
   private timeDrift = -1;
 
   // Total duration of all tracks in playlist in seconds.
-  $totalDuration = new BehaviorSubject<number>(-1);
+  totalDuration$ = new BehaviorSubject<number>(-1);
   // Total size of all tracks in playlist in bytes.
-  $totalSize = new BehaviorSubject<number>(-1);
+  totalSize$ = new BehaviorSubject<number>(-1);
 
-  $playbackRate = new BehaviorSubject<number>(-1);
-  $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
+  playbackRate$ = new BehaviorSubject<number>(-1);
+  isPlaying$ = this.status$.pipe(map((status) => status == PlayerStatus.playing));
 
   private fragmentTimeline: FragmentTimelineItem[] = [];
 
@@ -50,7 +50,7 @@ export class AudioPlayer {
     this.audio.preservesPitch = true;
     this.audio.addEventListener('timeupdate', () => this.readProgress());
 
-    this.$bookDetails
+    this.bookDetails$
       .pipe(filter(book => book != null))
       .subscribe((book) => {
         if (!Hls.isSupported()) {
@@ -65,7 +65,7 @@ export class AudioPlayer {
         });
 
         this.hls.on(Hls.Events.LEVEL_UPDATED, (_, data) => {
-          this.$totalDuration.next(this.audio.duration);
+          this.totalDuration$.next(this.audio.duration);
 
           if (data.details.dateRanges) {
             let cumulativeSize = 0;
@@ -88,7 +88,7 @@ export class AudioPlayer {
                 cumulativeSize += parseInt(range.attr["X-SIZE"]);
               }
             });
-            this.$totalSize.next(cumulativeSize)
+            this.totalSize$.next(cumulativeSize)
             this.fragmentTimeline = fragments;
 
           } else {
@@ -120,7 +120,7 @@ export class AudioPlayer {
         this.hls.loadSource(masterPlaylistUrl);
         this.hls.attachMedia(this.audio);
 
-        this.audio.playbackRate = this.$playbackRate.value;
+        this.audio.playbackRate = this.playbackRate$.value;
 
         // Boost the volume
         const audioContext = new window.AudioContext();
@@ -131,15 +131,15 @@ export class AudioPlayer {
         gainNode.gain.value = 2.5;
       });
 
-    this.$playbackRate.subscribe(() => {
-      if (this.audio && this.$playbackRate.value > 0) {
-        this.audio.playbackRate = this.$playbackRate.value;
+    this.playbackRate$.subscribe(() => {
+      if (this.audio && this.playbackRate$.value > 0) {
+        this.audio.playbackRate = this.playbackRate$.value;
       }
     });
 
     interval(5000)
       .pipe(
-        combineLatestWith(this.$isPlaying),
+        combineLatestWith(this.isPlaying$),
         filter(([_, isPlaying]) => isPlaying),
       ).subscribe(() => this.updateProgress());
   }
@@ -157,18 +157,18 @@ export class AudioPlayer {
 
     this.osBindings.onDestroy();
 
-    this.$status.complete();
-    this.$bookDetails.complete();
-    this.$globalProgressSeconds.complete();
-    this.$playbackRate.complete();
+    this.status$.complete();
+    this.bookDetails$.complete();
+    this.globalProgressSeconds$.complete();
+    this.playbackRate$.complete();
   }
 
   private readProgress() {
-    this.$globalProgressSeconds.next(this.getCurrentTime());
+    this.globalProgressSeconds$.next(this.getCurrentTime());
   }
 
   private updateProgress() {
-    combineLatest([this.$bookDetails.pipe(filter(b => b != null)), this.$globalProgressSeconds])
+    combineLatest([this.bookDetails$.pipe(filter(b => b != null)), this.globalProgressSeconds$])
       .pipe(
         take(1),
         switchMap(([bookDetails, progressSeconds]) => {
@@ -193,7 +193,7 @@ export class AudioPlayer {
   play() {
     if (this.audio) {
       this.audio.play();
-      this.$status.next(PlayerStatus.playing);
+      this.status$.next(PlayerStatus.playing);
     }
   }
 
@@ -202,7 +202,7 @@ export class AudioPlayer {
       this.audio.pause();
       this.readProgress();
       this.updateProgress();
-      this.$status.next(PlayerStatus.paused);
+      this.status$.next(PlayerStatus.paused);
     }
   }
 
@@ -228,18 +228,18 @@ export class AudioPlayer {
   }
 
   setPlaybackRate(playbackRate: number) {
-    this.$playbackRate.next(playbackRate);
+    this.playbackRate$.next(playbackRate);
   }
 
   adjustPlaybackRate(adjustment: number) {
     const maxValue = 2;
     const minValue = 0.75;
-    const newRate = Math.max(Math.min(this.$playbackRate.value + adjustment, maxValue), minValue);
+    const newRate = Math.max(Math.min(this.playbackRate$.value + adjustment, maxValue), minValue);
     this.setPlaybackRate(newRate);
   }
 
   initPlayer(overview: BookOverview, playbackInfo: PlaybackInfo) {
-    this.$bookDetails.next(overview);
+    this.bookDetails$.next(overview);
     if (playbackInfo.data["progress_seconds"]) {
       this.setCurrentTime(playbackInfo.data["progress_seconds"]);
     }

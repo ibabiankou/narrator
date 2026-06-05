@@ -47,7 +47,7 @@ export class BooksPage implements OnInit {
   readonly pageIndex = computed(() => Number(this.queryParams()['page_index'] || 0));
   readonly size = computed(() => Number(this.queryParams()['size'] || DEFAULT_PAGE_SIZE));
 
-  private $books =
+  private books$ =
     combineLatest([toObservable(this.searchQuery), toObservable(this.pageIndex), toObservable(this.size)]).pipe(
       switchMap(([searchQuery, pageIndex, size]) => {
         if (searchQuery != undefined && searchQuery.trim().length > 0) {
@@ -57,7 +57,7 @@ export class BooksPage implements OnInit {
         }
       })
     );
-  private booksPage = toSignal(this.$books);
+  private booksPage = toSignal(this.books$);
   readonly books = computed(() => this.booksPage()?.items || []);
   readonly pageInfo = computed(() => this.booksPage()?.page_info || DEFAULT_PAGE_INFO);
 
