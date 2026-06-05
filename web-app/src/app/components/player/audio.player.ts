@@ -12,6 +12,12 @@ enum PlayerStatus {
   paused = "paused",
 }
 
+interface FragmentTimelineItem {
+  id: string;
+  startTime: number;
+  duration: number;
+}
+
 /**
  * Responsible for playback logic: Playing each track, navigating back and forth, changing tracks.
  */
@@ -26,10 +32,16 @@ export class AudioPlayer {
   // Currently playing time in seconds.
   $globalProgressSeconds = new BehaviorSubject<number>(0);
   private timeDrift = -1;
+
+  // Total duration of all tracks in playlist in seconds.
   $totalDuration = new BehaviorSubject<number>(-1);
+  // Total size of all tracks in playlist in bytes.
+  $totalSize = new BehaviorSubject<number>(-1);
 
   $playbackRate = new BehaviorSubject<number>(-1);
   $isPlaying = this.$status.pipe(map((status) => status == PlayerStatus.playing));
+
+  private fragmentTimeline: FragmentTimelineItem[] = [];
 
   constructor(private bookService: BooksService, filesService: FilesService) {
     this.osBindings = new OSBindings(this, filesService);
@@ -52,8 +64,36 @@ export class AudioPlayer {
           debug: false,
         });
 
-        this.hls.on(Hls.Events.LEVEL_UPDATED, () => {
+        this.hls.on(Hls.Events.LEVEL_UPDATED, (_, data) => {
           this.$totalDuration.next(this.audio.duration);
+
+          if (data.details.dateRanges) {
+            let cumulativeSize = 0;
+            let cumulativeDuration = 0;
+            let fragments: FragmentTimelineItem[] = [];
+
+            Object.values(data.details.dateRanges).forEach(range => {
+              if (!range) return;
+
+              if (range.attr["X-DURATION"]) {
+                const frag = {
+                  id: range.id,
+                  startTime: cumulativeDuration,
+                  duration: parseFloat(range.attr["X-DURATION"]),
+                };
+                fragments.push(frag);
+                cumulativeDuration += frag.duration;
+              }
+              if (range.attr["X-SIZE"]) {
+                cumulativeSize += parseInt(range.attr["X-SIZE"]);
+              }
+            });
+            this.$totalSize.next(cumulativeSize)
+            this.fragmentTimeline = fragments;
+
+          } else {
+            console.warn("No date ranges found, unable to sync section being played.")
+          }
         });
 
         // Update time drift each time a new audio track is started.
