@@ -1,6 +1,4 @@
 :host {
-  --book-font-size: 16px;
-
   cursor: auto;
   transition: cursor 0.4s;
 
@@ -44,43 +42,4 @@ app-toolbar {
 .main-container {
   flex-grow: 1;
   width: 100%;
-
-  max-width: var(--app-container-width);
-  margin: 0 auto;
-
-  font-size: var(--book-font-size);
-  line-height: 1.4;
-}
-
-.page-with-sections {
-  display: flex;
-  flex-direction: row;
-  padding: 0 5px;
-
-  .raw-page {
-    width: 45%;
-    padding: 0 10px;
-  }
-
-  .sections {
-    width: 55%;
-    padding: 0 10px;
-
-    app-section {
-      margin-bottom: 5px;
-    }
-  }
-}
-
-.sections-only {
-  padding: 0 15px;
-
-  .sections {
-    max-width: var(--app-container-width);
-    margin: 0 auto;
-
-    app-section {
-      margin-bottom: 5px;
-    }
-  }
 }

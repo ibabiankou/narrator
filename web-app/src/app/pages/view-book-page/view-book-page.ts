@@ -1,7 +1,7 @@
-import { AfterViewInit, Component, computed, effect, inject, input, model, OnInit, viewChild } from '@angular/core';
-import { BookStatus, TocItem } from '../../core/models/books.dto';
+import { Component, computed, inject, input, OnInit, viewChild } from '@angular/core';
+import { BookStatus } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
-import { filter, switchMap, take } from 'rxjs';
+import { filter, switchMap, tap } from 'rxjs';
 import { PlayerComponent } from '../../components/player/player.component';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -40,7 +40,7 @@ import { ReadiumService } from '../../core/services/readium.service';
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
 })
-export class ViewBookPage implements OnInit, AfterViewInit {
+export class ViewBookPage implements OnInit {
   private booksService = inject(BooksService);
   private readiumService = inject(ReadiumService);
   private settingsService = inject(SettingsService);
@@ -51,7 +51,10 @@ export class ViewBookPage implements OnInit, AfterViewInit {
   readonly readiumEpub = viewChild(ReadiumEpub);
 
   bookDetails = toSignal(toObservable(this.bookId).pipe(
-    switchMap(bookId => this.booksService.getBookDetails(bookId))
+    switchMap(bookId => this.booksService.getBookDetails(bookId)),
+    tap(bookDetails => {
+      this.titleService.setTitle(`${bookDetails.title} - NNarrator`);
+    })
   ));
   publication = toSignal(toObservable(this.bookDetails).pipe(
     filter(bookDetails => !!bookDetails),
@@ -61,30 +64,17 @@ export class ViewBookPage implements OnInit, AfterViewInit {
 
   title = computed(() => this.bookDetails()?.title ?? "Loading...");
 
-  tocItems = model<TocItem[]>();
-  currentItem = 0;
-
-  constructor() {
-    effect(() => {
-      this.booksService.getTableOfContent(this.bookId()).subscribe({
-        next: tocItems => {
-          this.tocItems.set(tocItems);
-        },
-      });
-    });
-  }
-
+  tocItems = toSignal(toObservable(this.bookId).pipe(
+    switchMap(bookId => this.booksService.getTableOfContent(bookId))
+  ));
 
   ngOnInit() {
-    this.settingsService.userPreferences$
-      .pipe(take(1))
-      .subscribe(preferences => {
-        // this.settingsService.setFontSizeStyle(preferences["text_size"]);
-        // TODO: make readium component aware of settings.
-      });
-  }
-
-  ngAfterViewInit() {
+    // this.settingsService.userPreferences$
+    //   .pipe(take(1))
+    //   .subscribe(preferences => {
+    //     // this.settingsService.setFontSizeStyle(preferences["text_size"]);
+    //     // TODO: make readium component aware of settings.
+    //   });
   }
 
   protected copyBookTitle() {
