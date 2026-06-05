@@ -112,7 +112,7 @@ export class BooksService {
   }
 
   getPlaylistUrl(id: string) {
-    return `${environment.api_base_url}/books/${id}/m3u8`;
+    return `${environment.api_base_url}/files/${id}/playlists/master.m3u8`;
   }
 
   uploadBook(file: File) {
@@ -127,10 +127,6 @@ export class BooksService {
 
   updateBookMetadata(bookId: string, metadata: BookMetadata) {
     return this.http.post<BookOverview>(`${this.apiUrl}/${bookId}/metadata/review`, metadata);
-  }
-
-  enqueue(bookId: string) {
-    return this.http.post<any>(`${this.apiUrl}/${bookId}/enqueue`, null);
   }
 
   uploadCover(bookId: string, file: File) {

@@ -82,8 +82,6 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   sectionPlayed = output<number>();
   syncCurrentSection = computed(() => !!this.preferences()!["auto_scroll"]);
 
-  fontSizePx = computed(() => <number>this.preferences()!["text_size"]);
-
   handleKeyBindings = input(true);
 
   // Total duration of the narrated part.
@@ -372,10 +370,5 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
       // Scroll the current fragment into view.
     }
     this.settingsService.patchUserPreferences({auto_scroll: newValue});
-  }
-
-  protected setFontSizePx(px: number) {
-    this.settingsService.setFontSizeStyle(px);
-    this.settingsService.patchUserPreferences({text_size: px});
   }
 }

@@ -25,8 +25,6 @@ export class DownloadService {
   }
 
   downloadBook(bookId: string) {
-    // TODO: Load all pages. Also need to figure out how to display pdf page from cache.
-
     const downloadInfo: DownloadInfo = {
       id: bookId,
       fragments_total: 0,

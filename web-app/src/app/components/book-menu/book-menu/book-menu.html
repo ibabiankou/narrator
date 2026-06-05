@@ -33,7 +33,7 @@
     </a>
   </ng-container>
 
-  @if (bookOverview().status == BookStatus.ready && bookStats()) {
+  @if (bookOverview().status == BookStatus.ready) {
     @if (isDownloaded()) {
       <button mat-menu-item aria-label="Show storage info" (click)="storageInfoDialog(storageInfoTemplate)">
         <mat-icon>database</mat-icon>

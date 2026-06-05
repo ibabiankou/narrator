@@ -38,17 +38,6 @@
                             [checked]="syncCurrentSection()"></mat-slide-toggle>
         </button>
 
-        <button mat-menu-item class="font-size">
-          <mat-icon>format_size</mat-icon>
-          <button matIconButton (click)="$event.stopPropagation();setFontSizePx(fontSizePx() - 1)">
-            <mat-icon>remove</mat-icon>
-          </button>
-          <span class="value">{{ fontSizePx() }}px</span>
-          <button matIconButton (click)="$event.stopPropagation();setFontSizePx(fontSizePx() + 1)">
-            <mat-icon>add</mat-icon>
-          </button>
-        </button>
-
         <button mat-menu-item class="playback-speed">
           <mat-icon>speed</mat-icon>
           <button matIconButton (click)="$event.stopPropagation();adjustPlaybackRate(-0.05)">
