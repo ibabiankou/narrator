@@ -1,3 +1,5 @@
+import zipfile
+
 import json
 import logging
 import os
@@ -53,6 +55,9 @@ class TestEpubService:
             fragments_file_name = dest_dir_path.joinpath(epub_path.stem + "_fragments.json")
             with open(fragments_file_name, "w") as f:
                 json.dump({k: v.model_dump() for k, v in fragments.items()}, f, indent=2)
+
+            epub_extracted_path = dest_dir_path.joinpath(epub_path.stem + "_unpacked")
+            zipfile.ZipFile(epub_with_fragments).extractall(path=epub_extracted_path)
 
     @pytest.mark.skip(reason="For manual execution.")
     def test_manifest(self):

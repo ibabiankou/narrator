@@ -1,3 +1,5 @@
+import json
+
 import logging
 import zipfile
 from io import BytesIO
@@ -13,6 +15,7 @@ from common_lib.models.tts import FragmentList
 from common_lib.service import Service
 from epub_lib import Epub
 from epub_lib.model.nav import PublicationContent
+from epub_lib.model.package import Item
 
 LOG = logging.getLogger(__name__)
 
@@ -89,7 +92,7 @@ class EpubService(Service):
             out_zip.writestr("mimetype", src_zip_file.read("mimetype"), compress_type=zipfile.ZIP_STORED)
 
             fragment_id = 0
-            fragment_map = {}
+            fragment_map: Dict[str, FragmentList] = {}
             for file in content_files:
                 content_file_bytes, file_fragments, last_fragment_id = process_xhtml_inplace(src_zip_file.read(file),
                                                                                              fragment_id)
@@ -97,24 +100,37 @@ class EpubService(Service):
                 fragment_map[file] = file_fragments
                 out_zip.writestr(file, content_file_bytes)
 
+            # Add fragment-map.json to the archive.
+            fragment_map_item_path = str(src_epub.root_file_dir.joinpath("fragment-map.json"))
+            short_fragment_map = {k: [f.formatted_id() for f in v.root] for k, v in fragment_map.items()}
+            out_zip.writestr(fragment_map_item_path, json.dumps(short_fragment_map))
+
+            # Add fragment-map.json to the manifest.
+            fragment_map_item = Item(
+                id="fragment-map",
+                href=fragment_map_item_path,
+                media_type="application/json",
+            )
+            src_epub.package.manifest.item.append(fragment_map_item)
+            xml_str = src_epub.package.to_xml(exclude_none=True, xml_declaration=True)
+            out_zip.writestr(src_epub.root_file, xml_str)
+
             for fileinfo in src_zip_file.infolist():
                 if fileinfo.is_dir():
                     continue
-
-                LOG.debug("Processing %s", fileinfo.filename)
-
-                if fileinfo.filename in content_files:
-                    LOG.debug("Skipping %s file...", fileinfo.filename)
+                if fileinfo.filename == src_epub.root_file:
+                    # Updated root file is already in the archive.
                     continue
 
                 if fileinfo.filename == "mimetype":
-                    LOG.debug("Skipping %s file...", fileinfo.filename)
+                    # mimetype is added the first without compression.
                     continue
 
                 if fileinfo.filename in content_files:
                     # Content files are already processed.
                     continue
                 else:
+                    LOG.debug("Processing %s", fileinfo.filename)
                     out_zip.writestr(fileinfo.filename, src_zip_file.read(fileinfo.filename))
 
         out_bytes.seek(0)
