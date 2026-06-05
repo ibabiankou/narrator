@@ -10,6 +10,7 @@ import { MatCheckbox } from '@angular/material/checkbox';
 import { TocItem } from '../../core/models/books.dto';
 import { NgClass } from '@angular/common';
 import { MatButton } from '@angular/material/button';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-select-for-narration',
@@ -27,6 +28,7 @@ import { MatButton } from '@angular/material/button';
 export class SelectForNarration {
   private booksService = inject(BooksService);
   private readiumService = inject(ReadiumService);
+  private router: Router = inject(Router);
 
   readonly readiumEpub = viewChild(ReadiumEpub);
 
@@ -129,5 +131,13 @@ export class SelectForNarration {
         }
       }
     }
+  }
+
+  protected startNarration() {
+    this.booksService.startNarration(this.bookId(), this.tocItems()!).subscribe({
+      next: value => {
+        this.router.navigate(['/books', this.bookId()]);
+      }
+    });
   }
 }

@@ -579,7 +579,7 @@ class BookService(Service):
                             tts_model="kokoro",
                             voice="am_michael",
                             track_base_name=track.name,
-                            order=track.fragments[0].id,
+                            order=track.fragments.root[0].id,
                             fragments=track.fragments,
                             added=datetime.now(UTC)
                         )

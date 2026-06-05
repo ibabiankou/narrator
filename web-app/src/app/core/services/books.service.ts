@@ -142,4 +142,8 @@ export class BooksService {
   getTableOfContent(bookId: string) {
     return this.http.get<TocItem[]>(`${this.apiUrl}/${bookId}/table-of-contents`);
   }
+
+  startNarration(bookId: string, tocItems: TocItem[]) {
+    return this.http.post<any>(`${this.apiUrl}/${bookId}/narrate`, tocItems);
+  }
 }
