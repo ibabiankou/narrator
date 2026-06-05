@@ -131,11 +131,26 @@ class NarrationQueueService(Service):
         playlist.is_endlist = False
 
         for track in tracks:
+            fragments = []
+            fragments.append({
+                "id": track.track_name,
+                "start_date": "0000-00-01",
+                "x_size_bytes": str(track.size_bytes)
+            })
+            for frag in track.timeline:
+                fragments.append({
+                    "id": frag.formatted_id(),
+                    "start_date": "0000-00-00",
+                    "x_duration": str(round(frag.duration, 3))
+                })
             segment = m3u8.Segment(
                 uri=f"/api/files/{track.audio_key}",
-                duration=sum([f.duration for f in track.timeline]),
-                discontinuity=True
+                duration=round(sum([f.duration for f in track.timeline]), 3),
+                discontinuity=True,
+                # Abusing the dateranges field to include timeline and file size data.
+                dateranges=fragments
             )
             playlist.segments.append(segment)
+
 
         return playlist.dumps()

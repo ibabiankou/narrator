@@ -103,4 +103,5 @@ class FragmentDuration(FragmentId):
 class TrackManifest(BaseModel):
     audio_key: str
     track_name: str
+    size_bytes: int
     timeline: List[FragmentDuration]

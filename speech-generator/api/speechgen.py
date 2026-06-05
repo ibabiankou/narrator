@@ -106,6 +106,7 @@ class SpeechGenService(Service):
         track_manifest_key = f"{base_key}.json"
         manifest = TrackManifest(
             audio_key=audio_key,
+            size_bytes=len(audio_bytes.getvalue()),
             track_name=payload.track_base_name,
             timeline=timeline,
         )
