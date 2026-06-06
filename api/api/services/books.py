@@ -1,32 +1,23 @@
 from concurrent.futures import ProcessPoolExecutor
 
 import asyncio
-import hashlib
 import logging
 import m3u8
-import pymupdf
 import uuid
 from datetime import datetime, UTC
 from fastapi import BackgroundTasks
 from io import BytesIO
-from pypdf import PdfReader, PdfWriter
 from sqlalchemy import update, text, select
 from sqlalchemy.sql.functions import count
-from tenacity import retry, stop_after_attempt, wait_exponential, wait_random
 from typing import Annotated, List
 
 from api.models import api, db, domain
 from api.models.db import NarrationQueue
 from api.models.narration import NarrationManifest
-from api.openlibrary.service import OpenlibraryServiceDep
 from api.services.epub import EpubServiceDep
-from api.services.experimental import identify_book
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
-from api.services.sections import SectionServiceDep
 from api.utils.imgproxy import ImgProxy
-from api.utils.text import LineReader, CleanupPipeline, pages_to_paragraphs, \
-    paragraphs_to_sections
 from common_lib.db import transactional
 from common_lib.service import Service
 from epub_lib import Epub
@@ -40,15 +31,11 @@ executor = ProcessPoolExecutor(max_workers=4)
 class BookService(Service):
     def __init__(self,
                  files_service: FilesServiceDep,
-                 sections_service: SectionServiceDep,
                  playback_progress_service: PlaybackProgressServiceDep,
-                 openlibrary_service: OpenlibraryServiceDep,
                  epub_service: EpubServiceDep,
                  **kwargs):
         self.files_service = files_service
-        self.sections_service = sections_service
         self.playback_progress_service = playback_progress_service
-        self.openlibrary_service = openlibrary_service
         self.epub_service = epub_service
 
         self.img_proxy = ImgProxy()
@@ -106,198 +93,13 @@ class BookService(Service):
 
         self.db.add(book)
 
-        # TODO: clean up PDF code
-        # background_tasks.add_task(self.extract_metadata, book_id, file_name)
-        # background_tasks.add_task(self.split_pages, book_id, file_name)
-        # background_tasks.add_task(self.extract_text, book_id, file_name)
-
         return api.BookOverview.from_orm(book)
-
-    def split_pages(self, book_id: uuid.UUID, book_file_name: str):
-        LOG.debug(f"Splitting book {book_id} into pages.")
-
-        pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
-
-        # Split it into individual page files
-        pdf_pages = self._split_into_pages(pdf_bytes)
-
-        # Upload page files to the object store
-        self.files_service.upload_book_pages(book_id, pdf_pages)
-
-    def _split_into_pages(self, pdf_file: BytesIO):
-        pdf_file.seek(0)
-        pdf_reader = PdfReader(pdf_file)
-
-        page_num = len(pdf_reader.pages)
-        LOG.info("Number of pages: %s", page_num)
-
-        pages = []
-        for i in range(page_num):
-            pdf_writer = PdfWriter()
-            pdf_writer.add_page(pdf_reader.pages[i])
-            current_page = {"file_name": f"{i}.pdf", "content": BytesIO()}
-            pdf_writer.write(current_page["content"])
-            current_page["content"].seek(0)
-            pages.append(current_page)
-
-        return pages
-
-    def get_text(self, book: db.Book, first_page: int = None, last_page: int = None, raw: bool = False):
-        pdf_bytes = self.files_service.get_book_file(book.id, book.file_name)
-        return self._get_text(pdf_bytes, first_page, last_page, raw)
-
-    def _get_text(self, pdf_bytes: BytesIO, first_page: int = None, last_page: int = None, raw: bool = False):
-        pdf_bytes.seek(0)
-        doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
-        pages = [p.get_text() for p in doc]
-
-        line_reader = LineReader(pages, CleanupPipeline([] if raw else CleanupPipeline.ALL_TRANSFORMERS))
-        lines = []
-        while line_reader.has_next():
-            page_index, line = line_reader.next()
-
-            if first_page is not None and page_index < first_page:
-                continue
-            if last_page is not None and page_index > last_page:
-                break
-
-            lines.append(line)
-
-        return "\n".join(lines)
-
-    def get_paragraphs(self, book: db.Book, first_page: int = None, last_page: int = None):
-        pdf_bytes = self.files_service.get_book_file(book.id, book.file_name)
-        doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
-        pages = [p.get_text() for p in doc]
-
-        result = []
-        for p in pages_to_paragraphs(pages):
-            if first_page is not None and p[0] < first_page:
-                continue
-            if last_page is not None and p[0] > last_page:
-                break
-            result.append(str(p))
-
-        return "\n".join(result)
-
-    @transactional
-    def extract_text(self, book_id: uuid.UUID, book_file_name: str):
-        LOG.info(f"Extracting text of the book {book_id}")
-
-        # Split each page into sections. A section is one or more paragraphs.
-        pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
-
-        doc = pymupdf.open(stream=pdf_bytes, filetype="application/pdf")
-        pages = [p.get_text() for p in doc]
-        paragraphs = pages_to_paragraphs(pages)
-        section_dicts = paragraphs_to_sections(paragraphs)
-
-        # Persist Sections in DB.
-        sections = []
-        for section_index in range(len(section_dicts)):
-            section_dict = section_dicts[section_index]
-            section = db.Section(book_id=book_id,
-                                 page_index=section_dict["page_index"],
-                                 section_index=section_index,
-                                 content=section_dict["content"])
-            sections.append(section)
-
-        self.db.add_all(sections)
 
     def _set_status(self, book_id: uuid.UUID, status: db.BookStatus):
         self.db.execute(update(db.Book).where(db.Book.id == book_id).values(status=status))
 
     def _set_candidates(self, book_id: uuid.UUID, metadata_candidates: domain.MetadataCandidates):
         self.db.execute(update(db.Book).where(db.Book.id == book_id).values(metadata_candidates=metadata_candidates))
-
-    @retry(
-        wait=wait_exponential(multiplier=2, min=1, max=10) + wait_random(0, 5),
-        stop=stop_after_attempt(3)
-    )
-    @transactional
-    def extract_metadata(self, book_id: uuid.UUID, book_file_name: str, update_metadata: bool = True,
-                         update_status: bool = True):
-        LOG.info(f"Extracting metadata of the book {book_id}")
-        pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
-
-        first_pages = self._get_text(pdf_bytes, 0, 10, False)
-        llm_metadata = identify_book(first_pages)
-        if llm_metadata is None:
-            LOG.error("Failed to extract metadata from the book text, skipping other sources.")
-        else:
-            llm_candidate = domain.MetadataCandidate(source="gemini", **llm_metadata.model_dump())
-
-            # TODO: Consider moving cover extraction outside this method.
-            image_filenames = self._extract_and_store_images(book_id, pdf_bytes)
-            if len(image_filenames) > 0:
-                # Assume the first image is the book cover image.
-                thumbnail_path = self.img_proxy.build_url(image_filenames[0])
-                self.set_cover(book_id, thumbnail_path)
-                llm_candidate.cover = thumbnail_path
-
-            ol_candidates = self.openlibrary_service.search_matches(book_id, llm_candidate)
-
-            all_candidates = [llm_candidate] + ol_candidates
-            metadata_candidates = domain.MetadataCandidates(candidates=all_candidates, preferred_index=0,
-                                                            selected_index=None)
-
-            self._set_candidates(book_id, metadata_candidates)
-
-            if update_metadata:
-                self.update_metadata(book_id, llm_metadata)
-
-        if update_status:
-            self._set_status(book_id, db.BookStatus.ready_for_metadata_review)
-
-    @transactional
-    def extract_and_store_images(self, book_id: uuid.UUID, book_file_name: str):
-        pdf_bytes = self.files_service.get_book_file(book_id, book_file_name)
-        self._extract_and_store_images(book_id, pdf_bytes)
-
-    def _extract_and_store_images(self, book_id: uuid.UUID, pdf_bytes: BytesIO) -> list[str]:
-        """Extracts all images found in the given PDF file and uploads them to files_service.
-        Returns the list of uploaded file names."""
-        LOG.info(f"Extracting images of the book {book_id}")
-        pdf_bytes.seek(0)
-
-        images = self._extract_images(book_id, pdf_bytes)
-        for image in images:
-            self.files_service.upload_file(image['file_name'], image['content'])
-
-        return [image['file_name'] for image in images]
-
-    def _extract_images(self, book_id: uuid.UUID, pdf_bytes: BytesIO):
-        pdf_bytes.seek(0)
-        pdf_reader = PdfReader(pdf_bytes)
-
-        # Deduplicate images by hashing them.
-        known_hashes = set()
-        extracted_images = []
-
-        for page_index, page in enumerate(pdf_reader.pages):
-            try:
-                for image_file_object in page.images:
-                    file_name = f"page{page_index}_{image_file_object.name}"
-                    file_key = f"{book_id}/images/{file_name}"
-
-                    hash_obj = hashlib.md5()
-                    hash_obj.update(image_file_object.data)
-
-                    file_hash = hash_obj.hexdigest()
-                    if file_hash in known_hashes:
-                        LOG.info(f"Skipping duplicate image: {file_name}")
-                        continue
-                    else:
-                        LOG.info(f"Extracting image: {file_name}")
-                        known_hashes.add(file_hash)
-
-                    extracted_images.append({"file_name": file_key, "content": BytesIO(image_file_object.data)})
-            except Exception as e:
-                LOG.error("Skipping page %s due to error %s", page_index, e)
-                continue
-
-        LOG.info(f"Extracted {len(extracted_images)} images: {[i["file_name"] for i in extracted_images]}")
-        return extracted_images
 
     @transactional
     def set_cover(self, book_id: uuid.UUID, cover_file_name: str):
@@ -316,7 +118,6 @@ class BookService(Service):
         book = self.db.get_one(db.Book, book_id)
 
         self.playback_progress_service.delete(user_id=user_id, book_id=book_id)
-        self.sections_service.delete_sections(book_id=book_id)
         self.files_service.delete_book_files(book_id=book_id)
 
         self.db.delete(book)
@@ -442,19 +243,7 @@ class BookService(Service):
 
     @transactional
     def process_book(self, book_id, task_name, background_tasks):
-        book = self.get_book(book_id)
-
-        if task_name == "split-pages":
-            background_tasks.add_task(self.split_pages, book.id, book.file_name)
-
-        if task_name == "extract-text":
-            background_tasks.add_task(self.extract_text, book.id, book.file_name)
-
-        if task_name == "extract-images":
-            background_tasks.add_task(self.extract_and_store_images, book.id, book.file_name)
-
-        if task_name == "extract-metadata":
-            background_tasks.add_task(self.extract_metadata, book.id, book.file_name, False, False)
+        pass
 
     @transactional
     def update_status(self, book_id: uuid.UUID, status: db.BookStatus):

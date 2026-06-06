@@ -1,14 +1,31 @@
 import logging
+import nltk
 import re
 import unicodedata
-from typing import Tuple
-
-import nltk
 from bs4 import BeautifulSoup
+from typing import Tuple
 
 from common_lib.models.tts import FragmentList, FragmentListBuilder
 
 LOG = logging.getLogger(__name__)
+
+
+# class Quotes(LineTransformer):
+#     pairs = {
+#         "“": "\"",
+#         "”": "\"",
+#         "«": "\"",
+#         "»": "\"",
+#         "‹": "'",
+#         "›": "'",
+#         "‘": "'",
+#         "’": "'",
+#     }
+#
+#     def __call__(self, line: str) -> str:
+#         for key, value in self.pairs.items():
+#             line = line.replace(key, value)
+#         return line
 
 
 def clean_text_for_tts(text):

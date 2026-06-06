@@ -1,10 +1,8 @@
 import logging
-import os
 import uuid
-from typing import Annotated, Optional
-
 from pydantic import ValidationError
 from sqlalchemy import text
+from typing import Annotated, Optional
 
 from api.models.domain import BookMetadata, MetadataCandidate
 from api.openlibrary.model import Author, Edition

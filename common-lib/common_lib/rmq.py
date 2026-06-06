@@ -42,8 +42,6 @@ default_connection_params = ConnectionParameters(
 class Topology:
     default_exchange = "narrator"
     api_queue = "api"
-    phonemization_queue = "phonemization"
-    speech_gen_queue = "speech-generation"
     narration_queue = "narration"
 
 

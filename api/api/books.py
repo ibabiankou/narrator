@@ -8,11 +8,9 @@ from sqlalchemy.exc import NoResultFound
 
 from api.models import db, api
 from api.models.auth import UserDep
-from api.services.audiotracks import AudioTrackServiceDep
 from api.services.books import BookServiceDep
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
-from api.services.sections import SectionServiceDep
 
 LOG = logging.getLogger(__name__)
 
@@ -63,41 +61,6 @@ def search_books(
     return book_service.search_books(user.id, query, page_request)
 
 
-def get_book_pages(book_id, number_of_pages: int, section_svc: SectionServiceDep) -> list[api.BookPage]:
-    # Convert into the API model.
-    pages = []
-    pages_dict = {}
-    # For now, I simply generate pages, but I might need to store that data explicitly instead.
-    for i in range(number_of_pages or 0):
-        pages.append(api.BookPage(index=i, file_name=f"{i}.pdf", sections=[]))
-        pages_dict[i] = pages[-1]
-
-    sections = section_svc.get_sections(book_id)
-    for section in sections:
-        pages_dict[section.page_index].sections.append(section)
-    return pages
-
-
-@books_router.get("/{book_id}")
-def get_book_with_content(book_id: uuid.UUID,
-                          book_service: BookServiceDep,
-                          section_svc: SectionServiceDep
-                          ) -> api.BookWithContent:
-    try:
-        overview = book_service.get_book_overview(book_id)
-    except NoResultFound:
-        raise HTTPException(status_code=404, detail="Book not found")
-
-    raw_stats = book_service.get_stats(book_id)
-    total = raw_stats.get("total")
-    stats = api.BookStats(total_narrated_seconds=raw_stats.get("narrated_duration"),
-                          available_percent=(raw_stats.get("available") / total if total > 0 else 1) * 100,
-                          total_size_bytes=raw_stats.get("total_size_bytes"))
-    pages = get_book_pages(overview.id, overview.number_of_pages, section_svc)
-
-    return api.BookWithContent(overview=overview, stats=stats, pages=pages)
-
-
 @books_router.get("/{book_id}/details")
 def get_book_details(book_id: uuid.UUID,
                      book_service: BookServiceDep,
@@ -139,21 +102,6 @@ def delete_book(book_id: uuid.UUID,
         raise HTTPException(status_code=404, detail="Book not found")
 
 
-@books_router.get("/{book_id}/m3u8")
-def book_playlist(book_id: uuid.UUID,
-                  book_service: BookServiceDep,
-                  audio_track_service: AudioTrackServiceDep):
-    try:
-        book_service.get_book(book_id)
-    except NoResultFound:
-        raise HTTPException(status_code=404, detail="Book not found")
-
-    return Response(
-        content=audio_track_service.get_playlist(book_id),
-        media_type="application/vnd.apple.mpegurl"
-    )
-
-
 @books_router.get("/{book_id}/playback_info")
 def get_playback_info(book_id: uuid.UUID,
                       user: UserDep,
@@ -163,7 +111,6 @@ def get_playback_info(book_id: uuid.UUID,
 
 @books_router.post("/{book_id}/playback_info")
 def update_playback_info(request: api.PlaybackInfo,
-                         book_id: uuid.UUID,
                          user: UserDep,
                          progress_service: PlaybackProgressServiceDep):
     progress_service.upsert_progress(db.PlaybackProgress(user_id=user.id, book_id=request.book_id, data=request.data))

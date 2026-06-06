@@ -99,46 +99,6 @@ class Book(Base):
     #  should be stored there and displayed in UI.
 
 
-class Section(Base):
-    __tablename__ = "sections"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"))
-
-    page_index: Mapped[int]
-    section_index: Mapped[int]
-
-    content: Mapped[str]
-    phonemes: Mapped[Optional[str]]
-
-    def __repr__(self) -> str:
-        return (f"Section(id={self.id}, book_id={self.book_id}, page_index={self.page_index}, "
-                f"section_index={self.section_index}")
-
-
-class AudioStatus(StrEnum):
-    missing = "missing"
-    queued = "queued"
-    generating = "generating"
-    failed = "failed"
-    ready = "ready"
-
-
-class AudioTrack(Base):
-    __tablename__ = "audio_tracks"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id"))
-    section_id: Mapped[int] = mapped_column(ForeignKey("sections.id"), unique=True)
-    playlist_order: Mapped[int]
-
-    status: Mapped[str] = mapped_column(default=AudioStatus.missing.value)
-    file_name: Mapped[Optional[str]]
-
-    duration: Mapped[Optional[float]]
-    bytes: Mapped[Optional[int]]
-
-
 class PlaybackProgress(Base):
     __tablename__ = "playback_progress"
 

@@ -4,7 +4,6 @@ import io
 import numpy as np
 import os
 from botocore.exceptions import ClientError
-from dataclasses import dataclass
 from datetime import datetime, UTC
 from io import BytesIO
 from kokoro import KModel, KPipeline
@@ -20,19 +19,11 @@ from common_lib.service import Service
 LOG = get_logger(__name__)
 
 
-@dataclass
-class GeneratedSpeech:
-    content: bytes
-    content_type: str
-    duration: float
-
-
 class SpeechGenService(Service):
     def __init__(self, rmq_client: RMQClientDep, lang_code: str = "a"):
         self.rmq_client = rmq_client
         self.model = KModel()
         self.speech_pipeline = KPipeline(lang_code, model=self.model, repo_id="hexgrad/Kokoro-82M")
-        self.phonemes_pipeline = KPipeline(lang_code, model=False, repo_id="hexgrad/Kokoro-82M")
 
         self.s3_client = boto3.client(
             "s3",
@@ -44,53 +35,6 @@ class SpeechGenService(Service):
         self.bucket_name = os.getenv("S3_BUCKET", "narrator")
         # Kokoro generates audio at 24kHz
         self.sample_rate = 24000
-
-    def phonemize(self, text: str, voice: str = "am_adam"):
-        phonemes = []
-        for result in self.phonemes_pipeline(
-                text=text,
-                voice=voice,
-                split_pattern=r'\n',
-                model=None
-        ):
-            phonemes.append(result.phonemes)
-
-        return "\n".join(phonemes)
-
-    def handle_phonemize_msg(self, payload: rmq.PhonemizeText):
-        LOG.debug("Converting text into phonemes for track %s.", payload.track_id)
-        phonemes = self.phonemize(payload.text, payload.voice)
-        payload = rmq.PhonemesResponse(book_id=payload.book_id, section_id=payload.section_id,
-                                       track_id=payload.track_id, phonemes=phonemes, voice=payload.voice)
-        self.rmq_client.publish(routing_key="phonemes", payload=payload)
-
-    def synthesize(self, phonemes: str, voice: str = "am_adam") -> GeneratedSpeech:
-        audio_np = None
-
-        chunks = phonemes.split("\n")
-        for chunk in chunks:
-            if not chunk.strip():
-                continue
-            for result in self.speech_pipeline.generate_from_tokens(tokens=chunk, voice=voice):
-                if audio_np is None:
-                    audio_np = result.audio.numpy()
-                else:
-                    audio_np = np.concatenate((audio_np, result.audio.numpy()), axis=0)
-
-        output, duration_s = self._encode_audio(audio_np)
-
-        return GeneratedSpeech(content=output.getvalue(), content_type="audio/aac",
-                               duration=duration_s)
-
-    def handle_synthesize_msg(self, payload: rmq.SynthesizeSpeech):
-        LOG.debug("Synthesizing speech for track %s.", payload.track_id)
-        result = self.synthesize(payload.phonemes, payload.voice)
-
-        key = f"{payload.file_path}/{payload.track_id}.aac"
-        self._upload_file(key, result.content_type, result.content)
-        payload = rmq.SpeechResponse(book_id=payload.book_id, section_id=payload.section_id, track_id=payload.track_id,
-                                     file_path=key, duration=result.duration, bytes=len(result.content))
-        self.rmq_client.publish(routing_key="speech", payload=payload)
 
     def handle_narrate_msg(self, payload: rmq.NarrateRequest):
         start_time = datetime.now(UTC)

@@ -1,15 +1,13 @@
+import boto3
 import logging
 import mimetypes
 import os
-import uuid
-from dataclasses import dataclass
-from io import BytesIO
-from typing import Annotated, Optional, List
-
-import boto3
 import requests
 from botocore.exceptions import ClientError
+from dataclasses import dataclass
 from fastapi import HTTPException
+from io import BytesIO
+from typing import Annotated, Optional, List
 
 from common_lib.service import Service
 
@@ -42,16 +40,6 @@ class FilesService(Service):
         )
         self.bucket_name = os.getenv("S3_BUCKET", "narrator")
 
-    def upload_book_pages(self, book_id: uuid.UUID, pdf_pages):
-        """Upload the book pages to the object store."""
-
-        pages_dir_path = f"{book_id}/pages"
-        for page in pdf_pages:
-            page_file_name = page["file_name"]
-            remote_path = f"{pages_dir_path}/{page_file_name}"
-            LOG.info(f"Uploading {remote_path}")
-            self.upload_file(remote_path, page["content"])
-
     def upload_file(self, key: str, body: BytesIO):
         mime_type, encoding = mimetypes.guess_type(key)
         if mime_type is None:
@@ -77,17 +65,6 @@ class FilesService(Service):
                 raise NotModified()
             else:
                 raise e
-
-    @staticmethod
-    def speech_filename(book_id: uuid.UUID, file_name: str = ""):
-        if file_name:
-            return f"{book_id}/speech/{file_name}"
-        else:
-            return f"{book_id}/speech"
-
-    def delete_speech_file(self, book_id: uuid.UUID, file_name: str):
-        remote_file_path = self.speech_filename(book_id, file_name)
-        self.delete_file(remote_file_path)
 
     def delete_file(self, key: str):
         try:

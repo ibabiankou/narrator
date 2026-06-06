@@ -19,14 +19,11 @@ from api.models.auth import UserDep, map_user
 from api.openlibrary.service import OpenlibraryService
 from api.processing import processing_router
 from api.procurement import procurement_router, ProcurementService
-from api.sections import sections_router
-from api.services.audiotracks import AudioTrackService
 from api.services.books import BookService
 from api.services.epub import EpubService
 from api.services.files import FilesService
 from api.services.narration_queue import NarrationQueueService
 from api.services.progress import PlaybackProgressService
-from api.services.sections import SectionService
 from api.services.settings import SettingsService
 from api.settings import settings_router
 from common_lib import RMQClient
@@ -55,10 +52,8 @@ async def lifespan(app: FastAPI):
 
     epub_svc = EpubService()
     rmq_client = RMQClient(Topology.default_exchange)
-    audiotrack_svc = AudioTrackService(files_svc, rmq_client, db_factory=narrator_db)
-    section_svc = SectionService(audiotrack_svc, progress_svc, rmq_client, settings_svc, db_factory=narrator_db)
     openlibrary_svc = OpenlibraryService(files_svc, db_factory=openlibrary_db)
-    books_svc = BookService(files_svc, section_svc, progress_svc, openlibrary_svc, epub_svc, db_factory=narrator_db)
+    books_svc = BookService(files_svc, progress_svc, epub_svc, db_factory=narrator_db)
     procurement_svc = ProcurementService(db_factory=narrator_db)
     narration_queue_svc = NarrationQueueService(rmq_client, settings_svc, files_svc, db_factory=narrator_db)
 
@@ -76,8 +71,6 @@ async def lifespan(app: FastAPI):
 
     rmq_client.configure(configure)
 
-    rmq_client.set_queue_message_handler(Topology.api_queue, rmq.PhonemesResponse, section_svc.handle_phonemes_msg)
-    rmq_client.set_queue_message_handler(Topology.api_queue, rmq.SpeechResponse, audiotrack_svc.handle_speech_msg)
     rmq_client.set_queue_message_handler(Topology.api_queue, rmq.NarrateResponse, narration_queue_svc.handle_response_msg)
 
     rmq_client.start_consuming()
@@ -134,7 +127,6 @@ base_url_router.include_router(files_router, prefix="/files")
 base_url_router.include_router(books_router, prefix="/books")
 base_url_router.include_router(metadata_router, prefix="/books/{book_id}/metadata")
 base_url_router.include_router(processing_router, prefix="/processing")
-base_url_router.include_router(sections_router, prefix="/sections")
 base_url_router.include_router(settings_router, prefix="/settings")
 base_url_router.include_router(procurement_router)
 base_url_router.include_router(maintenance_router, prefix="/maintenance")

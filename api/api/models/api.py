@@ -63,36 +63,6 @@ class BookMetadataForReview(BaseModel):
     metadata_candidates: MetadataCandidates
 
 
-class BookStats(BaseModel):
-    # Seconds narrated so far.
-    total_narrated_seconds: float
-    # Percentage of the total book that is narrated.
-    available_percent: float
-    # Sum of every audio_track size in bytes.
-    total_size_bytes: int
-
-
-class BookSection(BaseModel):
-    id: int
-    book_id: uuid.UUID
-    page_index: int
-    section_index: int
-
-    content: str
-
-
-class BookPage(BaseModel):
-    index: int
-    file_name: str
-    sections: list[BookSection]
-
-
-class BookWithContent(BaseModel):
-    overview: BookOverview
-    stats: BookStats
-    pages: list[BookPage]
-
-
 class BookDetails(BookMetadata):
     id: uuid.UUID
     owner_id: uuid.UUID
@@ -111,14 +81,6 @@ class BookDetails(BookMetadata):
                            description=book.description,
                            authors=[] if book.authors is None else list(book.authors),
                            isbns=[] if book.isbns is None else list(book.isbns))
-
-
-class AudioTrack(BaseModel):
-    book_id: uuid.UUID
-    section_id: int
-    status: str
-    file_name: Optional[str]
-    duration: Optional[float]
 
 
 class PlaybackInfo(BaseModel):
