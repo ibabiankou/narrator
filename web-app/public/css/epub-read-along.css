@@ -1,6 +1,6 @@
-span[id].past {
+span.nf.past {
   color: gray !important;
 }
-span[id].current {
+span.nf.current {
   color: light-dark(#0071e6, #003f80) !important;
 }

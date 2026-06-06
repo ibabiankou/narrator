@@ -28,6 +28,8 @@ def clean_text_for_tts(text):
     text = allowed.sub("", text)
     return re.sub(r'\s+', ' ', text).strip()
 
+def new_span(id: str) -> str:
+    return f'<span id="{id}" class="nf">'
 
 def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:
     try:
@@ -98,7 +100,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
             frag = fragments.add_text(clean_text_for_tts(sentences_clean[current_sent_idx]), list(visited_ids))
             seg_id = frag.formatted_id()
 
-            new_html_content += f'<span id="{seg_id}">'
+            new_html_content += new_span(seg_id)
 
             def traverse(node, open_tags):
                 nonlocal new_html_content, current_char_count, current_sent_idx
@@ -134,7 +136,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                                     sentences_clean[current_sent_idx]), list(visited_ids))
                                 seg_id = frag.formatted_id()
 
-                                new_html_content += f'<span id="{seg_id}">'
+                                new_html_content += new_span(seg_id)
                                 for t_name, t_attrs in open_tags:
                                     attr_str = " ".join([f'{k}="{v}"' for k,v in t_attrs.items()])
                                     new_html_content += f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>"
@@ -164,7 +166,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                                     sentences_clean[current_sent_idx]), list(visited_ids))
                                 seg_id = frag.formatted_id()
 
-                                new_html_content += f'<span id="{seg_id}">'
+                                new_html_content += new_span(seg_id)
                                 for t_name, t_attrs in open_tags:
                                     attr_str = " ".join([f'{k}="{v}"' for k,v in t_attrs.items()])
                                     new_html_content += f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>"

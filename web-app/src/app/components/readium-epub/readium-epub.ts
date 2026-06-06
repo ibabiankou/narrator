@@ -258,7 +258,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
 
   updateStyles(doc: Document, targetElement: HTMLElement) {
     // Find all elements in the exact order they appear on the page.
-    const elements = doc.querySelectorAll("span[id]");
+    const elements = doc.querySelectorAll("span.nf");
 
     // Make target element the current one.
     if (this.currentElement) {
