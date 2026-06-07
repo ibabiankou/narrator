@@ -108,7 +108,7 @@ class EpubService(Service):
             # Add fragment-map.json to the manifest.
             fragment_map_item = Item(
                 id="fragment-map",
-                href=fragment_map_item_path,
+                href="fragment-map.json",
                 media_type="application/json",
             )
             src_epub.package.manifest.item.append(fragment_map_item)
