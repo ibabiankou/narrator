@@ -1,3 +1,9 @@
+app-toolbar div[center] {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .main-container {
   max-width: var(--app-container-width);
   margin: 30px auto;

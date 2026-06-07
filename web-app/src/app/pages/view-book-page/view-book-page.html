@@ -1,5 +1,5 @@
 <app-toolbar appHideIdle>
-  <div breadcrumb class="title">
+  <div center class="title">
     @defer (when bookDetails()) {
       <a routerLink="/books/{{ bookId() }}">
         <h1>{{ bookDetails()!.title }}</h1>

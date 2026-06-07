@@ -9,8 +9,6 @@ import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SettingsService } from '../../core/services/settings.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { map, tap } from 'rxjs';
 import { RenderIfDirective } from '../../core/renderIfDirective';
 import { MatDialog } from '@angular/material/dialog';
 import { KeyboardShortcutsDialog } from '../keyboard-shortcuts/keyboardShortcuts';
@@ -59,7 +57,6 @@ export class ToolbarComponent {
   private readonly settingsService = inject(SettingsService);
   private readonly themeService = inject(ThemeService);
 
-  private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly dialog = inject(MatDialog);
 
   @ContentChild(BreadcrumbContentDirective) breadcrumbContent?: BreadcrumbContentDirective;
@@ -67,17 +64,6 @@ export class ToolbarComponent {
   @ContentChild(ActionButtonContentDirective) actionButtonContent?: ActionButtonContentDirective;
 
   settings = toSignal(this.settingsService.userPreferences$);
-
-  isMobile = toSignal(
-    this.breakpointObserver
-      .observe([Breakpoints.Handset])
-      .pipe(map(result => result.matches), tap(result => console.log("isMobile", result))),
-    { initialValue: false }
-  );
-
-  get hasBreadcrumbContent(): boolean {
-    return !!this.breadcrumbContent;
-  }
 
   protected setTheme(theme: string) {
     this.themeService.setTheme(theme);

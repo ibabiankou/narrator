@@ -1,11 +1,3 @@
-:host {
-  ::ng-deep div[actionButton] {
-    display: flex;
-    gap: 16px;
-    padding-right: 16px;
-  }
-}
-
 $toolbarHeight: 75px;
 mat-toolbar {
   position: fixed;
@@ -15,6 +7,10 @@ mat-toolbar {
   z-index: 1000;
 
   height: $toolbarHeight;
+
+  display: flex;
+  gap: 12px;
+  align-items: center;
 
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
@@ -34,17 +30,6 @@ mat-toolbar {
 
 .center {
   flex: 1 1 auto;
-}
-
-.toolbar-row-item {
-  display: flex;
-  align-items: center;
-}
-
-.large-screen {
-  display: flex;
-}
-
-.small-screen {
-  display: flex;
+  // Required for text-overflow: ellipsis to work in the children.
+  min-width: 0;
 }
