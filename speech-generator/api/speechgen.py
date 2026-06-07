@@ -97,7 +97,11 @@ class SpeechGenService(Service):
             if isinstance(frag, TextFragment):
                 result_maybe = self._narrate_fragment(frag, voice)
                 if result_maybe is None:
-                    raise RuntimeError("Failed to narrate fragment: %s", frag.id)
+                    if frag.text:
+                        raise RuntimeError("Failed to narrate fragment: %s", frag.id)
+                    else:
+                        LOG.warning("Skipping empty fragment: %s", frag.id)
+                        continue
                 frag_audio, fragment_duration_s = result_maybe
                 audio_np = frag_audio if audio_np is None else np.concatenate((audio_np, frag_audio), axis=0)
                 timings.append(FragmentDuration(id=frag.id, duration=fragment_duration_s))
