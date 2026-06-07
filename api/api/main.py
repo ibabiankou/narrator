@@ -35,7 +35,7 @@ from common_lib.uvicorn import EndpointFilter
 # Filter out health check from access logs.
 EndpointFilter.add_filter("/api/")
 
-CORS_REGEX = "(https://)?(\w+\.)*ggnt\.eu(:\d+)?"
+CORS_REGEX = r"(https://)?(\w+\.)*ggnt\.eu(:\d+)?"
 
 
 @asynccontextmanager
@@ -95,7 +95,7 @@ setup_keycloak_middleware(
     app,
     keycloak_configuration=keycloak_config,
     user_mapper=map_user,
-    exclude_patterns=["^\/api\/?$", "/docs", "/openapi.json"],
+    exclude_patterns=[r"^\/api\/?$", "/docs", "/openapi.json"],
     add_swagger_auth=True,
     swagger_auth_pkce=True,
 )
