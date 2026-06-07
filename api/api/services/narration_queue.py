@@ -4,7 +4,7 @@ import asyncio
 import logging
 import m3u8
 from datetime import datetime, UTC
-from typing import Sequence, List
+from typing import Sequence, List, Annotated
 
 from sqlalchemy import select, text, update
 
@@ -154,3 +154,13 @@ class NarrationQueueService(Service):
 
 
         return playlist.dumps()
+
+    @transactional
+    def resend(self, queue_ids):
+        stmt = select(db.NarrationQueue).where(db.NarrationQueue.id.in_(queue_ids))
+        # noinspection PyTypeChecker
+        db_records: Sequence[db.NarrationQueue] = self.db.scalars(stmt).all()
+        self._send_rmq_messages(list(db_records))
+
+
+NarrationQueueServiceDep = Annotated[NarrationQueueService, NarrationQueueService.dep()]

@@ -6,6 +6,7 @@ from sqlalchemy.exc import NoResultFound
 from api.models.auth import AdminUser
 from api.services.books import BookServiceDep
 from api.services.files import FilesServiceDep
+from api.services.narration_queue import NarrationQueueServiceDep
 
 maintenance_router = APIRouter(tags=["Maintenance API"])
 
@@ -38,6 +39,15 @@ def check_orphan_files(
             if cleanup:
                 LOG.warning("Deleting dir %s.", dir_name)
                 files_service.delete_book_files(dir_name)
+
+
+@maintenance_router.post("/narrate")
+def resend_narration_requests(
+        queue_ids: list[int],
+        user: AdminUser,
+        narration_queue_service: NarrationQueueServiceDep
+):
+    narration_queue_service.resend(queue_ids)
 
 
 @maintenance_router.get("/debug-headers")
