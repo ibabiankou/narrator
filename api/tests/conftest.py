@@ -1,5 +1,8 @@
+from pathlib import Path
+
 import logging
 import os
+import pytest
 
 # Get the absolute path of your project root directory
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -24,3 +27,20 @@ def custom_record_factory(*args, **kwargs):
 
 # Tell the logging framework to use our customized factory during the test run
 logging.setLogRecordFactory(custom_record_factory)
+
+
+@pytest.fixture
+def test_data_loader(request):
+    """
+    Returns a function that loads a text file from the local 'test_data' directory.
+    """
+    test_dir = Path(request.fspath).parent
+    data_dir = test_dir / "test_data"
+
+    def _loader(filename: str) -> str:
+        file_path = data_dir / filename
+        if not file_path.exists():
+            raise FileNotFoundError(f"Test file not found at {file_path}")
+        return file_path.read_text(encoding="utf-8")
+
+    return _loader
