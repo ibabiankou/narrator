@@ -32,7 +32,7 @@ export class DownloadService {
     };
     this.cache.set(bookId, downloadInfo).subscribe();
 
-    return this.bookService.getBookWithContent(bookId)
+    return this.bookService.getBookDetails(bookId)
       .pipe(
         switchMap((_) =>
           this.getFragmentUrls(this.bookService.getPlaylistUrl(bookId))

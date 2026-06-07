@@ -6,8 +6,8 @@ import {
 } from '../../components/toolbar/toolbar.component';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { filter, repeat, switchMap, take, tap, timer } from 'rxjs';
-import { BookMetadata, BookStatus } from '../../core/models/books.dto';
+import { repeat, switchMap, take, tap, timer } from 'rxjs';
+import { BookMetadata } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
 import { AuthService } from '../../core/services/authService';
 import { Router } from '@angular/router';
@@ -57,8 +57,6 @@ export class EditMetadataPage implements OnInit {
               count: 25,
               delay: (count) => timer(2 ^ count * 500 * (0.75 + 0.5 * Math.random()))
             }),
-            // TODO: Show a message to user if the book is in a wrong status? OR redirect it to a different page right away?
-            filter((book) => BookStatus.ge(book.overview.status, BookStatus.ready_for_metadata_review)),
             take(1),
             tap(book => {
               if (!this.authService.isOwner(book.overview.owner_id)) {

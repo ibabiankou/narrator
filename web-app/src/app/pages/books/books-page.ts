@@ -133,10 +133,10 @@ export class BooksPage implements OnInit {
           this.notificationService.showMessage(
             "Processing the book. It might take a few seconds. Be patient...",
             10_000);
-          this.router.navigate(['/books', bookDetails.id, 'edit-details']);
+          this.router.navigate(this.bookLink(bookDetails));
         },
         error: err => {
-          // TODO: show the error message.
+          this.notificationService.showError("Something went wrong during the upload. Please try again later.");
           console.error("Error: ", err);
         }
       });
@@ -160,7 +160,7 @@ export class BooksPage implements OnInit {
         return;
       }
 
-      // Validate it's a PDF file
+      // Validate it's a EPUB file
       const file = files[0];
       if (file.type !== "application/epub+zip") {
         this.notificationService.showError("Invalid file type. Only EPUB files are supported.");
@@ -173,10 +173,6 @@ export class BooksPage implements OnInit {
 
   protected bookLink(book: BookOverview) {
     switch (book.status) {
-      case BookStatus.ready_for_metadata_review:
-        return ['/books', book.id, 'edit-details'];
-      case BookStatus.ready_for_content_review:
-        return ['/books', book.id, 'edit'];
       case BookStatus.ready_for_toc_review:
         return ['/books', book.id, 'select-for-narration'];
     }

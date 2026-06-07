@@ -1,13 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   BookDetails,
   BookMetadata,
   BookMetadataForReview,
   BookOverview,
-  BookWithContent,
   PlaybackInfo,
   TocItem
 } from '../models/books.dto';
@@ -22,7 +21,6 @@ export class BooksService {
 
   private apiUrl = `${environment.api_base_url}/books`;
   private playbackInfoCache: IndexDBCache<PlaybackInfo>;
-  private booksCache: IndexDBCache<BookWithContent>;
   private bookDetailsCache: IndexDBCache<BookDetails>;
 
   constructor(private http: HttpClient,
@@ -32,27 +30,13 @@ export class BooksService {
       "playback-info",
       (url: string) => this.http.get<PlaybackInfo>(url),
       (url: string, info: PlaybackInfo) => this.http.post<void>(url, info));
-    this.booksCache = new IndexDBCache(
-      this.connectionService,
-      "books",
-      (url: string) => this.http.get<BookWithContent>(url));
     this.bookDetailsCache = new IndexDBCache(
       this.connectionService,
       "book-details",
       (url: string) => this.http.get<BookDetails>(url));
-  }
 
-  getBookWithContent(bookId: string): Observable<BookWithContent> {
-    const url = `${this.apiUrl}/${bookId}`;
-    return this.booksCache.get(url)
-      .pipe(
-        switchMap(bookMaybe =>
-          bookMaybe ? of(bookMaybe) : throwError(() => new Error('Unable to load the book'))),
-        tap(bookWithContent => {
-          bookWithContent.pages.forEach(page => {
-            page.file_url = `${environment.api_base_url}/files/${bookId}/pages/${page.file_name}`
-          });
-        }));
+    // TODO: drop it at some point.
+    indexedDB.deleteDatabase("books");
   }
 
   getBookDetails(bookId: string): Observable<BookDetails> {
@@ -66,8 +50,8 @@ export class BooksService {
 
   listBooks(pageIndex?: number, size?: number): Observable<PageResponse<BookOverview>> {
     const loadFromCache =
-      this.booksCache.getAll().pipe(
-        map(bwc => bwc.map(bwc => bwc.overview)),
+      this.bookDetailsCache.getAll().pipe(
+        map(overviews => overviews.reverse()),
         map(overviews => toPageResponse(overviews, pageIndex || 0, size || DEFAULT_PAGE_SIZE)),
       );
 
