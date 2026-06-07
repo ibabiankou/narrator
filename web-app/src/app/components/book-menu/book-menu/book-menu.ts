@@ -1,5 +1,4 @@
 import { Component, computed, inject, input, signal, TemplateRef, viewChild, WritableSignal } from '@angular/core';
-import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
 import { MatIcon } from '@angular/material/icon';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
@@ -10,7 +9,6 @@ import {
   MatDialogContent,
   MatDialogTitle
 } from '@angular/material/dialog';
-import { SettingsService } from '../../../core/services/settings.service';
 import { BooksService } from '../../../core/services/books.service';
 import { Router, RouterLink } from '@angular/router';
 import { OwnerDirective } from '../../../core/ownerDirective';
@@ -23,8 +21,6 @@ import { RenderIfDirective } from '../../../core/renderIfDirective';
 @Component({
   selector: 'app-book-menu',
   imports: [
-    MatButtonToggle,
-    MatButtonToggleGroup,
     MatIcon,
     MatIconButton,
     MatMenu,
@@ -44,7 +40,6 @@ import { RenderIfDirective } from '../../../core/renderIfDirective';
 })
 export class BookMenu {
   private booksService: BooksService = inject(BooksService);
-  private settingsService: SettingsService = inject(SettingsService);
   private downloadService: DownloadService = inject(DownloadService);
   private dialog = inject(MatDialog);
   private router: Router = inject(Router);
@@ -52,8 +47,6 @@ export class BookMenu {
   private downloadSubscription: Subscription | null = null;
 
   bookOverview = input.required<BookOverview>();
-  editMode = input<boolean>(false);
-  showPages = computed(() => <string>this.settingsService.userPreferences()!["viewer_mode"]);
 
   downloadInfo: WritableSignal<DownloadInfo | undefined> = signal(undefined);
   isDownloaded = computed(() => this.downloadInfo() != undefined);
@@ -82,10 +75,6 @@ export class BookMenu {
           this.reloadDownloadInfo();
         }
       });
-  }
-
-  setShowPages(viewerMode: string) {
-    this.settingsService.patchUserPreferences({viewer_mode: viewerMode});
   }
 
   protected downloadBookDialog(templateRef: TemplateRef<any>) {

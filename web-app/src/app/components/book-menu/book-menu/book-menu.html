@@ -3,19 +3,6 @@
 </button>
 
 <mat-menu #menu="matMenu">
-  @if (editMode()) {
-    <div class="toggle-buttons" (click)="$event.stopPropagation()">
-      <mat-button-toggle-group name="readerMode" aria-label="Reader Mode" [value]="showPages()">
-        <mat-button-toggle value="text" (click)="setShowPages('text')">
-          <mat-icon>subject</mat-icon>
-        </mat-button-toggle>
-        <mat-button-toggle value="both" (click)="setShowPages('both')">
-          <mat-icon class="flip-horizontal">vertical_split</mat-icon>
-        </mat-button-toggle>
-      </mat-button-toggle-group>
-    </div>
-  }
-
   <ng-container *appRenderIf="'desktop'">
     <a mat-menu-item
        *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
@@ -23,13 +10,6 @@
        routerLink="/books/{{ bookOverview().id }}/edit-details">
       <mat-icon>edit</mat-icon>
       <span>Edit details</span>
-    </a>
-    <a mat-menu-item
-       *appOwnerOrHasRole="bookOverview().owner_id; roles: ['admin']"
-       aria-label="Edit content"
-       routerLink="/books/{{ bookOverview().id }}/edit">
-      <mat-icon>edit</mat-icon>
-      <span>Edit content</span>
     </a>
   </ng-container>
 
