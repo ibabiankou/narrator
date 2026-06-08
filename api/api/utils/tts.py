@@ -2,7 +2,7 @@ import logging
 import nltk
 import re
 import unicodedata
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from typing import Tuple
 
 from common_lib.models.tts import FragmentList, FragmentListBuilder
@@ -48,6 +48,14 @@ def clean_text_for_tts(text):
 def new_span(id: str) -> str:
     return f'<span id="{id}" class="nf">'
 
+
+def get_raw_text(tag: Tag):
+    result = tag.get_text()
+    LOG.info("\n%s\n%s", tag, result)
+
+    return result
+
+
 def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:
     try:
         soup = BeautifulSoup(file_bytes, 'xml')
@@ -68,12 +76,15 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                 tag_id: str = str(tag.get("id"))
                 visited_ids.add(tag_id)
 
+            # TODO: Would I usually see a section break here, or during raw text extraction?
+
             if tag.name not in block_tags: continue
             if tag.find(block_tags): continue
 
-            full_text_raw = tag.get_text()
+            full_text_raw = get_raw_text(tag)
             if not full_text_raw.strip(): continue
-            # LOG.debug("Raw text:\n%s", full_text_raw)
+
+            # At this point I already lost all the info I need to add punctuation.
 
             # TODO: Add punctuation to raw text, if it does not end with one.
             # TODO: Only send to split, if it's too long.
@@ -84,8 +95,6 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
             full_text_clean = re.sub(r'\s+', ' ', full_text_raw).strip()
             sentences_clean = nltk.sent_tokenize(full_text_clean)
             if not sentences_clean: continue
-
-            # LOG.debug("NLTK sent_tokenize result:\n%s", sentences_clean)
 
             # TODO: tweak split here. < Should I do it here or before NLTK?
             # TODO: Further split too long sentences.
