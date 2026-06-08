@@ -3,10 +3,9 @@ import nltk
 import re
 import unicodedata
 from bs4 import BeautifulSoup, Tag
-from dataclasses import dataclass
 from typing import Tuple, List
 
-from common_lib.models.tts import FragmentList, FragmentListBuilder
+from common_lib.models.tts import FragmentList, FragmentListBuilder, Token
 
 LOG = logging.getLogger(__name__)
 
@@ -49,43 +48,6 @@ def clean_text_for_tts(text):
 
 def new_span(id: str) -> str:
     return f'<span id="{id}" class="nf">'
-
-
-@dataclass
-class Token:
-    NORM_PATTERN = re.compile(r'\W+')
-
-    # A slice of the text from the html.
-    raw_text: str
-    # The same slice, but cleaned up for TTS.
-    tts_text: str
-    # The same slice, but normalized for comparison during reconstruction.
-    normalized_text: str
-
-    length: int
-
-    def __init__(self, text: str):
-        self.raw_text = text
-        # TODO: Do a smarter cleanup.
-        self.tts_text = text
-
-        self.normalized_text = self.normalize(text)
-        self.length = len(self.normalized_text)
-
-    @staticmethod
-    def normalize(text: str):
-        return Token.NORM_PATTERN.sub('', text).lower()
-
-    def ensure_ends_with_punctuation(self):
-        """Adds a period to the end of the tts_text unless it's already ends with some punctuation."""
-        if self.tts_text:
-            if self.tts_text[-1] not in ".!?":
-                self.tts_text += '.'
-
-    def __str__(self):
-        return self.tts_text
-    def __repr__(self):
-        return self.__str__()
 
 
 def split_into_fragments(tag: Tag, target_length: int = 75) -> List[List[Token]]:

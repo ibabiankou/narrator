@@ -1,4 +1,5 @@
 import re
+from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional, Any, Literal, Union, Annotated
 
@@ -70,6 +71,45 @@ class FragmentList(RootModel[List[Fragment]]):
         removed = [f for f in self.root if idref in f.visited_ids]
         self.root = [f for f in self.root if idref not in f.visited_ids]
         return removed
+
+
+@dataclass
+class Token:
+    NORM_PATTERN = re.compile(r'\W+')
+
+    # A slice of the text from the html.
+    raw_text: str
+    # The same slice, but cleaned up for TTS.
+    tts_text: str
+    # The same slice, but normalized for comparison during reconstruction.
+    normalized_text: str
+
+    length: int
+
+    def __init__(self, text: str):
+        self.raw_text = text
+        # TODO: Do a smarter cleanup.
+        self.tts_text = text
+
+        self.normalized_text = self.normalize(text)
+        self.length = len(self.normalized_text)
+
+    @staticmethod
+    def normalize(text: str):
+        return Token.NORM_PATTERN.sub('', text).lower()
+
+    def ensure_ends_with_punctuation(self):
+        """Adds a period to the end of the tts_text unless it's already ends with some punctuation."""
+        if self.tts_text:
+            if self.tts_text[-1] not in ".!?":
+                self.tts_text += '.'
+
+    def __str__(self):
+        return self.tts_text
+    def __repr__(self):
+        return self.__str__()
+
+
 
 
 class FragmentListBuilder(BaseModel):
