@@ -308,3 +308,7 @@ class Epub:
         # noinspection PyUnresolvedReferences
         signature = m.hashvalues.tolist()
         return signature
+
+    def _read_file(self, zip_path: str) -> bytes:
+        with self.zip_file.open(zip_path) as f:
+            return f.read()

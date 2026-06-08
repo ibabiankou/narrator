@@ -270,6 +270,18 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
     return soup.encode(formatter="minimal", encoding='utf-8'), fragments.build(), fragments.current_id
 
 
+def split_raw_text(text: str) -> List[str]:
+    if not text.strip(): return []
+
+    # Clean for NLTK
+    text_clean = re.sub(r'\s+', ' ', text).strip()
+    sentences_clean = nltk.sent_tokenize(text_clean)
+    if not sentences_clean: return []
+
+    # TODO: Here I split into tokens, and return list of token lists.
+    return sentences_clean
+
+
 def process_xhtml_inplace_v2(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:
     try:
         soup = BeautifulSoup(file_bytes, 'xml')
@@ -292,11 +304,7 @@ def process_xhtml_inplace_v2(file_bytes: bytes, global_id_start) -> Tuple[bytes,
             if tag.find(BLOCK_TAGS): continue
 
             full_text_raw = tag.get_text()
-            if not full_text_raw.strip(): continue
-
-            # Clean for NLTK
-            full_text_clean = re.sub(r'\s+', ' ', full_text_raw).strip()
-            sentences_clean = nltk.sent_tokenize(full_text_clean)
+            sentences_clean = split_raw_text(full_text_raw)
             if not sentences_clean: continue
 
             # 1. Fuzzy Boundary Calc
