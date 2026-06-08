@@ -115,7 +115,6 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
             if tag.name not in BLOCK_TAGS: continue
             if tag.find(BLOCK_TAGS): continue
 
-            split_into_fragments(tag)
             full_text_raw = tag.get_text()
             if not full_text_raw.strip(): continue
 
@@ -157,7 +156,12 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
 
                 if isinstance(node, str):
                     text = str(node)
+
+                    LOG.debug("  " * len(open_tags) + "Node is a string, so processing it...")
+
                     while len(text) > 0:
+                        LOG.debug("  " * len(open_tags) + "Remaining text: %s", text)
+
                         if current_sent_idx >= len(split_indices):
                             new_html_content += text
                             current_char_count += len(text)
@@ -187,6 +191,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                                 seg_id = frag.formatted_id()
 
                                 new_html_content += new_span(seg_id)
+                                # TODO: If any of the tags have ID, it would be now duplicated.
                                 for t_name, t_attrs in open_tags:
                                     attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
                                     new_html_content += f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>"
@@ -228,6 +233,8 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                     attr_str = " ".join([f'{k}="{v}"' for k, v in attrs.items()])
                     tag_open = f"<{node.name} {attr_str}>" if attr_str else f"<{node.name}>"
 
+                    LOG.debug("  " * len(open_tags) + "Traversing: %s", node.name)
+
                     if node.name in VOID_TAGS:
                         new_html_content += tag_open.replace(">", " />")
                     else:
@@ -237,12 +244,19 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                             traverse(child, open_tags)
                         new_html_content += f"</{node.name}>"
                         open_tags.pop()
+                        LOG.debug("  " * len(open_tags) + "Exiting: %s", node.name)
+
+                else:
+                    LOG.warning("  " * len(open_tags) + "  >>> Not a string and has no name: %s", node)
+                    raise RuntimeError("Unexpected node type")
 
             for child in tag.contents:
                 traverse(child, [])
 
             new_html_content += "</span>"
 
+            # TODO: The following part is weird as fuck! I wonder if I can build beautiful soup model right away
+            #  and avoid entire string concatenation and parsing shenanigans.
             wrapped_content = f"<body>{new_html_content}</body>"
             new_soup = BeautifulSoup(wrapped_content, 'xml')
             tag.clear()
