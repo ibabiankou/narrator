@@ -3,7 +3,8 @@ import nltk
 import re
 import unicodedata
 from bs4 import BeautifulSoup, Tag
-from typing import Tuple
+from dataclasses import dataclass
+from typing import Tuple, List
 
 from common_lib.models.tts import FragmentList, FragmentListBuilder
 
@@ -45,16 +46,91 @@ def clean_text_for_tts(text):
     text = allowed.sub("", text)
     return re.sub(r'\s+', ' ', text).strip()
 
+
 def new_span(id: str) -> str:
     return f'<span id="{id}" class="nf">'
 
 
-def get_raw_text(tag: Tag):
-    result = tag.get_text()
-    LOG.info("\n%s\n%s", tag, result)
+@dataclass
+class Token:
+    NORM_PATTERN = re.compile(r'\W+')
 
-    return result
+    # A slice of the text from the html.
+    raw_text: str
+    # The same slice, but cleaned up for TTS.
+    tts_text: str
+    # The same slice, but normalized for comparison during reconstruction.
+    normalized_text: str
 
+    length: int
+
+    def __init__(self, text: str):
+        self.raw_text = text
+        # TODO: Do a smarter cleanup.
+        self.tts_text = text
+
+        self.normalized_text = self.normalize(text)
+        self.length = len(self.normalized_text)
+
+    @staticmethod
+    def normalize(text: str):
+        return Token.NORM_PATTERN.sub('', text).lower()
+
+    def ensure_ends_with_punctuation(self):
+        """Adds a period to the end of the tts_text unless it's already ends with some punctuation."""
+        if self.tts_text:
+            if self.tts_text[-1] not in ".!?":
+                self.tts_text += '.'
+
+    def __str__(self):
+        return self.tts_text
+    def __repr__(self):
+        return self.__str__()
+
+
+def split_into_fragments(tag: Tag, target_length: int = 75) -> List[List[Token]]:
+    raw_text = tag.get_text()
+    tokens = [Token(t) for t in tokenize_with_whitespace(raw_text)]
+
+    # Split tokens into fragments.
+    fragments = []
+    total_len = sum([t.length for t in tokens])
+    num_fragments = max(1, round(total_len / target_length))
+    avg_len = total_len / num_fragments
+    remaining_len = avg_len
+    current_fragment: List[Token] = []
+    for token in tokens:
+        if remaining_len <=0:
+            fragments.append(current_fragment)
+            current_fragment = []
+            remaining_len += avg_len
+
+        current_fragment.append(token)
+        remaining_len -= token.length
+    if current_fragment:
+        fragments.append(current_fragment)
+
+    LOG.info("\n%s\n%s\n%s\n%s", tag, raw_text, [t.normalized_text for t in tokens], fragments)
+
+    return fragments
+
+# A screenshot of her message app popped up. It was a conversation between
+# her and Morrigan. Most of it was cut off, and she’d just snapped the last exchange.
+
+# Regex to split a string into tokens on whitespace without loosing anything.
+TOKEN_PATTERN = re.compile(r'\S+\s*|\s+')
+
+def tokenize_with_whitespace(text: str) -> List[str]:
+    """
+    Split the result string into tokens on whitespace characters, preserving all whitespace characters.
+    Each token is a word plus all whitespace characters. Joining all tokens without any separators
+    should reconstruct the original string.
+    """
+    return TOKEN_PATTERN.findall(text)
+
+
+BLOCK_TAGS = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'div', 'table', 'th', 'td'}
+VOID_TAGS = {'br', 'img', 'hr', 'area', 'base', 'col', 'embed', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
 
 def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:
     try:
@@ -67,8 +143,6 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                 tag.decompose()
 
         fragments = FragmentListBuilder(current_id=global_id_start)
-        block_tags = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'div', 'table', 'th', 'td'}
-        VOID_TAGS = {'br', 'img', 'hr', 'area', 'base', 'col', 'embed', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
 
         visited_ids = set()
         for tag in soup.find_all():
@@ -76,29 +150,17 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                 tag_id: str = str(tag.get("id"))
                 visited_ids.add(tag_id)
 
-            # TODO: Would I usually see a section break here, or during raw text extraction?
+            if tag.name not in BLOCK_TAGS: continue
+            if tag.find(BLOCK_TAGS): continue
 
-            if tag.name not in block_tags: continue
-            if tag.find(block_tags): continue
-
-            full_text_raw = get_raw_text(tag)
+            split_into_fragments(tag)
+            full_text_raw = tag.get_text()
             if not full_text_raw.strip(): continue
-
-            # At this point I already lost all the info I need to add punctuation.
-
-            # TODO: Add punctuation to raw text, if it does not end with one.
-            # TODO: Only send to split, if it's too long.
-            # TODO: Catch pauses here.
-            # TODO: Do guessing if it's an acronym or simply all caps... Lower if latter.
 
             # Clean for NLTK
             full_text_clean = re.sub(r'\s+', ' ', full_text_raw).strip()
             sentences_clean = nltk.sent_tokenize(full_text_clean)
             if not sentences_clean: continue
-
-            # TODO: tweak split here. < Should I do it here or before NLTK?
-            # TODO: Further split too long sentences.
-            # TODO: Merge too short sentences.
 
             # 1. Fuzzy Boundary Calc
             split_indices = []
@@ -115,7 +177,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                         end_raw += 1
                     cursor_raw = end_raw
                 else:
-                    cursor_raw = len(full_text_raw) # Fallback
+                    cursor_raw = len(full_text_raw)  # Fallback
                 split_indices.append(cursor_raw)
 
             # 2. Reconstruction
@@ -164,7 +226,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
 
                                 new_html_content += new_span(seg_id)
                                 for t_name, t_attrs in open_tags:
-                                    attr_str = " ".join([f'{k}="{v}"' for k,v in t_attrs.items()])
+                                    attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
                                     new_html_content += f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>"
 
                             # Note: We do NOT consume text here because remaining_len was 0.
@@ -194,14 +256,14 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
 
                                 new_html_content += new_span(seg_id)
                                 for t_name, t_attrs in open_tags:
-                                    attr_str = " ".join([f'{k}="{v}"' for k,v in t_attrs.items()])
+                                    attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
                                     new_html_content += f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>"
 
                             text = text[remaining_len:]
 
                 elif node.name:
                     attrs = {k: " ".join(v) if isinstance(v, list) else v for k, v in node.attrs.items()}
-                    attr_str = " ".join([f'{k}="{v}"' for k,v in attrs.items()])
+                    attr_str = " ".join([f'{k}="{v}"' for k, v in attrs.items()])
                     tag_open = f"<{node.name} {attr_str}>" if attr_str else f"<{node.name}>"
 
                     if node.name in VOID_TAGS:
