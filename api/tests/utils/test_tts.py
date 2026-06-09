@@ -9,7 +9,7 @@ from io import BytesIO
 from xmldiff.main import diff_texts
 
 from api.utils.tts import tokenize_with_whitespace, split_tokens_into_fragments, FragmentInjector, \
-    process_xhtml_inplace_v2
+    process_xhtml_inplace
 from common_lib.models.tts import Token, FragmentListBuilder
 from epub_lib import Epub
 
@@ -33,15 +33,15 @@ class TestTts:
     def test_first(self):
         html_str = "<p>This is a test</p>"
 
-        output_html_bytes, frags, last_id = process_xhtml_inplace_v2(html_str.encode(), 0)
+        output_html_bytes, frags, last_id = process_xhtml_inplace(html_str.encode(), 0)
 
     def test_short_no_punct(self, test_data_loader):
         html_str = test_data_loader("short_no_punct.html")
-        output_html_bytes, frags, last_id = process_xhtml_inplace_v2(html_str.encode(), 0)
+        output_html_bytes, frags, last_id = process_xhtml_inplace(html_str.encode(), 0)
 
     def test_3(self, test_data_loader):
         html_str = test_data_loader("3.html")
-        output_html_bytes, frags, last_id = process_xhtml_inplace_v2(html_str.encode(), 0)
+        output_html_bytes, frags, last_id = process_xhtml_inplace(html_str.encode(), 0)
 
     def test_tokenize_with_whitespace_specific(self, test_data_loader):
         cases = [" ", "\n", "\t", "\r", " word", "word ", " word "]
@@ -80,7 +80,7 @@ class TestTts:
                 content_bytes = epub._read_file(content_file)
 
                 try:
-                    process_xhtml_inplace_v2(content_bytes, 0)
+                    process_xhtml_inplace(content_bytes, 0)
                 except:
                     LOG.error("Failed on file %s", content_file)
 
