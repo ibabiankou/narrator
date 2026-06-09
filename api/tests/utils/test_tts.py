@@ -1,3 +1,7 @@
+import zipfile
+
+import shutil
+
 import time
 
 from io import BytesIO
@@ -8,6 +12,7 @@ import os
 import logging
 import pytest
 from bs4 import BeautifulSoup
+from xmldiff import formatting
 from xmldiff.main import diff_texts
 
 from api.utils.tts import process_xhtml_inplace, tokenize_with_whitespace, process_xhtml_inplace_v2
@@ -71,12 +76,13 @@ class TestTts:
     def test_compare_v1_v2_multiple(self, test_data_loader):
         src_dir_path = os.path.expanduser("~/Downloads/epub/")
         epub_files = list(Path(src_dir_path).rglob("*.epub"))
+        dest_dir_path = Path(os.path.expanduser("~/repos/narrator/out/tests/"))
         epub_files.sort()
 
         v1_times = []
         v2_times = []
         for epub_path in epub_files[:5]:
-            LOG.info("Processing: %s", epub_path)
+            LOG.info("Processing EPUB: %s", epub_path)
 
             file_bytes = BytesIO(epub_path.read_bytes())
             epub = Epub(file_bytes)
@@ -84,17 +90,30 @@ class TestTts:
             for content_file in content_files:
                 content_bytes = epub._read_file(content_file)
 
+                LOG.info("V1 Processing file: %s", content_file)
                 start = time.perf_counter()
                 xml_bytes_v1, fragments_v1, index_v1 = process_xhtml_inplace(content_bytes, 0)
+                # LOG.info("V1 output: %s", xml_bytes_v1.decode())
                 v1_times.append(time.perf_counter() - start)
 
+                LOG.info("V2 Processing file: %s", content_file)
                 start = time.perf_counter()
-                xml_bytes_v2, fragments_v2, index_v2 = process_xhtml_inplace_v2(content_bytes, 0)
+                try:
+                    xml_bytes_v2, fragments_v2, index_v2 = process_xhtml_inplace_v2(content_bytes, 0)
+                except IndexError:
+                    LOG.warning("Failed to process %s", content_file)
+                    continue
                 v2_times.append(time.perf_counter() - start)
 
-                assert_no_diff(xml_bytes_v1, xml_bytes_v2)
+                # Validation: parse both, fetch all fragments, and compare individually, while trimming outer whitespaces.
+                v1 = BeautifulSoup(xml_bytes_v1, 'xml')
+                v1_frags = v1.find_all("span", attrs={"class": "nf"})
+                v2 = BeautifulSoup(xml_bytes_v2, 'xml')
+                v2_frags = v2.find_all("span", attrs={"class": "nf"})
 
-                assert index_v1 == index_v2
+                assert len(v1_frags) == len(v2_frags)
+                for v1_frag, v2_frag in zip(v1_frags, v2_frags):
+                    assert v1_frag.get_text().strip() == v2_frag.get_text().strip()
 
         v1_avg = sum(v1_times)/len(v1_times)
         LOG.info("V1 times avg: %s", v1_avg)

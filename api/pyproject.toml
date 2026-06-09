@@ -45,6 +45,6 @@ addopts = [
     "--import-mode=importlib",
 ]
 log_cli = true
-log_cli_level = "debug"
+log_cli_level = "info"
 log_cli_format = "%(asctime)s [%(levelname)8s] (%(relative_path)40s:%(lineno)s) %(message)s "
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"

@@ -89,7 +89,7 @@ class Token:
     def __init__(self, text: str):
         self.raw_text = text
         # TODO: Do a smarter cleanup.
-        self.tts_text = text
+        self.tts_text = re.sub(r'\s+', ' ', text)
 
         self.normalized_text = self.normalize(text)
         self.length = len(self.normalized_text)
@@ -105,7 +105,7 @@ class Token:
                 self.tts_text += '.'
 
     def __str__(self):
-        return self.tts_text
+        return self.normalized_text
     def __repr__(self):
         return self.__str__()
 
