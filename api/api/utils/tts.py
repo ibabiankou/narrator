@@ -2,49 +2,12 @@ from collections import deque, defaultdict
 
 import logging
 import re
-import unicodedata
 from bs4 import BeautifulSoup, Tag
 from typing import Tuple, List, Set, Optional
 
 from common_lib.models.tts import FragmentList, FragmentListBuilder, Token
 
 LOG = logging.getLogger(__name__)
-
-
-# class Quotes(LineTransformer):
-#     pairs = {
-#         "“": "\"",
-#         "”": "\"",
-#         "«": "\"",
-#         "»": "\"",
-#         "‹": "'",
-#         "›": "'",
-#         "‘": "'",
-#         "’": "'",
-#     }
-#
-#     def __call__(self, line: str) -> str:
-#         for key, value in self.pairs.items():
-#             line = line.replace(key, value)
-#         return line
-
-
-def clean_text_for_tts(text):
-    """
-    Cleans text for TTS only. Visual text remains untouched.
-    """
-    # TODO Ensure apostrophe in height measuremenets are not removed. Or replaced with words.
-    text = unicodedata.normalize('NFKC', text)
-    text = re.sub(r'\.\s*\.\s*\.', '...', text)
-    text = text.replace('—', ', ').replace('–', '-')
-    text = re.sub(r'(?<=[a-zA-Z])[\u2018\u2019\u0027](?=[a-zA-Z])', '___APO___', text)
-    text = re.sub(r'["“”‘’\']', '', text)
-    text = text.replace('___APO___', "'")
-    text = re.sub(r'[!]{2,}', '!', text)
-    text = re.sub(r'[?]{2,}', '?', text)
-    allowed = re.compile(r"[^a-zA-Z0-9\s.,?!;:'-]")
-    text = allowed.sub("", text)
-    return re.sub(r'\s+', ' ', text).strip()
 
 
 def new_span(id: str) -> str:
@@ -147,12 +110,17 @@ class FragmentInjector:
     def inject(self):
         # Split the content into fragments.
         tag_tokens = tokenize_tag_content(self.tag)
+        if self.only_empty(tag_tokens):
+            return
+
+        if tag_tokens:
+            # Assuming that injection only happens on block elements such as paragraph or div.
+            # Therefore, we want to ensure punctuation is present at the end to have an appropriate pause.
+            tag_tokens[-1].add_punctuation_in_tts = True
 
         if self._scene_break(tag_tokens):
             self.fragments.add_pause(1, [])
             return
-
-        if not tag_tokens: return
 
         self.pending_fragments.extend(split_tokens_into_fragments(tag_tokens, target_length=self.target_length))
 
@@ -168,6 +136,12 @@ class FragmentInjector:
         if new_soup.body:
             for child in list(new_soup.body.contents): self.tag.append(child)
 
+    def only_empty(self, tokens: List[Token]):
+        for t in tokens:
+            if not t._tts_text.isspace():
+                return False
+        return True
+
     @staticmethod
     def _scene_break(tokens: List[Token]):
         """Returns True if we consider tokens to represent a scene break.
@@ -177,7 +151,11 @@ class FragmentInjector:
             for c in t.raw_text:
                 if c.isspace(): continue
                 char_dict[c] += 1
-        return len(char_dict) == 1 and not char_dict.popitem()[0].isalnum()
+        if len(char_dict) == 1:
+            character, count = char_dict.popitem()
+            if not character.isalnum() and count > 1:
+                return True
+        return False
 
     def traverse(self, node):
         self.open_fragment_if_needed()
@@ -233,8 +211,7 @@ class FragmentInjector:
                     self.new_content.append(f"</{t_name}>")
                 self.new_content.append(f"</span>")
 
-            added_fragment = self.fragments.add_text("".join([t.tts_text for t in next_fragment]),
-                                                     list(self.visited_ids))
+            added_fragment = self.fragments.add_tokens(next_fragment, list(self.visited_ids))
             self.current_fragment = added_fragment
 
             # Open newly added fragment and re-open all tags.

@@ -36,15 +36,15 @@ class TestTts:
             ([Token("---")], True),
             ([Token("___")], True),
             ([Token("***")], True),
-            ([Token("!")], True),
             ([Token("◆◆◆")], True),
             ([Token("")], False),
             ([Token(" ")], False),
+            ([Token("&")], False),
             ([Token("aaa")], False),
             ([Token("888")], False),
         ]
         for case in cases:
-            assert FragmentInjector._scene_break(case[0]) == case[1]
+            assert FragmentInjector._scene_break(case[0]) == case[1], f"Expected {case[1]} for {case[0]}"
 
     def test_first(self):
         html_str = "<p>This is a test</p>"

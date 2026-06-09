@@ -1,10 +1,13 @@
+import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Any, Literal, Union, Annotated, Tuple
+from typing import List, Optional, Any, Literal, Union, Annotated
 
 import unicodedata
 from pydantic import BaseModel, RootModel, field_serializer, field_validator, Field
+
+LOG = logging.getLogger(__name__)
 
 
 class FragmentType(str, Enum):
@@ -96,16 +99,17 @@ class Token:
     # A slice of the text from the html.
     raw_text: str
     # The same slice, but cleaned up for TTS.
-    tts_text: str
+    _tts_text: str
     # The same slice, but normalized for comparison during reconstruction.
     normalized_text: str
 
     length: int
+    # Flag indicating punctuation should be added at the end of the text, if not already present.
     add_punctuation_in_tts: bool = False
 
     def __init__(self, text: str):
         self.raw_text = text
-        self.tts_text = self._clean_for_tts(text)
+        self._tts_text = self._clean_for_tts(text)
 
         self.normalized_text = self.normalize(text)
         self.length = len(self.normalized_text)
@@ -113,6 +117,20 @@ class Token:
     @staticmethod
     def normalize(text: str):
         return Token.NORM_PATTERN.sub('', text).lower()
+
+    def tts_text(self):
+        if not self.add_punctuation_in_tts:
+            return self._tts_text
+
+        if self._tts_text and self._tts_text[-1].isspace():
+            return self._add_punctuation(self._tts_text.rstrip()) + " "
+        else:
+            return self._add_punctuation(self._tts_text)
+
+    def _add_punctuation(self, text: str):
+        if text and text[-1] not in ":;,.!?":
+            return text + "."
+        return text
 
     def starts_with_whitespace(self):
         s = self.raw_text
@@ -151,15 +169,15 @@ class FragmentListBuilder(BaseModel):
         self.fragments.append(frag)
         return frag
 
-    def add_text(self, text: str, visited_ids: List[str]) -> Fragment:
-        frag = TextFragment(id=self.next_id(), text=text, visited_ids=visited_ids)
-        self.fragments.append(frag)
-        return frag
-
     def build(self):
         # noinspection PyArgumentList
         return FragmentList(self.fragments)
 
+    def add_tokens(self, tokens: List[Token], visited_ids: List[str]) -> Fragment:
+        text = "".join([t.tts_text() for t in tokens])
+        frag = TextFragment(id=self.next_id(), text=text, visited_ids=visited_ids)
+        self.fragments.append(frag)
+        return frag
 
 class FragmentDuration(FragmentId):
     duration: float

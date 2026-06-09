@@ -35,7 +35,7 @@ class TestEpubService:
             with open(file_name, "wb") as f:
                 f.write(clean_epub.getvalue())
 
-    # @pytest.mark.skip(reason="For manual execution.")
+    @pytest.mark.skip(reason="For manual execution.")
     def test_inline_fragments(self):
         src_dir_path = os.path.expanduser("~/Downloads/epub/")
         dest_dir_path = Path(os.path.expanduser("~/repos/narrator/out/fragments/"))
