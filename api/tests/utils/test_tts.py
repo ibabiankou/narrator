@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup, Tag
 from io import BytesIO
 from xmldiff.main import diff_texts
 
-from api.utils.tts import process_xhtml_inplace, tokenize_with_whitespace, process_xhtml_inplace_v2, BLOCK_TAGS, \
+from api.utils.tts import process_xhtml_inplace, tokenize_with_whitespace, BLOCK_TAGS, \
     tokenize_tag_content, split_tokens_into_fragments, FragmentInjector
 from common_lib.models.tts import Token, FragmentListBuilder
 from epub_lib import Epub
@@ -63,17 +63,6 @@ class TestTts:
             assert len(full_text) > 0
             assert full_text == reconstructed
 
-    def test_compare_v1_v2(self, test_data_loader):
-        files = ["short_no_punct.html", "3.html"]
-        for file in files:
-            html_str = test_data_loader(file)
-
-            xml_bytes_v1, fragments_v1, index_v1 = process_xhtml_inplace(html_str.encode(), 0)
-            xml_bytes_v2, fragments_v2, index_v2 = process_xhtml_inplace_v2(html_str.encode(), 0)
-
-            assert_no_diff(xml_bytes_v1, xml_bytes_v2)
-
-            assert index_v1 == index_v2
 
     @pytest.mark.skip(reason="For manual execution.")
     def test_tokenize_tag_content_real_books(self, test_data_loader):
@@ -118,19 +107,87 @@ class TestTts:
 
         assert len(fragments) == 1, "Should not split tokens without whitespace in between."
 
-    # Test frag injector:
-    def test_fragment_injector(self, test_data_loader):
+    def test_fragment_injector_text_only(self, test_data_loader):
         html_str = test_data_loader("fragment_injector.html")
         soup = BeautifulSoup(html_str, 'xml')
 
         # noinspection PyTypeChecker
-        tag: Tag = soup.find(attrs={"id": "mid-split"})
-
-        assert type(tag) is Tag
+        tag: Tag = soup.find(attrs={"id": "text-only"})
+        assert tag is not None
 
         fb = FragmentListBuilder()
-        fi = FragmentInjector(tag, fb, set(), target_length=50)
-        result_maybe = fi.inject()
+        fi = FragmentInjector(tag, fb, set(), target_length=20)
+        fi.inject()
 
-        LOG.info("Raw: \n%s", tag.get_text())
-        LOG.info("Result: \n%s", result_maybe)
+        expected_html = """
+        <p id="text-only"><span class="nf" id="n-0">The idea helps explain </span><span class="nf" id="n-1">why free markets.</span></p>
+        """
+        assert expected_html.strip() == str(tag)
+
+    def test_fragment_injector_has_tag(self, test_data_loader):
+        html_str = test_data_loader("fragment_injector.html")
+        soup = BeautifulSoup(html_str, 'xml')
+
+        # noinspection PyTypeChecker
+        tag: Tag = soup.find(attrs={"id": "with-tag"})
+        assert tag is not None
+
+        fb = FragmentListBuilder()
+        fi = FragmentInjector(tag, fb, set(), target_length=20)
+        fi.inject()
+
+        expected_html = """
+        <p id="with-tag"><span class="nf" id="n-0">The <b>idea</b> helps explain </span><span class="nf" id="n-1">why free markets.</span></p>
+        """
+        assert expected_html.strip() == str(tag)
+
+    def test_fragment_injector_mid_tag(self, test_data_loader):
+        html_str = test_data_loader("fragment_injector.html")
+        soup = BeautifulSoup(html_str, 'xml')
+
+        # noinspection PyTypeChecker
+        tag: Tag = soup.find(attrs={"id": "mid-tag"})
+        assert tag is not None
+
+        fb = FragmentListBuilder()
+        fi = FragmentInjector(tag, fb, set(), target_length=20)
+        fi.inject()
+
+        expected_html = """
+        <p id="mid-tag"><span class="nf" id="n-0">The <b>idea helps explain </b></span><span class="nf" id="n-1"><b>why free</b> markets.</span></p>
+        """
+        assert expected_html.strip() == str(tag)
+
+    def test_fragment_injector_end_tag(self, test_data_loader):
+        html_str = test_data_loader("fragment_injector.html")
+        soup = BeautifulSoup(html_str, 'xml')
+
+        # noinspection PyTypeChecker
+        tag: Tag = soup.find(attrs={"id": "end-tag"})
+        assert tag is not None
+
+        fb = FragmentListBuilder()
+        fi = FragmentInjector(tag, fb, set(), target_length=20)
+        fi.inject()
+
+        expected_html = """
+        <p id="end-tag"><span class="nf" id="n-0">The <b>idea helps explain </b></span><span class="nf" id="n-1">why free markets.</span></p>
+        """
+        assert expected_html.strip() == str(tag)
+
+    def test_fragment_injector_start_tag(self, test_data_loader):
+        html_str = test_data_loader("fragment_injector.html")
+        soup = BeautifulSoup(html_str, 'xml')
+
+        # noinspection PyTypeChecker
+        tag: Tag = soup.find(attrs={"id": "start-tag"})
+        assert tag is not None
+
+        fb = FragmentListBuilder()
+        fi = FragmentInjector(tag, fb, set(), target_length=20)
+        fi.inject()
+
+        expected_html = """
+        <p id="start-tag"><span class="nf" id="n-0">The idea helps explain </span><span class="nf" id="n-1"><b>why free </b>markets.</span></p>
+        """
+        assert expected_html.strip() == str(tag)

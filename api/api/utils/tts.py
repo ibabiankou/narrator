@@ -215,6 +215,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
                     if node.name in VOID_TAGS:
                         new_html_content += tag_open.replace(">", " />")
                     else:
+                        # Open if needed
                         open_tags.append((node.name, attrs))
                         new_html_content += tag_open
                         for child in node.contents:
@@ -298,7 +299,7 @@ class FragmentInjector:
                  visited_ids: Optional[Set[str]]= None,
                  target_length: int = 75):
         # Updated content of the tag to be concatenated.
-        self.new_content = []
+        self.new_content = ["<body>"]
 
         self.tag = tag
         self.fragments = fragments
@@ -313,32 +314,44 @@ class FragmentInjector:
         self.tag_q = deque[Token]()
 
         self.pending_fragments: deque[List[Token]] = deque()
-        # self.current_fragment_idx = 0
+        self.current_fragment = None
 
         self.open_tag_stack = []
 
-    def inject(self) -> Optional[str]:
+    def inject(self):
         # Split the content into fragments.
         tag_tokens = tokenize_tag_content(self.tag)
-        if not tag_tokens: return None
+        if not tag_tokens: return
+
         self.pending_fragments.extend(split_tokens_into_fragments(tag_tokens, target_length=self.target_length))
 
-        # Open the first pending fragment.
-        self.open_fragment()
-
-        # Inject fragment boundaries.
         for child in self.tag.contents:
             self.traverse(child)
+        self.new_content.append(f"</span>")
 
-        self.close_fragment()
-        return "".join(self.new_content)
+        # TODO: The following part is weird as fuck! I wonder if I can build beautiful soup model right away
+        #  and avoid entire string concatenation and parsing shenanigans.
+        self.new_content.append("</body>")
+        new_soup = BeautifulSoup("".join(self.new_content), 'xml')
+        self.tag.clear()
+        if new_soup.body:
+            for child in list(new_soup.body.contents): self.tag.append(child)
 
-    def open_fragment(self):
+        return self.tag
+
+    def open_fragment_if_needed(self):
         if len(self.frag_q) == 0 and len(self.pending_fragments) > 0:
             next_fragment = self.pending_fragments.popleft()
             self.frag_q.extend(next_fragment)
 
+            # Close the current fragment, if present
+            if self.current_fragment is not None:
+                for t_name, _ in reversed(self.open_tag_stack):
+                    self.new_content.append(f"</{t_name}>")
+                self.new_content.append(f"</span>")
+
             added_fragment = self.fragments.add_text("".join([t.tts_text for t in next_fragment]), list(self.visited_ids))
+            self.current_fragment = added_fragment
 
             # Open newly added fragment and re-open all tags.
             self.new_content.append(new_span(added_fragment.formatted_id()))
@@ -346,20 +359,12 @@ class FragmentInjector:
                 attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
                 self.new_content.append(f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>")
 
-    def close_fragment(self):
-        for t_name, _ in reversed(self.open_tag_stack):
-            self.new_content.append(f"</{t_name}>")
-        self.new_content.append("</span>")
-
-
     def traverse(self, node):
+        self.open_fragment_if_needed()
+
         if isinstance(node, str):
             node_tokens = [Token(t) for t in tokenize_with_whitespace(node)]
             self.tag_q.extend(node_tokens)
-
-            if len(self.frag_q) == 0:
-                # We have new content, but no
-                self.open_fragment()
 
             while len(self.tag_q) > 0:
                 tag_tok = self.tag_q.popleft()
@@ -370,13 +375,9 @@ class FragmentInjector:
 
                 self.new_content.append(tag_tok.raw_text)
 
-                if len(self.frag_q) == 0:
-                    # We have reached the end of the fragment, so we need to insert markup here.
-                    self.close_fragment()
-
-                    if len(self.tag_q) > 0:
-                        # We still have more tokens in this tag, so we also need to open the next fragment.
-                        self.open_fragment()
+                if len(self.frag_q) == 0 and len(self.tag_q) > 0:
+                    # End of the fragment is reached, but we have more content here, so open another one.
+                    self.open_fragment_if_needed()
 
         elif node.name: # TODO: figure out where name is added and do a nicer check to keep the type info.
             # Current node is a tag node, open in and add to the open_tag_stack
@@ -558,17 +559,8 @@ def process_xhtml_inplace_v2(file_bytes: bytes, global_id_start) -> Tuple[bytes,
             if tag.name not in BLOCK_TAGS: continue
             if tag.find(BLOCK_TAGS): continue
 
-            new_html_content = fragment_tag_content(tag, fragments, visited_ids)
-            if new_html_content is None:
-                continue
-
-            # TODO: The following part is weird as fuck! I wonder if I can build beautiful soup model right away
-            #  and avoid entire string concatenation and parsing shenanigans.
-            wrapped_content = f"<body>{new_html_content}</body>"
-            new_soup = BeautifulSoup(wrapped_content, 'xml')
-            tag.clear()
-            if new_soup.body:
-                for child in list(new_soup.body.contents): tag.append(child)
+            injector = FragmentInjector(tag, fragments, visited_ids)
+            injector.inject()
 
     except Exception as e:
         LOG.error("Failed to fragment the content: %s", e, exc_info=True)
