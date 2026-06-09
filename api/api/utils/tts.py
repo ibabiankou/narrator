@@ -5,7 +5,7 @@ import nltk
 import re
 import unicodedata
 from bs4 import BeautifulSoup, Tag
-from typing import Tuple, List
+from typing import Tuple, List, Set, Optional
 
 from common_lib.models.tts import FragmentList, FragmentListBuilder, Token
 
@@ -52,37 +52,9 @@ def new_span(id: str) -> str:
     return f'<span id="{id}" class="nf">'
 
 
-def split_into_fragments(tag: Tag, target_length: int = 75) -> List[List[Token]]:
-    raw_text = tag.get_text()
-    tokens = [Token(t) for t in tokenize_with_whitespace(raw_text)]
-
-    # Split tokens into fragments.
-    fragments = []
-    total_len = sum([t.length for t in tokens])
-    num_fragments = max(1, round(total_len / target_length))
-    avg_len = total_len / num_fragments
-    remaining_len = avg_len
-    current_fragment: List[Token] = []
-    for token in tokens:
-        if remaining_len <=0:
-            fragments.append(current_fragment)
-            current_fragment = []
-            remaining_len += avg_len
-
-        current_fragment.append(token)
-        remaining_len -= token.length
-    if current_fragment:
-        fragments.append(current_fragment)
-
-    LOG.info("\n%s\n%s\n%s\n%s", tag, raw_text, [t.normalized_text for t in tokens], fragments)
-
-    return fragments
-
-# A screenshot of her message app popped up. It was a conversation between
-# her and Morrigan. Most of it was cut off, and she’d just snapped the last exchange.
-
 # Regex to split a string into tokens on whitespace without loosing anything.
 TOKEN_PATTERN = re.compile(r'\S+\s*|\s+')
+
 
 def tokenize_with_whitespace(text: str) -> List[str]:
     """
@@ -94,7 +66,9 @@ def tokenize_with_whitespace(text: str) -> List[str]:
 
 
 BLOCK_TAGS = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'div', 'table', 'th', 'td'}
-VOID_TAGS = {'br', 'img', 'hr', 'area', 'base', 'col', 'embed', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
+VOID_TAGS = {'br', 'img', 'hr', 'area', 'base', 'col', 'embed', 'input', 'link', 'meta', 'param', 'source', 'track',
+             'wbr'}
+
 
 def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:
     LOG.debug("V1 Start...")
@@ -276,6 +250,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
 
 def tokenize_tag_content(tag: Tag) -> List[Token]:
     all_tokens = []
+
     def traverse(node):
         """Do an in-order depth-first traversal of the tag tree. Tokenize each string node."""
         if isinstance(node, str):
@@ -284,13 +259,172 @@ def tokenize_tag_content(tag: Tag) -> List[Token]:
         elif node.name:
             for child in node.contents:
                 traverse(child)
+
     traverse(tag)
     return all_tokens
 
 
-def split_tokens_into_fragments(tokens: List[Token], target_len: int = 75) -> List[List[Token]]:
+def split_tokens_into_fragments(tokens: List[Token], target_length: int = 75) -> List[List[Token]]:
+    if not tokens: return []
 
-    return []
+    fragments = []
+    total_len = sum([t.length for t in tokens])
+    num_fragments = max(1, round(total_len / target_length))
+    avg_len = total_len / num_fragments
+
+    remaining_len = avg_len
+    current_fragment: List[Token] = []
+    for token in tokens:
+        if remaining_len <= 0:
+            # Only split fragments where there is whitespace between edge elements.
+            if current_fragment[-1].ends_with_whitespace() or token.starts_with_whitespace():
+                fragments.append(current_fragment)
+                current_fragment = []
+                remaining_len += avg_len
+
+        current_fragment.append(token)
+        remaining_len -= token.length
+    if current_fragment:
+        fragments.append(current_fragment)
+    return fragments
+
+
+def fragment_tag_content(tag: Tag, fragments: FragmentListBuilder, visited_ids: Set[str]) -> Optional[str]:
+    tag_tokens = tokenize_tag_content(tag)
+    sentences_clean: List[List[Token]] = split_tokens_into_fragments(tag_tokens)
+    if not sentences_clean: return None
+
+    # Inject fragment boundaries.
+    new_html_content = ""
+    current_sent_idx = 0
+
+    sent_q = deque[Token]()
+    tag_q = deque[Token]()
+
+    current_sent = sentences_clean[current_sent_idx]
+    sent_q.extend(current_sent)
+    frag = fragments.add_text("".join([t.tts_text for t in current_sent]), list(visited_ids))
+    seg_id = frag.formatted_id()
+
+    new_html_content += new_span(seg_id)
+
+    def traverse(node, open_tags):
+        nonlocal new_html_content, current_sent_idx
+
+        if isinstance(node, str):
+            text = str(node)
+
+            # Split text into tokens.
+            tokens = [Token(t) for t in tokenize_with_whitespace(text)]
+            tag_q.extend(tokens)
+
+            LOG.debug("  " * len(open_tags) + "Node is a string, so processing it...")
+            LOG.debug("  " * len(open_tags) + "\nnode tokens: %s\nsent tokens: %s\nopen tags: %s", tag_q,
+                      sent_q, open_tags)
+
+            # Iterate over both tokens and current "sentence";
+            # If run out of sentence tokens, inject the span tags.
+            # If run out of text tokens, return and wait for the next tag.
+
+            # 1. tag has more tokens than sentence.
+
+            while len(tag_q) > 0:  # Handle all tokens in the current tag.
+                if len(sent_q) == 0:
+                    # A new sentence is needed. So pick it up.
+                    LOG.debug("  " * len(
+                        open_tags) + "Reached end of sentence. Closing span and taking next sentence.")
+
+                    # Close current fragment
+                    for t_name, _ in reversed(open_tags): new_html_content += f"</{t_name}>"
+                    new_html_content += "</span>"
+
+                    # Take next sentence.
+                    current_sent_idx += 1
+
+                    # Start Next fragment (if sentence exists)
+                    if current_sent_idx < len(sentences_clean):
+                        sentence_tokens = sentences_clean[current_sent_idx]
+                        sent_q.extend(sentence_tokens)
+                        frag = fragments.add_text("".join([t.tts_text for t in sentence_tokens]),
+                                                  list(visited_ids))
+                        seg_id = frag.formatted_id()
+
+                        new_html_content += new_span(seg_id)
+                        # TODO: If any of the tags have ID, it would be now duplicated.
+                        for t_name, t_attrs in open_tags:
+                            attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
+                            new_html_content += f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>"
+                    else:
+                        if len(tag_q) > 0:
+                            raise ValueError("Tag has more tokens, but no more sentences!")
+
+                tag_tok = tag_q.popleft()
+                sent_tok = sent_q.popleft()
+                if tag_tok.normalized_text != sent_tok.normalized_text:
+                    raise ValueError(f"Token mismatch: '{tag_tok}' != '{sent_tok}'")
+
+                new_html_content += tag_tok.raw_text
+
+                if len(sent_q) == 0 and len(tag_q) == 0:
+                    LOG.debug(
+                        "  " * len(open_tags) + "Reached end of sentence and tag together. Breaking cycle.")
+                    break
+
+                if len(sent_q) == 0:  # Reached end of the sentence/fragment, so close, take next, continue.
+                    LOG.debug("  " * len(
+                        open_tags) + "Reached end of sentence. Closing span and taking next sentence.")
+
+                    # Close current fragment
+                    for t_name, _ in reversed(open_tags): new_html_content += f"</{t_name}>"
+                    new_html_content += "</span>"
+
+                    # Take next sentence.
+                    current_sent_idx += 1
+
+                    # Start Next fragment (if sentence exists)
+                    if current_sent_idx < len(sentences_clean):
+                        sentence_tokens = sentences_clean[current_sent_idx]
+                        sent_q.extend(sentence_tokens)
+                        frag = fragments.add_text("".join([t.tts_text for t in sentence_tokens]),
+                                                  list(visited_ids))
+                        seg_id = frag.formatted_id()
+
+                        new_html_content += new_span(seg_id)
+                        # TODO: If any of the tags have ID, it would be now duplicated.
+                        for t_name, t_attrs in open_tags:
+                            attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
+                            new_html_content += f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>"
+                    else:
+                        if len(tag_q) > 0:
+                            raise ValueError("Tag has more tokens, but no more sentences!")
+
+        elif node.name:
+            attrs = {k: " ".join(v) if isinstance(v, list) else v for k, v in node.attrs.items()}
+            attr_str = " ".join([f'{k}="{v}"' for k, v in attrs.items()])
+            tag_open = f"<{node.name} {attr_str}>" if attr_str else f"<{node.name}>"
+
+            LOG.debug("  " * len(open_tags) + "Traversing: %s", node.name)
+
+            if node.name in VOID_TAGS:
+                new_html_content += tag_open.replace(">", " />")
+            else:
+                open_tags.append((node.name, attrs))
+                new_html_content += tag_open
+                for child in node.contents:
+                    traverse(child, open_tags)
+                new_html_content += f"</{node.name}>"
+                open_tags.pop()
+                LOG.debug("  " * len(open_tags) + "Exiting: %s", node.name)
+
+        else:
+            LOG.warning("  " * len(open_tags) + "  >>> Not a string and has no name: %s", node)
+            raise RuntimeError("Unexpected node type")
+
+    for child in tag.contents:
+        traverse(child, [])
+
+    new_html_content += "</span>"
+    return new_html_content
 
 
 def process_xhtml_inplace_v2(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:
@@ -309,133 +443,9 @@ def process_xhtml_inplace_v2(file_bytes: bytes, global_id_start) -> Tuple[bytes,
             if tag.name not in BLOCK_TAGS: continue
             if tag.find(BLOCK_TAGS): continue
 
-            sentences_clean: List[List[Token]] = []
-            if not sentences_clean: continue
-
-            # Inject fragment boundaries.
-            new_html_content = ""
-            current_sent_idx = 0
-
-            sent_q = deque[Token]()
-            tag_q = deque[Token]()
-
-            current_sent = sentences_clean[current_sent_idx]
-            sent_q.extend(current_sent)
-            frag = fragments.add_text("".join([t.tts_text for t in current_sent]), list(visited_ids))
-            seg_id = frag.formatted_id()
-
-            new_html_content += new_span(seg_id)
-
-            def traverse(node, open_tags):
-                nonlocal new_html_content, current_sent_idx
-
-                if isinstance(node, str):
-                    text = str(node)
-
-                    # Split text into tokens.
-                    tokens = [Token(t) for t in tokenize_with_whitespace(text)]
-                    tag_q.extend(tokens)
-
-                    LOG.debug("  " * len(open_tags) + "Node is a string, so processing it...")
-                    LOG.debug("  " * len(open_tags) + "\nnode tokens: %s\nsent tokens: %s\nopen tags: %s", tag_q, sent_q, open_tags)
-
-                    # Iterate over both tokens and current "sentence";
-                    # If run out of sentence tokens, inject the span tags.
-                    # If run out of text tokens, return and wait for the next tag.
-
-                    # 1. tag has more tokens than sentence.
-
-                    while len(tag_q) > 0: # Handle all tokens in the current tag.
-                        if len(sent_q) == 0:
-                            # A new sentence is needed. So pick it up.
-                            LOG.debug("  " * len(open_tags) + "Reached end of sentence. Closing span and taking next sentence.")
-
-                            # Close current fragment
-                            for t_name, _ in reversed(open_tags): new_html_content += f"</{t_name}>"
-                            new_html_content += "</span>"
-
-                            # Take next sentence.
-                            current_sent_idx += 1
-
-                            # Start Next fragment (if sentence exists)
-                            if current_sent_idx < len(sentences_clean):
-                                sentence_tokens = sentences_clean[current_sent_idx]
-                                sent_q.extend(sentence_tokens)
-                                frag = fragments.add_text("".join([t.tts_text for t in sentence_tokens]), list(visited_ids))
-                                seg_id = frag.formatted_id()
-
-                                new_html_content += new_span(seg_id)
-                                # TODO: If any of the tags have ID, it would be now duplicated.
-                                for t_name, t_attrs in open_tags:
-                                    attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
-                                    new_html_content += f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>"
-                            else:
-                                if len(tag_q) > 0:
-                                    raise ValueError("Tag has more tokens, but no more sentences!")
-
-                        tag_tok = tag_q.popleft()
-                        sent_tok = sent_q.popleft()
-                        if tag_tok.normalized_text != sent_tok.normalized_text:
-                            raise ValueError(f"Token mismatch: '{tag_tok}' != '{sent_tok}'")
-
-                        new_html_content += tag_tok.raw_text
-
-                        if len(sent_q) == 0 and len(tag_q) == 0:
-                            LOG.debug("  " * len(open_tags) + "Reached end of sentence and tag together. Breaking cycle.")
-                            break
-
-                        if len(sent_q) == 0: # Reached end of the sentence/fragment, so close, take next, continue.
-                            LOG.debug("  " * len(open_tags) + "Reached end of sentence. Closing span and taking next sentence.")
-
-                            # Close current fragment
-                            for t_name, _ in reversed(open_tags): new_html_content += f"</{t_name}>"
-                            new_html_content += "</span>"
-
-                            # Take next sentence.
-                            current_sent_idx += 1
-
-                            # Start Next fragment (if sentence exists)
-                            if current_sent_idx < len(sentences_clean):
-                                sentence_tokens = sentences_clean[current_sent_idx]
-                                sent_q.extend(sentence_tokens)
-                                frag = fragments.add_text("".join([t.tts_text for t in sentence_tokens]), list(visited_ids))
-                                seg_id = frag.formatted_id()
-
-                                new_html_content += new_span(seg_id)
-                                # TODO: If any of the tags have ID, it would be now duplicated.
-                                for t_name, t_attrs in open_tags:
-                                    attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
-                                    new_html_content += f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>"
-                            else:
-                                if len(tag_q) > 0:
-                                    raise ValueError("Tag has more tokens, but no more sentences!")
-
-                elif node.name:
-                    attrs = {k: " ".join(v) if isinstance(v, list) else v for k, v in node.attrs.items()}
-                    attr_str = " ".join([f'{k}="{v}"' for k, v in attrs.items()])
-                    tag_open = f"<{node.name} {attr_str}>" if attr_str else f"<{node.name}>"
-
-                    LOG.debug("  " * len(open_tags) + "Traversing: %s", node.name)
-
-                    if node.name in VOID_TAGS:
-                        new_html_content += tag_open.replace(">", " />")
-                    else:
-                        open_tags.append((node.name, attrs))
-                        new_html_content += tag_open
-                        for child in node.contents:
-                            traverse(child, open_tags)
-                        new_html_content += f"</{node.name}>"
-                        open_tags.pop()
-                        LOG.debug("  " * len(open_tags) + "Exiting: %s", node.name)
-
-                else:
-                    LOG.warning("  " * len(open_tags) + "  >>> Not a string and has no name: %s", node)
-                    raise RuntimeError("Unexpected node type")
-
-            for child in tag.contents:
-                traverse(child, [])
-
-            new_html_content += "</span>"
+            new_html_content = fragment_tag_content(tag, fragments, visited_ids)
+            if new_html_content is None:
+                continue
 
             # TODO: The following part is weird as fuck! I wonder if I can build beautiful soup model right away
             #  and avoid entire string concatenation and parsing shenanigans.

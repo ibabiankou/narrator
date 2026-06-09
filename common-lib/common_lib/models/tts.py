@@ -98,6 +98,14 @@ class Token:
     def normalize(text: str):
         return Token.NORM_PATTERN.sub('', text).lower()
 
+    def starts_with_whitespace(self):
+        s = self.raw_text
+        return bool(s and s[0].isspace())
+
+    def ends_with_whitespace(self):
+        s = self.raw_text
+        return bool(s and s[-1].isspace())
+
     def ensure_ends_with_punctuation(self):
         """Adds a period to the end of the tts_text unless it's already ends with some punctuation."""
         if self.tts_text:
