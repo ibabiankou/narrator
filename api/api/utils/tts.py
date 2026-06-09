@@ -291,25 +291,27 @@ def split_tokens_into_fragments(tokens: List[Token], target_length: int = 75) ->
 
 def fragment_tag_content(tag: Tag, fragments: FragmentListBuilder, visited_ids: Set[str]) -> Optional[str]:
     tag_tokens = tokenize_tag_content(tag)
-    sentences_clean: List[List[Token]] = split_tokens_into_fragments(tag_tokens)
-    if not sentences_clean: return None
+    planned_fragments: List[List[Token]] = split_tokens_into_fragments(tag_tokens)
+    if not planned_fragments: return None
 
     # Inject fragment boundaries.
     new_html_content = ""
-    current_sent_idx = 0
+    current_fragment_idx = 0
 
-    sent_q = deque[Token]()
+    # Unprocessed tokens in the current fragment.
+    frag_q = deque[Token]()
+    # Unprocessed tokens in the current tag.
     tag_q = deque[Token]()
 
-    current_sent = sentences_clean[current_sent_idx]
-    sent_q.extend(current_sent)
-    frag = fragments.add_text("".join([t.tts_text for t in current_sent]), list(visited_ids))
+    current_fragment = planned_fragments[current_fragment_idx]
+    frag_q.extend(current_fragment)
+    frag = fragments.add_text("".join([t.tts_text for t in current_fragment]), list(visited_ids))
     seg_id = frag.formatted_id()
 
     new_html_content += new_span(seg_id)
 
     def traverse(node, open_tags):
-        nonlocal new_html_content, current_sent_idx
+        nonlocal new_html_content, current_fragment_idx
 
         if isinstance(node, str):
             text = str(node)
@@ -320,7 +322,7 @@ def fragment_tag_content(tag: Tag, fragments: FragmentListBuilder, visited_ids: 
 
             LOG.debug("  " * len(open_tags) + "Node is a string, so processing it...")
             LOG.debug("  " * len(open_tags) + "\nnode tokens: %s\nsent tokens: %s\nopen tags: %s", tag_q,
-                      sent_q, open_tags)
+                      frag_q, open_tags)
 
             # Iterate over both tokens and current "sentence";
             # If run out of sentence tokens, inject the span tags.
@@ -329,7 +331,7 @@ def fragment_tag_content(tag: Tag, fragments: FragmentListBuilder, visited_ids: 
             # 1. tag has more tokens than sentence.
 
             while len(tag_q) > 0:  # Handle all tokens in the current tag.
-                if len(sent_q) == 0:
+                if len(frag_q) == 0:
                     # A new sentence is needed. So pick it up.
                     LOG.debug("  " * len(
                         open_tags) + "Reached end of sentence. Closing span and taking next sentence.")
@@ -339,12 +341,12 @@ def fragment_tag_content(tag: Tag, fragments: FragmentListBuilder, visited_ids: 
                     new_html_content += "</span>"
 
                     # Take next sentence.
-                    current_sent_idx += 1
+                    current_fragment_idx += 1
 
                     # Start Next fragment (if sentence exists)
-                    if current_sent_idx < len(sentences_clean):
-                        sentence_tokens = sentences_clean[current_sent_idx]
-                        sent_q.extend(sentence_tokens)
+                    if current_fragment_idx < len(planned_fragments):
+                        sentence_tokens = planned_fragments[current_fragment_idx]
+                        frag_q.extend(sentence_tokens)
                         frag = fragments.add_text("".join([t.tts_text for t in sentence_tokens]),
                                                   list(visited_ids))
                         seg_id = frag.formatted_id()
@@ -359,18 +361,18 @@ def fragment_tag_content(tag: Tag, fragments: FragmentListBuilder, visited_ids: 
                             raise ValueError("Tag has more tokens, but no more sentences!")
 
                 tag_tok = tag_q.popleft()
-                sent_tok = sent_q.popleft()
+                sent_tok = frag_q.popleft()
                 if tag_tok.normalized_text != sent_tok.normalized_text:
                     raise ValueError(f"Token mismatch: '{tag_tok}' != '{sent_tok}'")
 
                 new_html_content += tag_tok.raw_text
 
-                if len(sent_q) == 0 and len(tag_q) == 0:
+                if len(frag_q) == 0 and len(tag_q) == 0:
                     LOG.debug(
                         "  " * len(open_tags) + "Reached end of sentence and tag together. Breaking cycle.")
                     break
 
-                if len(sent_q) == 0:  # Reached end of the sentence/fragment, so close, take next, continue.
+                if len(frag_q) == 0:  # Reached end of the sentence/fragment, so close, take next, continue.
                     LOG.debug("  " * len(
                         open_tags) + "Reached end of sentence. Closing span and taking next sentence.")
 
@@ -379,12 +381,12 @@ def fragment_tag_content(tag: Tag, fragments: FragmentListBuilder, visited_ids: 
                     new_html_content += "</span>"
 
                     # Take next sentence.
-                    current_sent_idx += 1
+                    current_fragment_idx += 1
 
                     # Start Next fragment (if sentence exists)
-                    if current_sent_idx < len(sentences_clean):
-                        sentence_tokens = sentences_clean[current_sent_idx]
-                        sent_q.extend(sentence_tokens)
+                    if current_fragment_idx < len(planned_fragments):
+                        sentence_tokens = planned_fragments[current_fragment_idx]
+                        frag_q.extend(sentence_tokens)
                         frag = fragments.add_text("".join([t.tts_text for t in sentence_tokens]),
                                                   list(visited_ids))
                         seg_id = frag.formatted_id()

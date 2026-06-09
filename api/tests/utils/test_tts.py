@@ -9,7 +9,8 @@ from io import BytesIO
 from xmldiff.main import diff_texts
 
 from api.utils.tts import process_xhtml_inplace, tokenize_with_whitespace, process_xhtml_inplace_v2, BLOCK_TAGS, \
-    tokenize_tag_content
+    tokenize_tag_content, split_tokens_into_fragments
+from common_lib.models.tts import Token
 from epub_lib import Epub
 
 LOG = logging.getLogger(__name__)
@@ -109,3 +110,10 @@ class TestTts:
                         epub.zip_file.extractall(path=epub_extracted_path)
 
                         assert False, f"Raw text mismatch: '{raw_text}' != '{token_text}'"
+
+    def test_split_tokens_into_fragments_no_split(self):
+        words = ["Hell ", "my", "friend!"]
+        tokens = [Token(word) for word in words]
+        fragments = split_tokens_into_fragments(tokens, 7)
+
+        assert len(fragments) == 1, "Should not split tokens without whitespace in between."
