@@ -271,6 +271,8 @@ def split_tokens_into_fragments(tokens: List[Token], target_length: int = 75) ->
     fragments = []
     total_len = sum([t.length for t in tokens])
     num_fragments = max(1, round(total_len / target_length))
+    if num_fragments == 1: return [tokens]
+
     avg_len = total_len / num_fragments
 
     remaining_len = avg_len

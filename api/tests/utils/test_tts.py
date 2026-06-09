@@ -8,8 +8,8 @@ from bs4 import BeautifulSoup, Tag
 from io import BytesIO
 from xmldiff.main import diff_texts
 
-from api.utils.tts import process_xhtml_inplace, tokenize_with_whitespace, BLOCK_TAGS, \
-    tokenize_tag_content, split_tokens_into_fragments, FragmentInjector
+from api.utils.tts import tokenize_with_whitespace, split_tokens_into_fragments, FragmentInjector, \
+    process_xhtml_inplace_v2
 from common_lib.models.tts import Token, FragmentListBuilder
 from epub_lib import Epub
 
@@ -33,15 +33,15 @@ class TestTts:
     def test_first(self):
         html_str = "<p>This is a test</p>"
 
-        output_html_bytes, frags, last_id = process_xhtml_inplace(html_str.encode(), 0)
+        output_html_bytes, frags, last_id = process_xhtml_inplace_v2(html_str.encode(), 0)
 
     def test_short_no_punct(self, test_data_loader):
         html_str = test_data_loader("short_no_punct.html")
-        output_html_bytes, frags, last_id = process_xhtml_inplace(html_str.encode(), 0)
+        output_html_bytes, frags, last_id = process_xhtml_inplace_v2(html_str.encode(), 0)
 
     def test_3(self, test_data_loader):
         html_str = test_data_loader("3.html")
-        output_html_bytes, frags, last_id = process_xhtml_inplace(html_str.encode(), 0)
+        output_html_bytes, frags, last_id = process_xhtml_inplace_v2(html_str.encode(), 0)
 
     def test_tokenize_with_whitespace_specific(self, test_data_loader):
         cases = [" ", "\n", "\t", "\r", " word", "word ", " word "]
@@ -63,9 +63,8 @@ class TestTts:
             assert len(full_text) > 0
             assert full_text == reconstructed
 
-
     @pytest.mark.skip(reason="For manual execution.")
-    def test_tokenize_tag_content_real_books(self, test_data_loader):
+    def test_process_xhtml_inplace_v2_real_books(self, test_data_loader):
         src_dir_path = os.path.expanduser("~/Downloads/epub/")
         epub_files = list(Path(src_dir_path).rglob("*.epub"))
         dest_dir_path = Path(os.path.expanduser("~/repos/narrator/out/tests/"))
@@ -80,25 +79,23 @@ class TestTts:
             for content_file in content_files:
                 content_bytes = epub._read_file(content_file)
 
-                soup = BeautifulSoup(content_bytes, 'xml')
+                try:
+                    process_xhtml_inplace_v2(content_bytes, 0)
+                except:
+                    LOG.error("Failed on file %s", content_file)
 
-                for tag in soup.find_all():
-                    # Only work with leaf block nodes.
-                    if tag.name not in BLOCK_TAGS: continue
-                    if tag.find(BLOCK_TAGS): continue
+                    epub_extracted_path = dest_dir_path / "unpacked_epub"
+                    shutil.rmtree(epub_extracted_path, ignore_errors=True)
+                    epub.zip_file.extractall(path=epub_extracted_path)
 
-                    raw_text = tag.get_text().strip()
-                    tokens = tokenize_tag_content(tag)
-                    token_text = "".join([t.raw_text for t in tokens]).strip()
+                    assert False
 
-                    if raw_text != token_text:
-                        LOG.error("Failed on file %s", content_file)
+    def test_split_tokens_into_fragments_one_empty_token(self):
+        words = [" "]
+        tokens = [Token(word) for word in words]
+        fragments = split_tokens_into_fragments(tokens)
 
-                        epub_extracted_path = dest_dir_path / "unpacked_epub"
-                        shutil.rmtree(epub_extracted_path, ignore_errors=True)
-                        epub.zip_file.extractall(path=epub_extracted_path)
-
-                        assert False, f"Raw text mismatch: '{raw_text}' != '{token_text}'"
+        assert len(fragments) == 1
 
     def test_split_tokens_into_fragments_no_split(self):
         words = ["Hell ", "my", "friend!"]
