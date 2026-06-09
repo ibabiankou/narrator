@@ -289,6 +289,119 @@ def split_tokens_into_fragments(tokens: List[Token], target_length: int = 75) ->
     return fragments
 
 
+class FragmentInjector:
+    # The fragment markup is always at the root level of the tag.
+
+    def __init__(self,
+                 tag: Tag,
+                 fragments: FragmentListBuilder,
+                 visited_ids: Optional[Set[str]]= None,
+                 target_length: int = 75):
+        # Updated content of the tag to be concatenated.
+        self.new_content = []
+
+        self.tag = tag
+        self.fragments = fragments
+        self.target_length = target_length
+
+        # TODO: make sure to push / pop IDs encountered during tag traversal.
+        self.visited_ids = visited_ids or set()
+
+        # Unprocessed tokens in the current fragment.
+        self.frag_q = deque[Token]()
+        # Unprocessed tokens in the current tag.
+        self.tag_q = deque[Token]()
+
+        self.pending_fragments: deque[List[Token]] = deque()
+        # self.current_fragment_idx = 0
+
+        self.open_tag_stack = []
+
+    def inject(self) -> Optional[str]:
+        # Split the content into fragments.
+        tag_tokens = tokenize_tag_content(self.tag)
+        if not tag_tokens: return None
+        self.pending_fragments.extend(split_tokens_into_fragments(tag_tokens, target_length=self.target_length))
+
+        # Open the first pending fragment.
+        self.open_fragment()
+
+        # Inject fragment boundaries.
+        for child in self.tag.contents:
+            self.traverse(child)
+
+        self.close_fragment()
+        return "".join(self.new_content)
+
+    def open_fragment(self):
+        if len(self.frag_q) == 0 and len(self.pending_fragments) > 0:
+            next_fragment = self.pending_fragments.popleft()
+            self.frag_q.extend(next_fragment)
+
+            added_fragment = self.fragments.add_text("".join([t.tts_text for t in next_fragment]), list(self.visited_ids))
+
+            # Open newly added fragment and re-open all tags.
+            self.new_content.append(new_span(added_fragment.formatted_id()))
+            for t_name, t_attrs in self.open_tag_stack:
+                attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
+                self.new_content.append(f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>")
+
+    def close_fragment(self):
+        for t_name, _ in reversed(self.open_tag_stack):
+            self.new_content.append(f"</{t_name}>")
+        self.new_content.append("</span>")
+
+
+    def traverse(self, node):
+        if isinstance(node, str):
+            node_tokens = [Token(t) for t in tokenize_with_whitespace(node)]
+            self.tag_q.extend(node_tokens)
+
+            if len(self.frag_q) == 0:
+                # We have new content, but no
+                self.open_fragment()
+
+            while len(self.tag_q) > 0:
+                tag_tok = self.tag_q.popleft()
+                frag_tok = self.frag_q.popleft()
+                if tag_tok.normalized_text != frag_tok.normalized_text:
+                    # This should not be happening, because both fragments and these tokens are collected the same way.
+                    raise ValueError(f"Token mismatch: '{tag_tok}' != '{frag_tok}'")
+
+                self.new_content.append(tag_tok.raw_text)
+
+                if len(self.frag_q) == 0:
+                    # We have reached the end of the fragment, so we need to insert markup here.
+                    self.close_fragment()
+
+                    if len(self.tag_q) > 0:
+                        # We still have more tokens in this tag, so we also need to open the next fragment.
+                        self.open_fragment()
+
+        elif node.name: # TODO: figure out where name is added and do a nicer check to keep the type info.
+            # Current node is a tag node, open in and add to the open_tag_stack
+
+            attrs = {k: " ".join(v) if isinstance(v, list) else v for k, v in node.attrs.items()}
+            attr_str = " ".join([f'{k}="{v}"' for k, v in attrs.items()])
+            tag_open = f"<{node.name} {attr_str}>" if attr_str else f"<{node.name}>"
+
+            LOG.debug("  " * len(self.open_tag_stack) + "Traversing: %s", node.name)
+
+            if node.name in VOID_TAGS:
+                self.new_content.append(tag_open.replace(">", " />"))
+            else:
+                self.open_tag_stack.append((node.name, attrs))
+                self.new_content.append(tag_open)
+                for child in node.contents:
+                    # If the current fragment queue is empty, then open the next fragment.
+                    self.traverse(child)
+                self.new_content.append(f"</{node.name}>")
+                self.open_tag_stack.pop()
+        else:
+            LOG.warning("  " * len(self.open_tag_stack) + "  >>> Not a string and has no name: %s", node)
+            raise RuntimeError("Unexpected node type")
+
+
 def fragment_tag_content(tag: Tag, fragments: FragmentListBuilder, visited_ids: Set[str]) -> Optional[str]:
     tag_tokens = tokenize_tag_content(tag)
     planned_fragments: List[List[Token]] = split_tokens_into_fragments(tag_tokens)

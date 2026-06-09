@@ -4,13 +4,13 @@ import logging
 import os
 import pytest
 import shutil
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from io import BytesIO
 from xmldiff.main import diff_texts
 
 from api.utils.tts import process_xhtml_inplace, tokenize_with_whitespace, process_xhtml_inplace_v2, BLOCK_TAGS, \
-    tokenize_tag_content, split_tokens_into_fragments
-from common_lib.models.tts import Token
+    tokenize_tag_content, split_tokens_into_fragments, FragmentInjector
+from common_lib.models.tts import Token, FragmentListBuilder
 from epub_lib import Epub
 
 LOG = logging.getLogger(__name__)
@@ -117,3 +117,20 @@ class TestTts:
         fragments = split_tokens_into_fragments(tokens, 7)
 
         assert len(fragments) == 1, "Should not split tokens without whitespace in between."
+
+    # Test frag injector:
+    def test_fragment_injector(self, test_data_loader):
+        html_str = test_data_loader("fragment_injector.html")
+        soup = BeautifulSoup(html_str, 'xml')
+
+        # noinspection PyTypeChecker
+        tag: Tag = soup.find(attrs={"id": "mid-split"})
+
+        assert type(tag) is Tag
+
+        fb = FragmentListBuilder()
+        fi = FragmentInjector(tag, fb, set(), target_length=50)
+        result_maybe = fi.inject()
+
+        LOG.info("Raw: \n%s", tag.get_text())
+        LOG.info("Result: \n%s", result_maybe)
