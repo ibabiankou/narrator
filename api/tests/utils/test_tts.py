@@ -1,21 +1,15 @@
-import zipfile
-
-import shutil
-
-import time
-
-from io import BytesIO
 from pathlib import Path
 
-import os
-
 import logging
+import os
 import pytest
+import shutil
 from bs4 import BeautifulSoup
-from xmldiff import formatting
+from io import BytesIO
 from xmldiff.main import diff_texts
 
-from api.utils.tts import process_xhtml_inplace, tokenize_with_whitespace, process_xhtml_inplace_v2
+from api.utils.tts import process_xhtml_inplace, tokenize_with_whitespace, process_xhtml_inplace_v2, BLOCK_TAGS, \
+    tokenize_tag_content
 from epub_lib import Epub
 
 LOG = logging.getLogger(__name__)
@@ -48,6 +42,14 @@ class TestTts:
         html_str = test_data_loader("3.html")
         output_html_bytes, frags, last_id = process_xhtml_inplace(html_str.encode(), 0)
 
+    def test_tokenize_with_whitespace_specific(self, test_data_loader):
+        cases = [" ", "\n", "\t", "\r", " word", "word ", " word "]
+        for text in cases:
+            tokens = tokenize_with_whitespace(text)
+            reconstructed = "".join(tokens)
+            assert len(tokens) > 0
+            assert text == reconstructed
+
     def test_tokenize_with_whitespace(self, test_data_loader):
         files = ["short_no_punct.html", "3.html"]
         for file in files:
@@ -72,16 +74,14 @@ class TestTts:
 
             assert index_v1 == index_v2
 
-    # @pytest.mark.skip(reason="For manual execution.")
-    def test_compare_v1_v2_multiple(self, test_data_loader):
+    @pytest.mark.skip(reason="For manual execution.")
+    def test_tokenize_tag_content_real_books(self, test_data_loader):
         src_dir_path = os.path.expanduser("~/Downloads/epub/")
         epub_files = list(Path(src_dir_path).rglob("*.epub"))
         dest_dir_path = Path(os.path.expanduser("~/repos/narrator/out/tests/"))
         epub_files.sort()
 
-        v1_times = []
-        v2_times = []
-        for epub_path in epub_files[:5]:
+        for epub_path in epub_files:
             LOG.info("Processing EPUB: %s", epub_path)
 
             file_bytes = BytesIO(epub_path.read_bytes())
@@ -90,34 +90,22 @@ class TestTts:
             for content_file in content_files:
                 content_bytes = epub._read_file(content_file)
 
-                LOG.info("V1 Processing file: %s", content_file)
-                start = time.perf_counter()
-                xml_bytes_v1, fragments_v1, index_v1 = process_xhtml_inplace(content_bytes, 0)
-                # LOG.info("V1 output: %s", xml_bytes_v1.decode())
-                v1_times.append(time.perf_counter() - start)
+                soup = BeautifulSoup(content_bytes, 'xml')
 
-                LOG.info("V2 Processing file: %s", content_file)
-                start = time.perf_counter()
-                try:
-                    xml_bytes_v2, fragments_v2, index_v2 = process_xhtml_inplace_v2(content_bytes, 0)
-                except IndexError:
-                    LOG.warning("Failed to process %s", content_file)
-                    continue
-                v2_times.append(time.perf_counter() - start)
+                for tag in soup.find_all():
+                    # Only work with leaf block nodes.
+                    if tag.name not in BLOCK_TAGS: continue
+                    if tag.find(BLOCK_TAGS): continue
 
-                # Validation: parse both, fetch all fragments, and compare individually, while trimming outer whitespaces.
-                v1 = BeautifulSoup(xml_bytes_v1, 'xml')
-                v1_frags = v1.find_all("span", attrs={"class": "nf"})
-                v2 = BeautifulSoup(xml_bytes_v2, 'xml')
-                v2_frags = v2.find_all("span", attrs={"class": "nf"})
+                    raw_text = tag.get_text().strip()
+                    tokens = tokenize_tag_content(tag)
+                    token_text = "".join([t.raw_text for t in tokens]).strip()
 
-                assert len(v1_frags) == len(v2_frags)
-                for v1_frag, v2_frag in zip(v1_frags, v2_frags):
-                    assert v1_frag.get_text().strip() == v2_frag.get_text().strip()
+                    if raw_text != token_text:
+                        LOG.error("Failed on file %s", content_file)
 
-        v1_avg = sum(v1_times)/len(v1_times)
-        LOG.info("V1 times avg: %s", v1_avg)
-        v2_avg = sum(v2_times)/len(v2_times)
-        LOG.info("V2 times avg: %s", v2_avg)
-        v2_speedup = ((v1_avg / v2_avg) - 1) * 100
-        LOG.info("V2 speedup: %s%%", v2_speedup)
+                        epub_extracted_path = dest_dir_path / "unpacked_epub"
+                        shutil.rmtree(epub_extracted_path, ignore_errors=True)
+                        epub.zip_file.extractall(path=epub_extracted_path)
+
+                        assert False, f"Raw text mismatch: '{raw_text}' != '{token_text}'"

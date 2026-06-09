@@ -82,7 +82,7 @@ def split_into_fragments(tag: Tag, target_length: int = 75) -> List[List[Token]]
 # her and Morrigan. Most of it was cut off, and she’d just snapped the last exchange.
 
 # Regex to split a string into tokens on whitespace without loosing anything.
-TOKEN_PATTERN = re.compile(r'\S+\s*|\s+\S+\s*')
+TOKEN_PATTERN = re.compile(r'\S+\s*|\s+')
 
 def tokenize_with_whitespace(text: str) -> List[str]:
     """
@@ -274,60 +274,29 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
     return soup.encode(formatter="minimal", encoding='utf-8'), fragments.build(), fragments.current_id
 
 
-def split_raw_text(tag: Tag) -> List[List[Token]]:
-    # TODO: This is temporary implementation to compare with the old logic.
-    raw_text = tag.get_text()
-    text_clean = re.sub(r'\s+', ' ', raw_text).strip()
-    sentences_clean = nltk.sent_tokenize(text_clean)
-    if not sentences_clean: return []
-
+def tokenize_tag_content(tag: Tag) -> List[Token]:
     all_tokens = []
     def traverse(node):
-        # If it's a string, then tokenize and add. otherwise go down.
+        """Do an in-order depth-first traversal of the tag tree. Tokenize each string node."""
         if isinstance(node, str):
-            all_tokens.extend([Token(t) for t in tokenize_with_whitespace(node)])
+            node_tokens = [Token(t) for t in tokenize_with_whitespace(node)]
+            all_tokens.extend(node_tokens)
         elif node.name:
             for child in node.contents:
                 traverse(child)
     traverse(tag)
+    return all_tokens
 
-    # Temporary Sanity check: assert raw text exactly matches tokenized;
-    tokens_text = "".join([t.raw_text for t in all_tokens])
-    if raw_text != tokens_text:
-        LOG.error("Raw text mismatch.\nRaw: \n%s\nTokens: \n%s", raw_text, tokens_text)
-        raise ValueError(f"Raw text mismatch.")
 
-    # Temporarily split tokens the same way old code would. Once I'm sure it works the same way,
-    # I'll switch to new fragmentation logic.
-    result = []
-    token_index = 0
-    for sentence in sentences_clean:
-        reconstructed_sentence = ""
-        sentence_tokens = []
-        while reconstructed_sentence.strip() != sentence:
-            try:
-                sentence_tokens.append(all_tokens[token_index])
-                reconstructed_sentence += all_tokens[token_index].tts_text
-                token_index += 1
-                if reconstructed_sentence.strip() == sentence:
-                    result.append(sentence_tokens)
-            except:
-                LOG.error("Failed to reconstruct sentence.\nnltk: \n%s\nmy: \n%s", sentence, reconstructed_sentence)
-                raise
+def split_tokens_into_fragments(tokens: List[Token], target_len: int = 75) -> List[List[Token]]:
 
-    return result
+    return []
 
 
 def process_xhtml_inplace_v2(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:
     LOG.debug("V2 Start...")
     try:
         soup = BeautifulSoup(file_bytes, 'xml')
-
-        # Cleanup links
-        for tag in soup.find_all("a"):
-            if "noteref" in tag.get("class", []) or tag.get("role") == "doc-noteref":
-                LOG.warning("Removing link: %s", tag)
-                tag.decompose()
 
         fragments = FragmentListBuilder(current_id=global_id_start)
 
@@ -340,7 +309,7 @@ def process_xhtml_inplace_v2(file_bytes: bytes, global_id_start) -> Tuple[bytes,
             if tag.name not in BLOCK_TAGS: continue
             if tag.find(BLOCK_TAGS): continue
 
-            sentences_clean: List[List[Token]] = split_raw_text(tag)
+            sentences_clean: List[List[Token]] = []
             if not sentences_clean: continue
 
             # Inject fragment boundaries.
