@@ -85,6 +85,7 @@ class Token:
     normalized_text: str
 
     length: int
+    add_punctuation_in_tts: bool = False
 
     def __init__(self, text: str):
         self.raw_text = text
@@ -105,12 +106,6 @@ class Token:
     def ends_with_whitespace(self):
         s = self.raw_text
         return bool(s and s[-1].isspace())
-
-    def ensure_ends_with_punctuation(self):
-        """Adds a period to the end of the tts_text unless it's already ends with some punctuation."""
-        if self.tts_text:
-            if self.tts_text[-1] not in ".!?":
-                self.tts_text += '.'
 
     def __str__(self):
         return f"'{self.raw_text}'"

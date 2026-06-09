@@ -1,4 +1,4 @@
-from collections import deque
+from collections import deque, defaultdict
 
 import logging
 import re
@@ -67,9 +67,11 @@ def tokenize_with_whitespace(text: str) -> List[str]:
 BLOCK_TAGS = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'div', 'table', 'th', 'td'}
 VOID_TAGS = {'br', 'img', 'hr', 'area', 'base', 'col', 'embed', 'input', 'link', 'meta', 'param', 'source', 'track',
              'wbr'}
+ENSURE_PUNCTUATION = {'br'}
+
 
 def tokenize_tag_content(tag: Tag) -> List[Token]:
-    all_tokens = []
+    all_tokens: List[Token] = []
 
     def traverse(node):
         """Do an in-order depth-first traversal of the tag tree. Tokenize each string node."""
@@ -77,6 +79,9 @@ def tokenize_tag_content(tag: Tag) -> List[Token]:
             node_tokens = [Token(t) for t in tokenize_with_whitespace(node)]
             all_tokens.extend(node_tokens)
         elif node.name:
+            if node.name in ENSURE_PUNCTUATION and len(all_tokens) > 0:
+                all_tokens[-1].add_punctuation_in_tts = True
+
             for child in node.contents:
                 traverse(child)
 
@@ -117,7 +122,7 @@ class FragmentInjector:
     def __init__(self,
                  tag: Tag,
                  fragments: FragmentListBuilder,
-                 visited_ids: Optional[Set[str]]= None,
+                 visited_ids: Optional[Set[str]] = None,
                  target_length: int = 75):
         # Updated content of the tag to be concatenated.
         self.new_content = ["<body>"]
@@ -142,6 +147,11 @@ class FragmentInjector:
     def inject(self):
         # Split the content into fragments.
         tag_tokens = tokenize_tag_content(self.tag)
+
+        if self._scene_break(tag_tokens):
+            self.fragments.add_pause(1, [])
+            return
+
         if not tag_tokens: return
 
         self.pending_fragments.extend(split_tokens_into_fragments(tag_tokens, target_length=self.target_length))
@@ -158,27 +168,16 @@ class FragmentInjector:
         if new_soup.body:
             for child in list(new_soup.body.contents): self.tag.append(child)
 
-        return self.tag
-
-    def open_fragment_if_needed(self):
-        if len(self.frag_q) == 0 and len(self.pending_fragments) > 0:
-            next_fragment = self.pending_fragments.popleft()
-            self.frag_q.extend(next_fragment)
-
-            # Close the current fragment, if present
-            if self.current_fragment is not None:
-                for t_name, _ in reversed(self.open_tag_stack):
-                    self.new_content.append(f"</{t_name}>")
-                self.new_content.append(f"</span>")
-
-            added_fragment = self.fragments.add_text("".join([t.tts_text for t in next_fragment]), list(self.visited_ids))
-            self.current_fragment = added_fragment
-
-            # Open newly added fragment and re-open all tags.
-            self.new_content.append(new_span(added_fragment.formatted_id()))
-            for t_name, t_attrs in self.open_tag_stack:
-                attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
-                self.new_content.append(f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>")
+    @staticmethod
+    def _scene_break(tokens: List[Token]):
+        """Returns True if we consider tokens to represent a scene break.
+        Usually it's a number of repetitive non-word characters."""
+        char_dict = defaultdict[str, int](int)
+        for t in tokens:
+            for c in t.raw_text:
+                if c.isspace(): continue
+                char_dict[c] += 1
+        return len(char_dict) == 1 and not char_dict.popitem()[0].isalnum()
 
     def traverse(self, node):
         self.open_fragment_if_needed()
@@ -200,7 +199,7 @@ class FragmentInjector:
                     # End of the fragment is reached, but we have more content here, so open another one.
                     self.open_fragment_if_needed()
 
-        elif node.name: # TODO: figure out where name is added and do a nicer check to keep the type info.
+        elif node.name:  # TODO: figure out where name is added and do a nicer check to keep the type info.
             # Current node is a tag node, open in and add to the open_tag_stack
 
             attrs = {k: " ".join(v) if isinstance(v, list) else v for k, v in node.attrs.items()}
@@ -222,6 +221,27 @@ class FragmentInjector:
         else:
             LOG.warning("  " * len(self.open_tag_stack) + "  >>> Not a string and has no name: %s", node)
             raise RuntimeError("Unexpected node type")
+
+    def open_fragment_if_needed(self):
+        if len(self.frag_q) == 0 and len(self.pending_fragments) > 0:
+            next_fragment = self.pending_fragments.popleft()
+            self.frag_q.extend(next_fragment)
+
+            # Close the current fragment, if present
+            if self.current_fragment is not None:
+                for t_name, _ in reversed(self.open_tag_stack):
+                    self.new_content.append(f"</{t_name}>")
+                self.new_content.append(f"</span>")
+
+            added_fragment = self.fragments.add_text("".join([t.tts_text for t in next_fragment]),
+                                                     list(self.visited_ids))
+            self.current_fragment = added_fragment
+
+            # Open newly added fragment and re-open all tags.
+            self.new_content.append(new_span(added_fragment.formatted_id()))
+            for t_name, t_attrs in self.open_tag_stack:
+                attr_str = " ".join([f'{k}="{v}"' for k, v in t_attrs.items()])
+                self.new_content.append(f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>")
 
 
 def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:

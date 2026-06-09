@@ -94,9 +94,8 @@ class EpubService(Service):
             fragment_id = 0
             fragment_map: Dict[str, FragmentList] = {}
             for file in content_files:
-                content_file_bytes, file_fragments, last_fragment_id = process_xhtml_inplace(src_zip_file.read(file),
+                content_file_bytes, file_fragments, fragment_id = process_xhtml_inplace(src_zip_file.read(file),
                                                                                              fragment_id)
-                fragment_id = last_fragment_id + 1
                 fragment_map[file] = file_fragments
                 out_zip.writestr(file, content_file_bytes)
 

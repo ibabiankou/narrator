@@ -9,7 +9,7 @@ from io import BytesIO
 from xmldiff.main import diff_texts
 
 from api.utils.tts import tokenize_with_whitespace, split_tokens_into_fragments, FragmentInjector, \
-    process_xhtml_inplace
+    process_xhtml_inplace, tokenize_tag_content
 from common_lib.models.tts import Token, FragmentListBuilder
 from epub_lib import Epub
 
@@ -30,6 +30,21 @@ def assert_no_diff(left, right):
 
 
 class TestTts:
+    def test_scene_break_detection(self):
+        cases = [
+            ([Token("---")], True),
+            ([Token("___")], True),
+            ([Token("***")], True),
+            ([Token("!")], True),
+            ([Token("◆◆◆")], True),
+            ([Token("")], False),
+            ([Token(" ")], False),
+            ([Token("aaa")], False),
+            ([Token("888")], False),
+        ]
+        for case in cases:
+            assert FragmentInjector._scene_break(case[0]) == case[1]
+
     def test_first(self):
         html_str = "<p>This is a test</p>"
 
@@ -188,3 +203,19 @@ class TestTts:
         <p id="start-tag"><span class="nf" id="n-0">The idea helps explain </span><span class="nf" id="n-1"><b>why free </b>markets.</span></p>
         """
         assert expected_html.strip() == str(tag)
+
+    def test_tokenize_tag_content_punct_on_br(self, test_data_loader):
+        html_str = test_data_loader("fragment_injector.html")
+        soup = BeautifulSoup(html_str, 'xml')
+
+        # noinspection PyTypeChecker
+        tag: Tag = soup.find(attrs={"id": "line-br"})
+        assert tag is not None
+
+        tokens = tokenize_tag_content(tag)
+        for t in tokens:
+            if t.raw_text == "explain":
+                assert t.add_punctuation_in_tts
+                return
+
+        assert False, "Token not found."
