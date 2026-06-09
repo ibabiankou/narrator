@@ -1,8 +1,9 @@
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Any, Literal, Union, Annotated
+from typing import List, Optional, Any, Literal, Union, Annotated, Tuple
 
+import unicodedata
 from pydantic import BaseModel, RootModel, field_serializer, field_validator, Field
 
 
@@ -76,6 +77,21 @@ class FragmentList(RootModel[List[Fragment]]):
 @dataclass
 class Token:
     NORM_PATTERN = re.compile(r'\W+')
+    PUNCTUATION_MAP = str.maketrans({
+        # Left and right curly double quotes -> standard double quote
+        '“': '"', '”': '"', '„': '"', '‟': '"', '«': '"', '»': '"',
+        # Left and right curly single quotes / apostrophes -> standard single quote
+        '‘': "'", '’': "'", '‚': "'", '‛': "'", '‹': "'", '›': "'", '`': "'", '´': "'", '′': "'",
+        # Various dashes (en-dash, em-dash, horizontal bar, figure dash) -> standard hyphen/minus
+        '–': '-', '—': '-', '―': '-', '‒': '-', '‑': '-', '−': '-',
+    })
+    TTS_CLEANUP_RULES = [
+        (re.compile(r'\s+'), ' '),
+        (re.compile(r'[!]{2,}'), '!'),
+        (re.compile(r'[?]{2,}'), '?'),
+        (re.compile(r'\.(\s*\.){2,}'), '…'),
+        (re.compile(r'[\u2060]'), ''),
+    ]
 
     # A slice of the text from the html.
     raw_text: str
@@ -89,8 +105,7 @@ class Token:
 
     def __init__(self, text: str):
         self.raw_text = text
-        # TODO: Do a smarter cleanup.
-        self.tts_text = re.sub(r'\s+', ' ', text)
+        self.tts_text = self._clean_for_tts(text)
 
         self.normalized_text = self.normalize(text)
         self.length = len(self.normalized_text)
@@ -109,10 +124,17 @@ class Token:
 
     def __str__(self):
         return f"'{self.raw_text}'"
+
     def __repr__(self):
         return self.__str__()
 
-
+    @staticmethod
+    def _clean_for_tts(text: str) -> str:
+        text = unicodedata.normalize('NFKC', text)
+        for regex, replacement in Token.TTS_CLEANUP_RULES:
+            text = regex.sub(replacement, text)
+        text = text.translate(Token.PUNCTUATION_MAP)
+        return text
 
 
 class FragmentListBuilder(BaseModel):

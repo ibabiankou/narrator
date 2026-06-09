@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import logging
@@ -219,3 +220,36 @@ class TestTts:
                 return
 
         assert False, "Token not found."
+
+    @pytest.mark.skip(reason="For manual execution.")
+    def test_check_for_unexpected_characters(self, test_data_loader):
+        src_dir_path = os.path.expanduser("~/Downloads/epub/")
+        epub_files = list(Path(src_dir_path).rglob("*.epub"))
+        dest_dir_path = Path(os.path.expanduser("~/repos/narrator/out/tests/"))
+        epub_files.sort()
+
+        not_allowed = re.compile(r"[^a-zA-Z0-9\s.…,?!;:'\"\-=+%()\[\]{}$/&*#@©~]")
+
+        for epub_path in epub_files:
+            LOG.info("Processing EPUB: %s", epub_path)
+
+            file_bytes = BytesIO(epub_path.read_bytes())
+            epub = Epub(file_bytes)
+            content_files = epub.get_spine_files()
+            for content_file in content_files:
+                content_bytes = epub._read_file(content_file)
+
+                try:
+                    content_bytes, fragments, frag_id = process_xhtml_inplace(content_bytes, 0)
+                    text = " ".join([f.text for f in fragments.root if f.type == "text"])
+                    unexpected_characters = set(not_allowed.findall(text))
+                    if unexpected_characters:
+                        LOG.error("Unexpected characters in file %s: %s", content_file, unexpected_characters)
+                except:
+                    LOG.error("Failed on file %s", content_file)
+
+                    epub_extracted_path = dest_dir_path / "unpacked_epub"
+                    shutil.rmtree(epub_extracted_path, ignore_errors=True)
+                    epub.zip_file.extractall(path=epub_extracted_path)
+
+                    assert False
