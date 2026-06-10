@@ -1,3 +1,5 @@
+from collections import deque
+
 import av
 import boto3
 import io
@@ -7,6 +9,7 @@ from botocore.exceptions import ClientError
 from datetime import datetime, UTC
 from io import BytesIO
 from kokoro import KModel, KPipeline
+from misaki.token import MToken
 from typing import Annotated, Tuple, List
 
 from api import get_logger
@@ -130,13 +133,24 @@ class SpeechGenService(Service):
         text = " ".join([f.text.strip() for f in fragments])
         total_text_len = len(text)
         completed = 0
+        results: List[KPipeline.Result] = []
         for result in self.speech_pipeline(text, voice):
+            self._fix_token_times(result)
             completed += len(result.graphemes)
-            LOG.debug("Batch progress: %.1f", completed/total_text_len)
-            if audio_np is None:
-                audio_np = result.audio.numpy()
+            LOG.debug("Batch progress: %.1f%%", completed/total_text_len*100)
+            LOG.debug(result.graphemes)
+            if result.tokens:
+                for t in result.tokens:
+                    LOG.debug(t)
+                results.append(result)
             else:
-                audio_np = np.concatenate((audio_np, result.audio.numpy()), axis=0)
+                LOG.warning("No tokens available...")
+
+            result_audio_np = result.audio.numpy()
+            result_duration_s = result_audio_np.size / self.sample_rate
+            LOG.debug("Batch duration seconds: %s", result_duration_s)
+
+            audio_np = result_audio_np if audio_np is None else np.concatenate((audio_np, result_audio_np), axis=0)
 
         if audio_np is None:
             LOG.error("Audio is empty for text: %s", text)
@@ -145,14 +159,71 @@ class SpeechGenService(Service):
         duration_s = audio_np.size / self.sample_rate
         LOG.debug("Total duration seconds: %s", duration_s)
 
-        # Extrapolate the fragment timings based on the length of the text.
-        timings = []
-        for frag in fragments:
-            frag_len = len(frag.text)
-            est_duration_s = frag_len * duration_s / total_text_len
-            timings.append(FragmentDuration(id=frag.id, duration=est_duration_s))
+        return audio_np, self._calculate_timeline(fragments, results)
 
-        return audio_np, timings
+    def _fix_token_times(self, result: KPipeline.Result):
+        if result.tokens is None:
+            return
+
+        # The first token does not include fade-in duration.
+        result.tokens[0].start_ts = 0
+
+        if result.audio is None or len(result.tokens) < 2:
+            return
+
+        # The last token does not include fade-out duration.
+        last = result.tokens[-1]
+        result_duration = result.audio.numpy().size / self.sample_rate
+        last.end_ts = result_duration
+
+        # Ensure start_ts of the last token is there.
+        second_to_last = result.tokens[-2]
+        if last.start_ts is None:
+            last.start_ts = second_to_last.end_ts
+
+        # When a token does not have corresponding phonemes, its start/end time will be None. Set those to the last
+        # seen time to maintain continuity.
+        last_known_time = 0
+        for t in result.tokens:
+            if t.start_ts is None:
+                t.start_ts = last_known_time
+            else:
+                last_known_time = t.start_ts
+            if t.end_ts is None:
+                t.end_ts = last_known_time
+            else:
+                last_known_time = t.end_ts
+
+
+    def _calculate_timeline(self, fragments: List[TextFragment], results: List[KPipeline.Result]) -> List[FragmentDuration]:
+        # Join the overall timeline across all results.
+        if len(results) > 1:
+            for i in range(1, len(results) - 1):
+                previous_batch = results[i-1].tokens
+                current_batch = results[i].tokens
+                # noinspection PyTypeChecker
+                for token in current_batch:
+                    token.start_ts += previous_batch[-1].end_ts
+                    token.end_ts += previous_batch[-1].end_ts
+
+        all_tokens = deque[MToken]()
+        for result in results:
+            # noinspection PyTypeChecker
+            all_tokens.extend(result.tokens)
+
+        timeline = []
+        for fragment in fragments:
+            token_text = ""
+            current_tokens: List[MToken] = []
+            while len(fragment.text) > len(token_text):
+                token = all_tokens.popleft()
+                token_text += token.text + token.whitespace
+                current_tokens.append(token)
+
+            duration = sum([(t.end_ts or 0) - (t.start_ts or 0) for t in current_tokens])
+            timeline.append(FragmentDuration(id=fragment.id, duration=duration))
+
+        return timeline
 
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):
         try:
