@@ -372,7 +372,7 @@ class BookService(Service):
                             tts_model=tts_model,
                             voice=voice,
                             track_base_name=track.name,
-                            order=track.fragment_groups.root[0].id,
+                            order=track.fragment_groups.root[0].root[0].id,
                             fragments=track.fragment_groups,
                             added=datetime.now(UTC)
                         )

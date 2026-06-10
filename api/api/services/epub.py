@@ -223,7 +223,7 @@ class EpubService(Service):
             for nav_item in content_file.navigation_items:
                 for audio_track in nav_item.audio_tracks:
                     for group in audio_track.fragment_groups.root:
-                        for frag in group:
+                        for frag in group.root:
                             # Drop all visited_ids from fragments.
                             frag.visited_ids = []
 

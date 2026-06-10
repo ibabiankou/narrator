@@ -102,7 +102,7 @@ class SpeechGenService(Service):
             elif isinstance(frag, PauseFragment):
                 if len(batch) > 0:
                     batch_audio_np, batch_timings = self._narrate_fragments(batch, voice)
-                    audio_np = batch_audio_np if batch_audio_np is None else np.concatenate((audio_np, batch_audio_np), axis=0)
+                    audio_np = batch_audio_np if audio_np is None else np.concatenate((audio_np, batch_audio_np), axis=0)
                     timings.extend(batch_timings)
 
                 # Add the pause
@@ -116,7 +116,7 @@ class SpeechGenService(Service):
         if len(batch) > 0:
             # narrate the batch
             batch_audio_np, batch_timings = self._narrate_fragments(batch, voice)
-            audio_np = batch_audio_np if batch_audio_np is None else np.concatenate((audio_np, batch_audio_np), axis=0)
+            audio_np = batch_audio_np if audio_np is None else np.concatenate((audio_np, batch_audio_np), axis=0)
             timings.extend(batch_timings)
 
         # noinspection PyTypeChecker
@@ -128,8 +128,11 @@ class SpeechGenService(Service):
     def _narrate_fragments(self, fragments: List[TextFragment], voice: str) -> Tuple[np.ndarray, List[FragmentDuration]]:
         audio_np = None
         text = " ".join([f.text.strip() for f in fragments])
+        total_text_len = len(text)
+        completed = 0
         for result in self.speech_pipeline(text, voice):
-            LOG.debug("Graphemes: %s", result.graphemes)
+            completed += len(result.graphemes)
+            LOG.debug("Batch progress: %.1f", completed/total_text_len)
             if audio_np is None:
                 audio_np = result.audio.numpy()
             else:
@@ -144,7 +147,6 @@ class SpeechGenService(Service):
 
         # Extrapolate the fragment timings based on the length of the text.
         timings = []
-        total_text_len = sum([len(f.text) for f in fragments])
         for frag in fragments:
             frag_len = len(frag.text)
             est_duration_s = frag_len * duration_s / total_text_len
