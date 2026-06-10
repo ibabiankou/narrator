@@ -1,4 +1,6 @@
 from collections import deque
+from dataclasses import dataclass
+from logging import DEBUG
 
 import av
 import boto3
@@ -20,6 +22,11 @@ from common_lib.models.tts import FragmentGroups, TextFragment, PauseFragment, F
 from common_lib.service import Service
 
 LOG = get_logger(__name__)
+
+@dataclass
+class TokenizedFragment:
+    fragment: TextFragment
+    tokens: List[MToken]
 
 
 class SpeechGenService(Service):
@@ -130,21 +137,37 @@ class SpeechGenService(Service):
 
     def _narrate_fragments(self, fragments: List[TextFragment], voice: str) -> Tuple[np.ndarray, List[FragmentDuration]]:
         audio_np = None
-        text = " ".join([f.text.strip() for f in fragments])
-        total_text_len = len(text)
-        completed = 0
+        tokenized_fragments: List[TokenizedFragment] = []
+
+        all_tokens = []
+        for fragment in fragments:
+            _, tokens = self.speech_pipeline.g2p(fragment.text)
+            if not tokens:
+                LOG.warning("No tokens generated for fragment '%s'.", fragment)
+            all_tokens.extend(tokens)
+            tokenized_fragments.append(
+                TokenizedFragment(
+                    fragment=fragment,
+                    tokens=tokens
+                )
+            )
+
         results: List[KPipeline.Result] = []
-        for result in self.speech_pipeline(text, voice):
-            self._fix_token_times(result)
-            completed += len(result.graphemes)
-            LOG.debug("Batch progress: %.1f%%", completed/total_text_len*100)
-            LOG.debug(result.graphemes)
-            if result.tokens:
+        tokens_processed = 0
+        for result in self.speech_pipeline.generate_from_tokens(all_tokens, voice):
+            if result.tokens is None:
+                raise RuntimeError(f"No tokens available in the result.")
+
+            results.append(result)
+
+            tokens_processed += len(result.tokens)
+            LOG.info("Batch progress: %.1f%%", tokens_processed/len(all_tokens)*100)
+            if LOG.isEnabledFor(DEBUG):
+                LOG.debug(result.graphemes)
                 for t in result.tokens:
                     LOG.debug(t)
-                results.append(result)
-            else:
-                LOG.warning("No tokens available...")
+
+            self._fix_token_times(result)
 
             result_audio_np = result.audio.numpy()
             result_duration_s = result_audio_np.size / self.sample_rate
@@ -153,13 +176,12 @@ class SpeechGenService(Service):
             audio_np = result_audio_np if audio_np is None else np.concatenate((audio_np, result_audio_np), axis=0)
 
         if audio_np is None:
-            LOG.error("Audio is empty for text: %s", text)
-            raise
+            raise RuntimeError("Audio is empty.")
 
         duration_s = audio_np.size / self.sample_rate
         LOG.debug("Total duration seconds: %s", duration_s)
 
-        return audio_np, self._calculate_timeline(fragments, results)
+        return audio_np, self._calculate_timeline(tokenized_fragments, results)
 
     def _fix_token_times(self, result: KPipeline.Result):
         if result.tokens is None:
@@ -195,10 +217,10 @@ class SpeechGenService(Service):
                 last_known_time = t.end_ts
 
 
-    def _calculate_timeline(self, fragments: List[TextFragment], results: List[KPipeline.Result]) -> List[FragmentDuration]:
-        # Join the overall timeline across all results.
+    def _calculate_timeline(self, fragments: List[TokenizedFragment], results: List[KPipeline.Result]) -> List[FragmentDuration]:
+        # Fix the overall timeline continuity across all results.
         if len(results) > 1:
-            for i in range(1, len(results) - 1):
+            for i in range(1, len(results)):
                 previous_batch = results[i-1].tokens
                 current_batch = results[i].tokens
                 # noinspection PyTypeChecker
@@ -213,16 +235,12 @@ class SpeechGenService(Service):
 
         timeline = []
         for fragment in fragments:
-            token_text = ""
-            current_tokens: List[MToken] = []
-            while len(fragment.text) > len(token_text):
-                token = all_tokens.popleft()
-                token_text += token.text + token.whitespace
-                current_tokens.append(token)
-
-            duration = sum([(t.end_ts or 0) - (t.start_ts or 0) for t in current_tokens])
-            timeline.append(FragmentDuration(id=fragment.id, duration=duration))
-
+            if not fragment.tokens:
+                timeline.append(FragmentDuration(id=fragment.fragment.id, duration=0))
+            else:
+                start_time = fragment.tokens[0].start_ts or 0
+                end_time = fragment.tokens[-1].end_ts or 0
+                timeline.append(FragmentDuration(id=fragment.fragment.id, duration=end_time - start_time))
         return timeline
 
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):
