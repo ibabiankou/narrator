@@ -5,7 +5,7 @@ import re
 from bs4 import BeautifulSoup, Tag
 from typing import Tuple, List, Set, Optional
 
-from common_lib.models.tts import FragmentList, FragmentListBuilder, Token
+from common_lib.models.tts import FragmentGroups, FragmentGroupsBuilder, Token
 
 LOG = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ class FragmentInjector:
 
     def __init__(self,
                  tag: Tag,
-                 fragments: FragmentListBuilder,
+                 fragments: FragmentGroupsBuilder,
                  visited_ids: Optional[Set[str]] = None,
                  target_length: int = 75):
         # Updated content of the tag to be concatenated.
@@ -118,15 +118,23 @@ class FragmentInjector:
             # Therefore, we want to ensure punctuation is present at the end to have an appropriate pause.
             tag_tokens[-1].add_punctuation_in_tts = True
 
+        self.fragments.next_group()
+
         if self._scene_break(tag_tokens):
             self.fragments.add_pause(1, [])
             return
 
         self.pending_fragments.extend(split_tokens_into_fragments(tag_tokens, target_length=self.target_length))
+        expected_fragment_number = len(self.pending_fragments)
 
         for child in self.tag.contents:
             self.traverse(child)
         self.new_content.append(f"</span>")
+
+        # Temporary sanity check if the number of fragments in the current group matches the number of pending fragments
+        actual_fragment_number = self.fragments.current_group_size()
+        if actual_fragment_number != expected_fragment_number:
+            LOG.warning("Expected %d fragments, but got %d", expected_fragment_number, actual_fragment_number)
 
         # TODO: The following part is weird as fuck! I wonder if I can build beautiful soup model right away
         #  and avoid entire string concatenation and parsing shenanigans.
@@ -221,11 +229,11 @@ class FragmentInjector:
                 self.new_content.append(f"<{t_name} {attr_str}>" if attr_str else f"<{t_name}>")
 
 
-def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentList, int]:
+def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, FragmentGroups, int]:
     try:
         soup = BeautifulSoup(file_bytes, 'xml')
 
-        fragments = FragmentListBuilder(current_id=global_id_start)
+        fragments = FragmentGroupsBuilder(current_id=global_id_start)
 
         visited_ids = set()
         for tag in soup.find_all():
@@ -236,6 +244,7 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
             if tag.name not in BLOCK_TAGS: continue
             if tag.find(BLOCK_TAGS): continue
 
+            # TODO: This is where a fragment group (paragraph) starts.
             injector = FragmentInjector(tag, fragments, visited_ids)
             injector.inject()
 

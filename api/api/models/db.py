@@ -10,7 +10,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from api.models import domain
 from api.utils.db import PydanticType, PydanticList
-from common_lib.models.tts import FragmentList
+from common_lib.models.tts import FragmentGroups
 
 
 class Base(DeclarativeBase):
@@ -130,7 +130,7 @@ class NarrationQueue(Base):
     track_base_name: Mapped[str]
     # ID of the first fragment in the track.
     order: Mapped[int]
-    fragments: Mapped[FragmentList] = mapped_column(type_=PydanticType(FragmentList), nullable=False)
+    fragments: Mapped[FragmentGroups] = mapped_column(type_=PydanticType(FragmentGroups), nullable=False)
     # When track was added to the queue.
     added: Mapped[datetime.datetime]
 

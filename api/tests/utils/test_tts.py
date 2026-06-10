@@ -11,7 +11,7 @@ from xmldiff.main import diff_texts
 
 from api.utils.tts import tokenize_with_whitespace, split_tokens_into_fragments, FragmentInjector, \
     process_xhtml_inplace, tokenize_tag_content
-from common_lib.models.tts import Token, FragmentListBuilder
+from common_lib.models.tts import Token, FragmentGroupsBuilder
 from epub_lib import Epub
 
 LOG = logging.getLogger(__name__)
@@ -128,7 +128,7 @@ class TestTts:
         tag: Tag = soup.find(attrs={"id": "text-only"})
         assert tag is not None
 
-        fb = FragmentListBuilder()
+        fb = FragmentGroupsBuilder()
         fi = FragmentInjector(tag, fb, set(), target_length=20)
         fi.inject()
 
@@ -145,7 +145,7 @@ class TestTts:
         tag: Tag = soup.find(attrs={"id": "with-tag"})
         assert tag is not None
 
-        fb = FragmentListBuilder()
+        fb = FragmentGroupsBuilder()
         fi = FragmentInjector(tag, fb, set(), target_length=20)
         fi.inject()
 
@@ -162,7 +162,7 @@ class TestTts:
         tag: Tag = soup.find(attrs={"id": "mid-tag"})
         assert tag is not None
 
-        fb = FragmentListBuilder()
+        fb = FragmentGroupsBuilder()
         fi = FragmentInjector(tag, fb, set(), target_length=20)
         fi.inject()
 
@@ -179,7 +179,7 @@ class TestTts:
         tag: Tag = soup.find(attrs={"id": "end-tag"})
         assert tag is not None
 
-        fb = FragmentListBuilder()
+        fb = FragmentGroupsBuilder()
         fi = FragmentInjector(tag, fb, set(), target_length=20)
         fi.inject()
 
@@ -196,7 +196,7 @@ class TestTts:
         tag: Tag = soup.find(attrs={"id": "start-tag"})
         assert tag is not None
 
-        fb = FragmentListBuilder()
+        fb = FragmentGroupsBuilder()
         fi = FragmentInjector(tag, fb, set(), target_length=20)
         fi.inject()
 

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from common_lib.models.tts import FragmentList
+from common_lib.models.tts import FragmentGroups
 from common_lib.rmq import RMQMessage
 
 
@@ -14,7 +14,7 @@ class NarrateRequest(RMQMessage):
     voice: str
     track_base_name: str
     order: int
-    fragments: FragmentList
+    fragments: FragmentGroups
 
 
 class NarrateResponse(RMQMessage):

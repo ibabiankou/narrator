@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from api.models.narration import NarrationManifest, ContentFile, NavigationItem, AudioTrack
 from api.utils.imgproxy import ImgProxy
 from api.utils.tts import process_xhtml_inplace
-from common_lib.models.tts import FragmentList
+from common_lib.models.tts import FragmentGroups
 from common_lib.service import Service
 from epub_lib import Epub
 from epub_lib.model.nav import PublicationContent
@@ -79,7 +79,7 @@ class EpubService(Service):
 
         return soup.encode(formatter="minimal")
 
-    def inline_fragments(self, file_bytes: BytesIO) -> Tuple[BytesIO, Dict[str, FragmentList]]:
+    def inline_fragments(self, file_bytes: BytesIO) -> Tuple[BytesIO, Dict[str, FragmentGroups]]:
         LOG.debug("Inlining fragments...")
         src_epub = Epub(file_bytes)
         content_files = src_epub.get_spine_files()
@@ -92,7 +92,7 @@ class EpubService(Service):
             out_zip.writestr("mimetype", src_zip_file.read("mimetype"), compress_type=zipfile.ZIP_STORED)
 
             fragment_id = 0
-            fragment_map: Dict[str, FragmentList] = {}
+            fragment_map: Dict[str, FragmentGroups] = {}
             for file in content_files:
                 content_file_bytes, file_fragments, fragment_id = process_xhtml_inplace(src_zip_file.read(file),
                                                                                              fragment_id)
@@ -101,7 +101,7 @@ class EpubService(Service):
 
             # Add fragment-map.json to the archive.
             fragment_map_item_path = str(src_epub.root_file_dir.joinpath("fragment-map.json"))
-            short_fragment_map = {k: [f.formatted_id() for f in v.root] for k, v in fragment_map.items()}
+            short_fragment_map = {k: v.all_fragment_ids() for k, v in fragment_map.items()}
             out_zip.writestr(fragment_map_item_path, json.dumps(short_fragment_map))
 
             # Add fragment-map.json to the manifest.
@@ -137,14 +137,14 @@ class EpubService(Service):
         return out_bytes, fragment_map
 
     def build_narration_manifest(
-            self, publication_content: PublicationContent, fragment_map: Dict[str, FragmentList]) -> NarrationManifest:
+            self, publication_content: PublicationContent, fragment_map: Dict[str, FragmentGroups]) -> NarrationManifest:
 
         narration_manifest_items: List[ContentFile] = []
         for spine_item in publication_content.spine_items:
             if spine_item.href not in fragment_map:
                 raise ValueError(f"Spine item '{spine_item.href}' is missing from fragment map.")
             # noinspection PyTypeChecker
-            all_fragments: FragmentList = fragment_map.get(spine_item.href)
+            all_fragments: FragmentGroups = fragment_map.get(spine_item.href)
 
             # TODO: implement smarter logic to suggest whether to narrate this content.
             should_narrate = True
@@ -222,17 +222,17 @@ class EpubService(Service):
         for content_file in narration_manifest_items:
             for nav_item in content_file.navigation_items:
                 for audio_track in nav_item.audio_tracks:
-                    for frag in audio_track.fragments.root:
-                        # Drop all visited_ids from fragments.
-                        frag.visited_ids = []
+                    for group in audio_track.fragment_groups.root:
+                        for frag in group:
+                            # Drop all visited_ids from fragments.
+                            frag.visited_ids = []
 
-                        if last_seen_id >= frag.id:
-                            LOG.warning("Content file: %s", content_file.href)
-                            LOG.warning("Nav item: %s", nav_item.idref)
-                            LOG.warning("Track: %s", audio_track.name)
-                            raise ValueError(f"Fragment id {frag.id} is not in ascending order.")
-                        last_seen_id = frag.id
-
+                            if last_seen_id >= frag.id:
+                                LOG.warning("Content file: %s", content_file.href)
+                                LOG.warning("Nav item: %s", nav_item.idref)
+                                LOG.warning("Track: %s", audio_track.name)
+                                raise ValueError(f"Fragment id {frag.id} is not in ascending order.")
+                            last_seen_id = frag.id
 
         # noinspection PyArgumentList
         return NarrationManifest(narration_manifest_items)

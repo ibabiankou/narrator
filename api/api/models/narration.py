@@ -4,76 +4,84 @@ from typing import List, Optional
 import math
 from pydantic import RootModel, BaseModel
 
-from common_lib.models.tts import FragmentList, TextFragment, PauseFragment, Fragment
+from common_lib.models.tts import FragmentGroups, TextFragment, PauseFragment, Fragment
 
 LOG = logging.getLogger(__name__)
 
 
 class AudioTrack(BaseModel):
     name: str
-    fragments: FragmentList
+    fragment_groups: FragmentGroups
 
     @classmethod
-    def from_fragments(cls, fragments: List[Fragment]) -> "AudioTrack":
+    def from_fragments(cls, fragments: List[List[Fragment]]) -> "AudioTrack":
         if fragments:
-            first = fragments[0].id
-            last = fragments[-1].id
+            first = fragments[0][0].id
+            last = fragments[-1][-1].id
             name = f"{first}-{last}"
             # noinspection PyArgumentList
-            return cls(name=name, fragments=FragmentList(fragments))
+            return cls(name=name, fragment_groups=FragmentGroups(fragments))
         else:
             raise ValueError("No fragments")
 
     @staticmethod
     def split_into_tracks(
-            fragments: List[Fragment],
+            fragment_groups: List[List[Fragment]],
             # This magic number is rough average from past data.
             # TODO: Move these magic numbers to configuration.
             target_track_duration_min: float = 3,
             chars_per_min=1000
     ) -> List["AudioTrack"]:
-        if not fragments:
+        if not fragment_groups:
             raise ValueError("No fragments")
 
-        total_len = sum([len(f.text) for f in fragments if isinstance(f, TextFragment)])
+        total_len = sum([AudioTrack.group_length(group) for group in fragment_groups])
         num_tracks = max(1, math.floor(int(total_len / (target_track_duration_min * chars_per_min))))
-        LOG.debug("Splitting %d fragments with total length %d into %d tracks",
-                 len(fragments), total_len, num_tracks)
+        LOG.debug("Splitting %d fragment groups with total length %d into %d tracks",
+                  len(fragment_groups), total_len, num_tracks)
 
         if num_tracks == 1:
-            return [AudioTrack.from_fragments(fragments)]
+            return [AudioTrack.from_fragments(fragment_groups)]
         else:
             result: List["AudioTrack"] = []
             avg_len = total_len / num_tracks
             remaining_len = avg_len
-            current_track_fragments: List[Fragment] = []
-            for frag in fragments:
-                if isinstance(frag, PauseFragment):
-                    current_track_fragments.append(frag)
+            current_track: List[List[Fragment]] = []
+            for group in fragment_groups:
+                if AudioTrack.pause_only(group):
+                    current_track.append(group)
                     continue
 
                 if remaining_len <= 0:  # Got a full track
-                    result.append(AudioTrack.from_fragments(current_track_fragments))
-                    current_track_fragments = []
+                    result.append(AudioTrack.from_fragments(current_track))
+                    current_track = []
                     remaining_len += avg_len
 
-                if isinstance(frag, TextFragment):
-                    current_track_fragments.append(frag)
-                    remaining_len -= len(frag.text)
-                    continue
+                current_track.append(group)
+                remaining_len -= AudioTrack.group_length(group)
 
-                raise ValueError(f"This should never happen... :)")
-
-            if current_track_fragments:
-                result.append(AudioTrack.from_fragments(current_track_fragments))
+            if current_track:
+                result.append(AudioTrack.from_fragments(current_track))
 
             if LOG.isEnabledFor(logging.DEBUG):
                 LOG.debug("Actual number of tracks: %d", len(result))
                 LOG.debug("Expected track length around: %d", avg_len)
                 LOG.debug("Actual track lengths: %s",
-                          [sum([len(f.text) for f in t.fragments.root if isinstance(f, TextFragment)]) for t in result])
+                          [sum([AudioTrack.group_length(g) for g in t.fragment_groups.root]) for t in result])
 
             return result
+
+    @staticmethod
+    def group_length(group: List[Fragment]) -> int:
+        return sum([len(f.text) for f in group if isinstance(f, TextFragment)])
+
+    @staticmethod
+    def pause_only(group: List[Fragment]) -> bool:
+        # Here I make an assumption that scene break is going to be a group with a single pause fragment.
+        for f in group:
+            if not isinstance(f, PauseFragment):
+                return False
+        return True
 
 
 class NavigationItem(BaseModel):

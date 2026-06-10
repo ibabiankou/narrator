@@ -74,7 +74,7 @@ class BookService(Service):
 
         publication_content = epub.get_publication_content()
         narration_manifest = self.epub_service.build_narration_manifest(publication_content, fragment_map)
-        narration_manifest_bytes = narration_manifest.model_dump_json(indent=2).encode()
+        narration_manifest_bytes = narration_manifest.model_dump_json().encode()
         self.files_service.upload_file(f"{book_id}/narration-manifest.json", narration_manifest_bytes)
 
         # TODO: Compress images;
@@ -372,8 +372,8 @@ class BookService(Service):
                             tts_model=tts_model,
                             voice=voice,
                             track_base_name=track.name,
-                            order=track.fragments.root[0].id,
-                            fragments=track.fragments,
+                            order=track.fragment_groups.root[0].id,
+                            fragments=track.fragment_groups,
                             added=datetime.now(UTC)
                         )
                         items_to_enqueue.append(queue_item)

@@ -63,18 +63,41 @@ Fragment = Annotated[
 ]
 
 
-class FragmentList(RootModel[List[Fragment]]):
-    def remove_all_by_visited_id(self, idref: Optional[str]) -> List[Fragment]:
-        """Removes all fragments having the given idref among visited_ids.
-        Returns the list of removed fragments."""
+class FragmentGroups(RootModel[List[List[Fragment]]]):
+
+    def remove_all_by_visited_id(self, idref: Optional[str]) -> List[List[Fragment]]:
+        """Removes all groups having the given idref among visited_ids. Returns the list of removed groups.
+
+        idref: is the fragment ID from the ToC navigation item. We assume it's not possible for one group to be split
+         between ToC items.
+        """
         if idref is None:
             removed = self.root
             self.root = []
             return removed
 
-        removed = [f for f in self.root if idref in f.visited_ids]
-        self.root = [f for f in self.root if idref not in f.visited_ids]
+        removed = []
+        remaining = []
+        for group in self.root:
+            # If any of the fragments in the group has the idref, remove it.
+            remove_group = False
+            for frag in group:
+                # Assumption here is that all fragments in the group belong to the same navigation idref.
+                if idref in frag.visited_ids:
+                    remove_group = True
+                    break
+
+            if remove_group:
+                removed.append(group)
+            else:
+                remaining.append(group)
+
+        self.root = remaining
         return removed
+
+    def all_fragment_ids(self) -> List[str]:
+        """Returns a list of all fragment IDs in the groups."""
+        return [f.formatted_id() for group in self.root for f in group]
 
 
 @dataclass
@@ -155,28 +178,42 @@ class Token:
         return text
 
 
-class FragmentListBuilder(BaseModel):
+class FragmentGroupsBuilder(BaseModel):
     current_id: int = 0
-    fragments: List[Fragment] = []
+    fragment_groups: List[List[Fragment]] = []
+    current_group: Optional[List[Fragment]] = None
 
     def next_id(self):
         next_id = self.current_id
         self.current_id += 1
         return next_id
 
+    def next_group(self):
+        """Starts a new group of fragments."""
+        if self.current_group and len(self.current_group) == 0:
+            LOG.warning("Got request to start a new group, but the current group is empty. Doing nothing.")
+            return
+
+        self.current_group = []
+        # noinspection PyTypeChecker
+        self.fragment_groups.append(self.current_group)
+
     def add_pause(self, duration: float, visited_ids: List[str]) -> Fragment:
         frag = PauseFragment(id=self.next_id(), duration=duration, visited_ids=visited_ids)
-        self.fragments.append(frag)
+        self.current_group.append(frag)
         return frag
+
+    def current_group_size(self):
+        return 0 if self.current_group is None else len(self.current_group)
 
     def build(self):
         # noinspection PyArgumentList
-        return FragmentList(self.fragments)
+        return FragmentGroups(self.fragment_groups)
 
     def add_tokens(self, tokens: List[Token], visited_ids: List[str]) -> Fragment:
         text = "".join([t.tts_text() for t in tokens])
         frag = TextFragment(id=self.next_id(), text=text, visited_ids=visited_ids)
-        self.fragments.append(frag)
+        self.current_group.append(frag)
         return frag
 
 class FragmentDuration(FragmentId):
