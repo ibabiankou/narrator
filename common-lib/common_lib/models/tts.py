@@ -63,9 +63,21 @@ Fragment = Annotated[
 ]
 
 
-class FragmentGroups(RootModel[List[List[Fragment]]]):
+class FragmentGroup(RootModel[List[Fragment]]):
+    def length(self):
+        return sum([len(f.text) for f in self.root if isinstance(f, TextFragment)])
 
-    def remove_all_by_visited_id(self, idref: Optional[str]) -> List[List[Fragment]]:
+    def pause_only(self) -> bool:
+        # Here I make an assumption that scene break is going to be a group with a single pause fragment.
+        for f in self.root:
+            if not isinstance(f, PauseFragment):
+                return False
+        return True
+
+
+class FragmentGroups(RootModel[List[FragmentGroup]]):
+
+    def remove_all_by_visited_id(self, idref: Optional[str]) -> List[FragmentGroup]:
         """Removes all groups having the given idref among visited_ids. Returns the list of removed groups.
 
         idref: is the fragment ID from the ToC navigation item. We assume it's not possible for one group to be split
@@ -81,7 +93,7 @@ class FragmentGroups(RootModel[List[List[Fragment]]]):
         for group in self.root:
             # If any of the fragments in the group has the idref, remove it.
             remove_group = False
-            for frag in group:
+            for frag in group.root:
                 # Assumption here is that all fragments in the group belong to the same navigation idref.
                 if idref in frag.visited_ids:
                     remove_group = True
@@ -97,7 +109,10 @@ class FragmentGroups(RootModel[List[List[Fragment]]]):
 
     def all_fragment_ids(self) -> List[str]:
         """Returns a list of all fragment IDs in the groups."""
-        return [f.formatted_id() for group in self.root for f in group]
+        return [f.formatted_id() for group in self.root for f in group.root]
+
+    def flatten(self) -> List[Fragment]:
+        return [f for group in self.root for f in group.root]
 
 
 @dataclass
@@ -215,6 +230,7 @@ class FragmentGroupsBuilder(BaseModel):
         frag = TextFragment(id=self.next_id(), text=text, visited_ids=visited_ids)
         self.current_group.append(frag)
         return frag
+
 
 class FragmentDuration(FragmentId):
     duration: float

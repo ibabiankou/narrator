@@ -7,12 +7,12 @@ from botocore.exceptions import ClientError
 from datetime import datetime, UTC
 from io import BytesIO
 from kokoro import KModel, KPipeline
-from typing import Annotated, Tuple, Optional, List
+from typing import Annotated, Tuple, List
 
 from api import get_logger
 from common_lib import RMQClientDep
 from common_lib.models import rmq
-from common_lib.models.tts import FragmentList, Fragment, TextFragment, PauseFragment, FragmentDuration, \
+from common_lib.models.tts import FragmentGroups, TextFragment, PauseFragment, FragmentDuration, \
     TrackManifest
 from common_lib.service import Service
 
@@ -43,7 +43,7 @@ class SpeechGenService(Service):
 
         audio_key = f"{base_key}.aac"
 
-        audio_np, timeline = self._narrate_fragments(payload.fragments, payload.voice)
+        audio_np, timeline = self._narrate_track(payload.fragments, payload.voice)
         audio_bytes, duration_s = self._encode_audio(audio_np)
         self._upload_file(audio_key, "audio/aac", audio_bytes.getvalue())
 
@@ -89,23 +89,35 @@ class SpeechGenService(Service):
 
         return output, float(total_duration_pts * stream.time_base)
 
-    def _narrate_fragments(self, fragments: FragmentList, voice: str) -> Tuple[np.ndarray, List[FragmentDuration]]:
+    def _narrate_track(self, fragment_groups: FragmentGroups, voice: str) -> Tuple[
+        np.ndarray, List[FragmentDuration]]:
+
         audio_np = None
         timings: List[FragmentDuration] = []
-        for fragment in fragments.root:
-            frag: Fragment = fragment
+
+        batch = []
+        for frag in fragment_groups.flatten():
             if isinstance(frag, TextFragment):
-                result_maybe = self._narrate_fragment(frag, voice)
-                if result_maybe is None:
-                    LOG.warning("Fragment %s result is empty. Skipping it...", frag.id)
-                    continue
-                frag_audio, fragment_duration_s = result_maybe
-                audio_np = frag_audio if audio_np is None else np.concatenate((audio_np, frag_audio), axis=0)
-                timings.append(FragmentDuration(id=frag.id, duration=fragment_duration_s))
+                batch.append(frag)
             elif isinstance(frag, PauseFragment):
+                if len(batch) > 0:
+                    batch_audio_np, batch_timings = self._narrate_fragments(batch, voice)
+                    audio_np = batch_audio_np if batch_audio_np is None else np.concatenate((audio_np, batch_audio_np), axis=0)
+                    timings.extend(batch_timings)
+
+                # Add the pause
                 pause = self._silence(frag.duration)
                 audio_np = pause if audio_np is None else np.concatenate((audio_np, pause), axis=0)
                 timings.append(FragmentDuration(id=frag.id, duration=frag.duration))
+
+                # Restart the batch
+                batch = []
+
+        if len(batch) > 0:
+            # narrate the batch
+            batch_audio_np, batch_timings = self._narrate_fragments(batch, voice)
+            audio_np = batch_audio_np if batch_audio_np is None else np.concatenate((audio_np, batch_audio_np), axis=0)
+            timings.extend(batch_timings)
 
         # noinspection PyTypeChecker
         return audio_np, timings
@@ -113,10 +125,10 @@ class SpeechGenService(Service):
     def _silence(self, duration_s: float):
         return np.zeros(int(duration_s * self.sample_rate), dtype=np.int16)
 
-    def _narrate_fragment(self, frag: TextFragment, voice: str) -> Optional[Tuple[np.ndarray, float]]:
+    def _narrate_fragments(self, fragments: List[TextFragment], voice: str) -> Tuple[np.ndarray, List[FragmentDuration]]:
         audio_np = None
-
-        for result in self.speech_pipeline(frag.text, voice):
+        text = " ".join([f.text.strip() for f in fragments])
+        for result in self.speech_pipeline(text, voice):
             LOG.debug("Graphemes: %s", result.graphemes)
             if audio_np is None:
                 audio_np = result.audio.numpy()
@@ -124,12 +136,21 @@ class SpeechGenService(Service):
                 audio_np = np.concatenate((audio_np, result.audio.numpy()), axis=0)
 
         if audio_np is None:
-            return None
+            LOG.error("Audio is empty for text: %s", text)
+            raise
 
         duration_s = audio_np.size / self.sample_rate
         LOG.debug("Total duration seconds: %s", duration_s)
 
-        return audio_np, duration_s
+        # Extrapolate the fragment timings based on the length of the text.
+        timings = []
+        total_text_len = sum([len(f.text) for f in fragments])
+        for frag in fragments:
+            frag_len = len(frag.text)
+            est_duration_s = frag_len * duration_s / total_text_len
+            timings.append(FragmentDuration(id=frag.id, duration=est_duration_s))
+
+        return audio_np, timings
 
     def _upload_file(self, remote_file_path: str, content_type: str, body: bytes):
         try:
