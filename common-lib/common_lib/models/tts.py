@@ -130,7 +130,7 @@ class Token:
         (re.compile(r'\s+'), ' '),
         (re.compile(r'[!]{2,}'), '!'),
         (re.compile(r'[?]{2,}'), '?'),
-        (re.compile(r'\.(\s*\.){2,}'), '…'),
+        (re.compile(r'(\.\s*){3,}'), '… '),
         (re.compile(r'[\u2060]'), ''),
     ]
 
