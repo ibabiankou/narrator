@@ -1,5 +1,5 @@
 import { Component, ElementRef, inject, input, NgZone, OnDestroy, OnInit, output, ViewChild } from '@angular/core';
-import { EpubNavigator } from '@readium/navigator';
+import { EpubNavigator, TextAlignment } from '@readium/navigator';
 import { Link, Publication } from '@readium/shared';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { NOOP_EPUB_LISTENERS } from '../../core/models/readium';
@@ -50,7 +50,9 @@ export class ReadiumEpub implements OnInit, OnDestroy {
                 scroll: true,
                 selectionBackgroundColor: "#4e70ff",
                 scrollPaddingTop: 24,
-                scrollPaddingBottom: 24
+                scrollPaddingBottom: 24,
+                textAlign: TextAlignment.justify,
+                fontSize: 1.5
               },
               defaults: {
                 scroll: true,
@@ -232,26 +234,37 @@ export class ReadiumEpub implements OnInit, OnDestroy {
   }
 
   showFragment(fragmentId: string) {
+    console.log("showFragment", fragmentId);
     if (!this.navigator) return;
     const pageHref = this.fragmentMap.get(fragmentId);
     if (!pageHref) {
       console.warn("Fragment", fragmentId, "not found in map of size", this.fragmentMap.size);
       return;
     }
-    this.navigateHref(pageHref, (ok) => {
-      if (!this.navigator) return;
-      // This kind of access into the guts of epub renderer feels fragile.
-      const frames = this.navigator.pool.currentFrames.filter(f => !!f);
-      if (frames) {
-        const doc = frames[0].window.document;
-        const el = doc.getElementById(fragmentId);
-        if (!el) {
-          console.error("Failed to getElementById for fragment", fragmentId);
-          return;
-        }
-        this.updateStyles(doc, el);
+    if (pageHref == this.navigator.currentLocator.href) {
+      // No need to navigate.
+      this.doShowFrag(fragmentId);
+    } else {
+      // Navigate and show
+      this.navigateHref(pageHref, (ok) => {
+        this.doShowFrag(fragmentId);
+      });
+    }
+  }
+
+  doShowFrag(fragmentId: string) {
+    if (!this.navigator) return;
+    // This kind of access into the guts of epub renderer feels fragile.
+    const frames = this.navigator.pool.currentFrames.filter(f => !!f);
+    if (frames) {
+      const doc = frames[0].window.document;
+      const el = doc.getElementById(fragmentId);
+      if (!el) {
+        console.error("Failed to getElementById for fragment", fragmentId);
+        return;
       }
-    });
+      this.updateStyles(doc, el);
+    }
   }
 
   private currentElement: Element | null = null;
