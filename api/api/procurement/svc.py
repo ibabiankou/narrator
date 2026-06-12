@@ -5,8 +5,8 @@ from typing import Annotated, Optional, Tuple, List, Dict
 from blake3 import blake3
 from sqlalchemy import select, text
 
-from api.procurement.domain import IdMatch, ImageMatch
-from api.procurement.models import EpubFile, MetadataId, ImagePhash
+from api.procurement.domain import IdMatch, ImageMatch, ContentMatch
+from api.procurement.models import EpubFile, MetadataId, ImagePhash, ContentSignature
 from common_lib.db import transactional
 from common_lib.service import Service
 from epub_lib import Epub
@@ -41,12 +41,17 @@ class ProcurementService(Service):
         if image_phash_maybe is not None:
             image_matches = self._match_images(image_phash_maybe.image_name, image_phash_maybe.phash)
 
+        # Search for content similarities
+        content_minhash = epub.calculate_minhash()
+        content_matches = self._match_content(content_minhash)
+
         epub_file = EpubFile(file_name=filename,
                              file_hash=file_hash,
                              file_size_bytes=len(body.getbuffer()),
                              raw_metadata=metadata,
                              id_matches=id_matches,
-                             cover_matches=image_matches
+                             cover_matches=image_matches,
+                             content_matches=content_matches
                              )
         self.db.add(epub_file)
         self.db.flush()
@@ -60,6 +65,8 @@ class ProcurementService(Service):
         if image_phash_maybe is not None:
             image_phash_maybe.source_file = epub_file.id
             self.db.add(image_phash_maybe)
+
+        self.db.add(ContentSignature(source_file=epub_file.id, full_signature=content_minhash))
 
     def _match_identifiers(self, epub) -> Tuple[List[IdMatch], Dict[str, MetadataId]]:
         ids_to_store = {}
@@ -126,6 +133,54 @@ class ProcurementService(Service):
         matches = []
         for row in rows:
             matches.append(ImageMatch(image_name=image_name, other_image_id=row[0], confidence=row[1]))
+        return matches
+
+    def _match_content(self, content_minhash: List[int]) -> List[ContentMatch]:
+        stmt = text("""
+                    WITH new_book AS (SELECT :given_signature ::bigint[] as given_signature,
+                                             :b1 ::bigint[]              as b1,
+                                             :b2 ::bigint[]              as b2,
+                                             :b3 ::bigint[]              as b3,
+                                             :b4 ::bigint[]              as b4,
+                                             :b5 ::bigint[]              as b5,
+                                             :b6 ::bigint[]              as b6,
+                                             :b7 ::bigint[]              as b7,
+                                             :b8 ::bigint[]              as b8),
+                         candidates AS (SELECT s.source_file, s.full_signature, n.given_signature
+                                        FROM procurement.content_signatures s,
+                                             new_book n
+                                        WHERE s.band1 = n.b1
+                                           OR s.band2 = n.b2
+                                           OR s.band3 = n.b3
+                                           OR s.band4 = n.b4
+                                           OR s.band5 = n.b5
+                                           OR s.band6 = n.b6
+                                           OR s.band7 = n.b7
+                                           OR s.band8 = n.b8)
+                    SELECT source_file,
+                           (SELECT count(*)
+                            FROM (SELECT unnest(full_signature)
+                                  INTERSECT
+                                  SELECT unnest(given_signature)) AS matches)::float / 128 AS confidence
+                    FROM candidates
+                    ORDER BY confidence DESC;
+                    """)
+        # noinspection PyTypeChecker
+        rows = self.db.execute(stmt, {
+            "given_signature": content_minhash,
+            "b1": content_minhash[0:16],
+            "b2": content_minhash[16:32],
+            "b3": content_minhash[32:48],
+            "b4": content_minhash[48:64],
+            "b5": content_minhash[64:80],
+            "b6": content_minhash[80:96],
+            "b7": content_minhash[96:112],
+            "b8": content_minhash[112:128],
+        }).all()
+
+        matches = []
+        for row in rows:
+            matches.append(ContentMatch(other_book_id=row[0], confidence=row[1]))
         return matches
 
 
