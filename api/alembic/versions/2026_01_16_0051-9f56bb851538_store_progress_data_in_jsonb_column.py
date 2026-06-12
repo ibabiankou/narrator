@@ -21,10 +21,6 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.execute("delete from playback_progress where 1 = 1")
-    op.drop_column('playback_progress', 'section_id')
-    op.drop_column('playback_progress', 'section_progress')
-    op.drop_column('playback_progress', 'sync_current_section')
-    op.drop_column('playback_progress', 'playback_rate')
 
     op.add_column('playback_progress', sa.Column('data', JSONB, nullable=False))
 

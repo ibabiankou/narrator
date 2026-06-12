@@ -20,14 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column(
-        'playback_progress',
-        sa.Column('sync_current_section', sa.Boolean)
-    )
-    op.add_column(
-        'playback_progress',
-        sa.Column('playback_rate', sa.Float)
-    )
+    pass
 
 
 def downgrade() -> None:

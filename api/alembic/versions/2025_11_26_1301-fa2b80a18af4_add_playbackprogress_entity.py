@@ -24,8 +24,6 @@ def upgrade() -> None:
         'playback_progress',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
         sa.Column('book_id', sa.UUID, sa.ForeignKey('books.id'), nullable=False, unique=True),
-        sa.Column('section_id', sa.Integer, sa.ForeignKey('sections.id'), nullable=False),
-        sa.Column('section_progress', sa.Float, nullable=False),
     )
 
 
