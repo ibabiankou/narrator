@@ -52,7 +52,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
                 scrollPaddingTop: 24,
                 scrollPaddingBottom: 24,
                 textAlign: TextAlignment.justify,
-                fontSize: 1.5
+                fontSize: 1.75
               },
               defaults: {
                 scroll: true,

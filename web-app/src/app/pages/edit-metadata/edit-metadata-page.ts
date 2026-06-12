@@ -1,9 +1,5 @@
 import { Component, effect, inject, input, model, OnInit } from '@angular/core';
-import {
-  ActionButtonContentDirective,
-  BreadcrumbContentDirective,
-  ToolbarComponent
-} from '../../components/toolbar/toolbar.component';
+import { ActionButtonContentDirective, ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { repeat, switchMap, take, tap, timer } from 'rxjs';
@@ -22,7 +18,6 @@ import { SkeletonComponent } from '../../components/skeleton/skeleton.component'
   selector: 'app-edit-metadata-page',
   imports: [
     ToolbarComponent,
-    BreadcrumbContentDirective,
     BookDetailsForm,
     BookOverview,
     ActionButtonContentDirective,
