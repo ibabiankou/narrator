@@ -162,10 +162,10 @@ class SpeechGenService(Service):
 
             tokens_processed += len(result.tokens)
             LOG.info("Batch progress: %.1f%%", tokens_processed/len(all_tokens)*100)
-            if LOG.isEnabledFor(DEBUG):
-                LOG.debug(result.graphemes)
-                for t in result.tokens:
-                    LOG.debug(t)
+            # if LOG.isEnabledFor(DEBUG):
+            #     LOG.debug(result.graphemes)
+            #     for t in result.tokens:
+            #         LOG.debug(t)
 
             self._fix_token_times(result)
 
