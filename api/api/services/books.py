@@ -305,7 +305,7 @@ class BookService(Service):
     def _do_complete_narration_maybe(self):
         """Update status if narration of a book is complete."""
         query_text = """select b.id,
-                               (select count(*) from narration_queue q where q.completed is null) as pending_count
+                               (select count(*) from narration_queue q where q.completed is null and q.book_id = b.id) as pending_count
                         from books b
                         where b.status = 'narrating';
                      """
