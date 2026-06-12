@@ -6,11 +6,7 @@ import { PlayerComponent } from '../../components/player/player.component';
 import { Title } from '@angular/platform-browser';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { SkeletonComponent } from '../../components/skeleton/skeleton.component';
-import {
-  ActionButtonContentDirective,
-  BreadcrumbContentDirective,
-  ToolbarComponent
-} from '../../components/toolbar/toolbar.component';
+import { ActionButtonContentDirective, ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { HideIdleDirective } from '../../core/hideIdleDirective';
 import { BookMenu } from '../../components/book-menu/book-menu/book-menu';
 import { RouterLink } from '@angular/router';
@@ -27,7 +23,6 @@ import { ReadiumService } from '../../core/services/readium.service';
     PlayerComponent,
     SkeletonComponent,
     ToolbarComponent,
-    BreadcrumbContentDirective,
     ActionButtonContentDirective,
     HideIdleDirective,
     BookMenu,
