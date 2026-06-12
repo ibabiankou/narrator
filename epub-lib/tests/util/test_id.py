@@ -1,5 +1,3 @@
-import uuid
-
 from epub_lib.util.id import normalize_identifier
 
 

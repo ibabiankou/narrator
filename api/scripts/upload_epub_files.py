@@ -33,8 +33,8 @@ if __name__ == "__main__":
 
     LOG.info("Found %s books but will process only %s.", len(all_books), len(subset))
     LOG.info("  %s", "\n  ".join(all_books))
-    for book in subset:
-        LOG.info("Uploading %s", book)
+    for i, book in enumerate(subset):
+        LOG.info("Uploading %s/%s: %s", i, len(subset), book)
         book_size = os.path.getsize(book)
         if book_size > 15 * 1024 * 1024:
             LOG.info("Skipping too large book '%s'. Actual size: %sMB", book, book_size / 1024 / 1024)
