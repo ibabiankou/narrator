@@ -3,6 +3,10 @@ import { ErrorHandler, Injectable } from '@angular/core';
 @Injectable()
 export class GlobalErrorHandler implements ErrorHandler {
   handleError(error: any): void {
+    GlobalErrorHandler.handleError(error);
+  }
+
+  static handleError(error: any): void {
     // Extract the raw message if it's wrapped in an ErrorEvent or Error object
     const message = error?.message || error?.toString() || '';
 
@@ -25,6 +29,6 @@ export class GlobalErrorHandler implements ErrorHandler {
     logs.push(errorLog);
     localStorage.setItem('app_errors', JSON.stringify(logs.slice(-10))); // Keep last 10
 
-    console.error('Captured Error:', error);
+    console.error('Unhandled error:', error);
   }
 }
