@@ -332,7 +332,8 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
 
   async requestWakeLock() {
     try {
-      if ('wakeLock' in navigator && this.wakeLock == null) {
+      const isVisible = document.visibilityState === 'visible';
+      if ('wakeLock' in navigator && this.wakeLock == null && isVisible) {
         this.wakeLock = await (navigator as any).wakeLock.request('screen');
         this.wakeLock.addEventListener('release', () => {
           this.wakeLock = null;
