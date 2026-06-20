@@ -51,14 +51,14 @@ export class ReadiumEpub implements OnInit, OnDestroy {
                 selectionBackgroundColor: "#4e70ff",
                 scrollPaddingTop: 24,
                 scrollPaddingBottom: 24,
+                scrollPaddingLeft: 8,
+                scrollPaddingRight: 8,
                 textAlign: TextAlignment.justify,
                 fontSize: 1.75
               },
               defaults: {
                 scroll: true,
                 selectionBackgroundColor: "#4e70ff",
-                scrollPaddingTop: 24,
-                scrollPaddingBottom: 24
               },
               injectables: {
                 rules: [
