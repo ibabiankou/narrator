@@ -1,0 +1,20 @@
+.toc {
+  padding: 16px 0;
+
+  .toc-item {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    padding: 4px 16px;
+
+    .title {
+      font-weight: bold;
+    }
+
+    &:hover, &.selected {
+      background-color: light-dark(#dddddd, rgb(255, 255, 255, 0.1));
+    }
+  }
+}

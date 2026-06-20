@@ -4,22 +4,16 @@
 
 <mat-sidenav-container>
   <mat-sidenav mode="side" opened>
-    <div class="toc">
-      @for (item of tocItems(); track $index) {
-        <div class="toc-item" [ngClass]="{'selected': $index == currentItem}" (click)="navigate($index)">
-          <div><span class="title">{{item.title}}</span></div>
-          <div>
-            <mat-checkbox
-              (click)="$event.stopPropagation();"
-              (change)="toggleItem($index)"
-              checked="{{item.narrate}}" />
-          </div>
-        </div>
-      }
-    </div>
+    <app-toc
+      [tocItems]="tocItems()!"
+      [currentTocItemIndex]="currentItem"
+      [allowSelection]="true"
+      (currentItemChanged)="readium.navigate($event)"
+    ></app-toc>
   </mat-sidenav>
   <mat-sidenav-content>
     <app-readium-epub
+      #readium
       [publication]="publication()!"
       [toc]="tocItems()!"
       (currentItemChanged)="currentItem = $event"

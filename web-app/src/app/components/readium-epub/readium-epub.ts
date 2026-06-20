@@ -217,8 +217,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     const link = new Link({href: this.toc()[tocIndex].href});
     this.navigator.go(link.locator, false, (ok) => {
       if (ok) {
-        this.currentItem = tocIndex;
-        this.currentItemChanged.emit(tocIndex);
+        this.updateCurrentItem(tocIndex);
         console.log("Successfully navigated to", this.navigator!.currentLocator.href);
       } else {
         console.log("Navigation is not successful.")
@@ -226,11 +225,25 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     });
   }
 
+  private updateCurrentItem(index: number) {
+    if (this.currentItem === index) return;
+    this.currentItem = index;
+    this.currentItemChanged.emit(index);
+  }
+
   navigateHref(href: string, cb: (ok: boolean) => void) {
     if (!this.navigator) return;
 
     const link = new Link({href: href});
-    this.navigator.go(link.locator, false, cb);
+    this.navigator.go(link.locator, false, (ok: boolean) => {
+      if (ok) {
+        const tocIndex = this.toc().findIndex(i => {return i.href === href})
+        if (tocIndex >= 0) {
+          this.updateCurrentItem(tocIndex);
+        }
+      }
+      cb(ok);
+    });
   }
 
   showFragment(fragmentId: string) {
@@ -246,7 +259,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
       this.doShowFrag(fragmentId);
     } else {
       // Navigate and show
-      this.navigateHref(pageHref, (ok) => {
+      this.navigateHref(pageHref, (_) => {
         this.doShowFrag(fragmentId);
       });
     }

@@ -1,6 +1,12 @@
 <app-toolbar appHideIdle>
   <div center class="title">
     @defer (when bookDetails()) {
+      <button matIconButton
+              aria-label="Toggle Table of Contents"
+              (click)="showToC = !showToC"
+      >
+        <mat-icon>list</mat-icon>
+      </button>
       <a routerLink="/books/{{ bookId() }}">
         <h1>{{ bookDetails()!.title }}</h1>
       </a>
@@ -25,12 +31,20 @@
   </div>
 </app-toolbar>
 
-<div class="main-container" appHideIdle hideClass="hide-cursor">
-  <app-readium-epub
-    [publication]="publication()!"
-    [toc]="tocItems()!"
-  ></app-readium-epub>
-</div>
+<mat-sidenav-container appHideIdle hideClass="hide-cursor">
+  <mat-sidenav mode="side" [opened]="showToC">
+    <app-toc [tocItems]="tocItems()!" [currentTocItemIndex]="currentItem"></app-toc>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <app-readium-epub
+      [publication]="publication()!"
+      [toc]="tocItems()!"
+      (currentItemChanged)="currentItem = $event"
+    ></app-readium-epub>
+  </mat-sidenav-content>
+</mat-sidenav-container>
+
 @defer (when bookDetails()) {
   @if (BookStatus.ge(bookDetails()!.status, BookStatus.narrating)) {
     <app-player appHideIdle

@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, OnInit, viewChild } from '@angular/core';
+import { Component, computed, inject, input, viewChild } from '@angular/core';
 import { BookStatus } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
 import { filter, switchMap, tap } from 'rxjs';
@@ -16,6 +16,8 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { SettingsService } from '../../core/services/settings.service';
 import { ReadiumEpub } from '../../components/readium-epub/readium-epub';
 import { ReadiumService } from '../../core/services/readium.service';
+import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/material/sidenav';
+import { TocComponent } from '../../components/toc/toc.component';
 
 @Component({
   selector: 'app-view-book-page',
@@ -31,11 +33,15 @@ import { ReadiumService } from '../../core/services/readium.service';
     MatIconButton,
     MatTooltip,
     ReadiumEpub,
+    MatSidenavContainer,
+    MatSidenavContent,
+    MatSidenav,
+    TocComponent,
   ],
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
 })
-export class ViewBookPage implements OnInit {
+export class ViewBookPage {
   private booksService = inject(BooksService);
   private readiumService = inject(ReadiumService);
   private settingsService = inject(SettingsService);
@@ -62,18 +68,11 @@ export class ViewBookPage implements OnInit {
   tocItems = toSignal(toObservable(this.bookId).pipe(
     switchMap(bookId => this.booksService.getTableOfContent(bookId))
   ));
+  showToC = false;
+  currentItem = 0;
 
   private preferences = toSignal(this.settingsService.userPreferences$);
   private readAlong = computed(() => !!this.preferences()!["auto_scroll"]);
-
-  ngOnInit() {
-    // this.settingsService.userPreferences$
-    //   .pipe(take(1))
-    //   .subscribe(preferences => {
-    //     // this.settingsService.setFontSizeStyle(preferences["text_size"]);
-    //     // TODO: make readium component aware of settings.
-    //   });
-  }
 
   protected copyBookTitle() {
     navigator.clipboard.writeText(this.title() ?? "");

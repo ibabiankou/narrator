@@ -22,27 +22,6 @@ mat-sidenav {
   border-bottom-right-radius: 0;
   box-sizing: border-box;
 
-  .toc {
-    padding: 16px 0;
-
-    .toc-item {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      gap: 1rem;
-      align-items: center;
-      padding: 4px 16px;
-
-      .title {
-        font-weight: bold;
-      }
-
-      &:hover, &.selected {
-        background-color: light-dark(#dddddd, rgb(255, 255, 255, 0.1));
-      }
-    }
-  }
-
   ::ng-deep .mat-drawer-inner-container {
     overflow-y: auto;
     overflow-x: hidden;
@@ -53,6 +32,7 @@ mat-sidenav {
     }
   }
 }
+
 .content-spacer {
   height: 75px;
 }
