@@ -2,7 +2,7 @@
   <div center class="title">
     <button matIconButton
             aria-label="Toggle Table of Contents"
-            (click)="toc.showToC.set(!toc.showToC())"
+            (click)="toc.toggle()"
     >
       <mat-icon>list</mat-icon>
     </button>
@@ -16,7 +16,8 @@
   #toc
   [tocItems]="tocItems()!"
   [currentTocItemIndex]="currentItem"
-  [showToC]="true"
+  [showAll]="true"
+  [startOpen]="true"
   [allowSelection]="true"
   (currentItemChanged)="readium.navigate($event)"
 >

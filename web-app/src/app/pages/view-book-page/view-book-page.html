@@ -3,7 +3,7 @@
     @defer (when bookDetails()) {
       <button matIconButton
               aria-label="Toggle Table of Contents"
-              (click)="showToC = !showToC"
+              (click)="toc.toggle()"
       >
         <mat-icon>list</mat-icon>
       </button>
@@ -32,12 +32,14 @@
 </app-toolbar>
 
 <app-toc
+  #toc
   appHideIdle hideClass="hide-cursor"
   [tocItems]="tocItems()!"
   [currentTocItemIndex]="currentItem"
-  [showToC]="showToC"
+  (currentItemChanged)="readium.navigate($event)"
 >
   <app-readium-epub
+    #readium
     [publication]="publication()!"
     [toc]="tocItems()!"
     (currentItemChanged)="currentItem = $event"

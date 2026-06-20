@@ -1,4 +1,4 @@
-import { Component, computed, effect, HostListener, inject, input, model, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, input, model } from '@angular/core';
 import { ToolbarComponent } from '../../components/toolbar/toolbar.component';
 import { filter, switchMap } from 'rxjs';
 import { BooksService } from '../../core/services/books.service';

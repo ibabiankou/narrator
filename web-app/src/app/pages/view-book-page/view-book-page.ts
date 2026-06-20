@@ -16,7 +16,6 @@ import { MatTooltip } from '@angular/material/tooltip';
 import { SettingsService } from '../../core/services/settings.service';
 import { ReadiumEpub } from '../../components/readium-epub/readium-epub';
 import { ReadiumService } from '../../core/services/readium.service';
-import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/material/sidenav';
 import { TocComponent } from '../../components/toc/toc.component';
 
 @Component({
@@ -33,9 +32,6 @@ import { TocComponent } from '../../components/toc/toc.component';
     MatIconButton,
     MatTooltip,
     ReadiumEpub,
-    MatSidenavContainer,
-    MatSidenavContent,
-    MatSidenav,
     TocComponent,
   ],
   templateUrl: './view-book-page.html',
@@ -68,7 +64,6 @@ export class ViewBookPage {
   tocItems = toSignal(toObservable(this.bookId).pipe(
     switchMap(bookId => this.booksService.getTableOfContent(bookId))
   ));
-  showToC = false;
   currentItem = 0;
 
   private preferences = toSignal(this.settingsService.userPreferences$);

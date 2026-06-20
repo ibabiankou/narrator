@@ -1,4 +1,4 @@
-import { Component, effect, HostListener, input, model, output } from '@angular/core';
+import { Component, HostListener, input, model, output } from '@angular/core';
 import { TocItem } from '../../core/models/books.dto';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { NgClass } from '@angular/common';
@@ -23,7 +23,10 @@ export class TocComponent {
   currentTocItemIndex = input<number>(0);
   allowSelection = input<boolean>(false);
 
-  showToC = model<boolean>(false);
+  // Whether to show items that not selected for narration.
+  showAll = input<boolean>(false);
+
+  opened = model<boolean>(false, {alias: "startOpen"});
 
   currentItemChanged = output<number>();
 
@@ -113,8 +116,12 @@ export class TocComponent {
     }
   }
 
-  @HostListener("window:keydown.space", [])
   toggle() {
+    this.opened.set(!this.opened());
+  }
+
+  @HostListener("window:keydown.space", [])
+  toggleItemListener() {
     if (this.allowSelection()) {
       this.toggleItem(this.currentTocItemIndex());
     }
