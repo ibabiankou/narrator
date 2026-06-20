@@ -80,8 +80,8 @@ export class AudioPlayer {
           debug: false,
         });
 
-        this.hls.on(Hls.Events.LEVEL_UPDATED, (_, data) => {
-          this.totalDuration$.next(this.audio.duration);
+        this.hls.on(Hls.Events.LEVEL_UPDATED, (eventName, data) => {
+          console.debug("Handling: %s", eventName, data);
 
           if (data.details.fragments) {
             let cumulativeSize = 0;
@@ -115,6 +115,7 @@ export class AudioPlayer {
             });
 
             this.totalSize$.next(cumulativeSize)
+            this.totalDuration$.next(cumulativeDuration);
             this.fragmentTimeline = fragments;
           }
 
@@ -124,7 +125,9 @@ export class AudioPlayer {
         });
 
         // Update time drift each time a new audio track is started.
-        this.hls.on(Hls.Events.FRAG_CHANGED, (_, data) => {
+        this.hls.on(Hls.Events.FRAG_CHANGED, (eventName, data) => {
+          console.debug("Handling: %s", eventName, data);
+
           if (data.frag) {
             if (this.timeDrift < 0) {
               // Skip the first fragment change because of the assumption that most of the time
