@@ -1,4 +1,4 @@
-import { Component, HostListener, input, model, output } from '@angular/core';
+import { Component, effect, HostListener, input, model, output } from '@angular/core';
 import { TocItem } from '../../core/models/books.dto';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { NgClass } from '@angular/common';
@@ -30,8 +30,22 @@ export class TocComponent {
 
   currentItemChanged = output<number>();
 
+  constructor() {
+    effect(() => {
+      const currentItem = this.currentTocItemIndex();
+      const tocItemElement = document.getElementById(this.itemId(currentItem));
+      if (tocItemElement) {
+        tocItemElement.scrollIntoView({behavior: "smooth", block: "center"});
+      }
+    });
+  }
+
   protected itemClicked(index: number) {
     this.currentItemChanged.emit(index);
+  }
+
+  protected itemId(index: number) {
+    return `toc-${index}`;
   }
 
   @HostListener("window:keydown.arrowdown", [])

@@ -3,7 +3,7 @@
     <div class="toc">
       @for (item of tocItems(); track $index) {
         <div class="toc-item" [ngClass]="{'selected': $index == currentTocItemIndex()}" (click)="itemClicked($index)">
-          <div><span class="title">{{item.title}}</span></div>
+          <div><span id="{{itemId($index)}}" class="title">{{item.title}}</span></div>
           @if (allowSelection()) {
             <div>
               <mat-checkbox
