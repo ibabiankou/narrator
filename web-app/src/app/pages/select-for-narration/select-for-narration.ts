@@ -7,9 +7,10 @@ import { ReadiumEpub } from '../../components/readium-epub/readium-epub';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { TocItem } from '../../core/models/books.dto';
-import { MatButton } from '@angular/material/button';
-import { Router } from '@angular/router';
+import { MatButton, MatIconButton } from '@angular/material/button';
+import { Router, RouterLink } from '@angular/router';
 import { TocComponent } from '../../components/toc/toc.component';
+import { MatIcon } from '@angular/material/icon';
 
 @Component({
   selector: 'app-select-for-narration',
@@ -19,6 +20,9 @@ import { TocComponent } from '../../components/toc/toc.component';
     MatSidenavModule,
     MatButton,
     TocComponent,
+    MatIcon,
+    MatIconButton,
+    RouterLink,
   ],
   templateUrl: './select-for-narration.html',
   styleUrl: './select-for-narration.scss',
@@ -27,8 +31,6 @@ export class SelectForNarration {
   private booksService = inject(BooksService);
   private readiumService = inject(ReadiumService);
   private router: Router = inject(Router);
-
-  readonly readiumEpub = viewChild(ReadiumEpub);
 
   bookId = input.required<string>();
   bookDetails = toSignal(toObservable(this.bookId).pipe(

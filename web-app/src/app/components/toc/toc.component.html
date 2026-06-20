@@ -1,15 +1,22 @@
-<div class="toc">
-  @for (item of tocItems(); track $index) {
-    <div class="toc-item" [ngClass]="{'selected': $index == currentTocItemIndex()}" (click)="itemClicked($index)">
-      <div><span class="title">{{item.title}}</span></div>
-      @if (allowSelection()) {
-        <div>
-          <mat-checkbox
-            (click)="$event.stopPropagation();"
-            (change)="toggleItem($index)"
-            checked="{{item.narrate}}" />
+<mat-sidenav-container>
+  <mat-sidenav mode="side" [opened]="showToC()">
+    <div class="toc">
+      @for (item of tocItems(); track $index) {
+        <div class="toc-item" [ngClass]="{'selected': $index == currentTocItemIndex()}" (click)="itemClicked($index)">
+          <div><span class="title">{{item.title}}</span></div>
+          @if (allowSelection()) {
+            <div>
+              <mat-checkbox
+                (click)="$event.stopPropagation();"
+                (change)="toggleItem($index)"
+                checked="{{item.narrate}}" />
+            </div>
+          }
         </div>
       }
     </div>
-  }
-</div>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <ng-content></ng-content>
+  </mat-sidenav-content>
+</mat-sidenav-container>

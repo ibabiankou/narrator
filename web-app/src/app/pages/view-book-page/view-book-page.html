@@ -31,19 +31,18 @@
   </div>
 </app-toolbar>
 
-<mat-sidenav-container appHideIdle hideClass="hide-cursor">
-  <mat-sidenav mode="side" [opened]="showToC">
-    <app-toc [tocItems]="tocItems()!" [currentTocItemIndex]="currentItem"></app-toc>
-  </mat-sidenav>
-
-  <mat-sidenav-content>
-    <app-readium-epub
-      [publication]="publication()!"
-      [toc]="tocItems()!"
-      (currentItemChanged)="currentItem = $event"
-    ></app-readium-epub>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+<app-toc
+  appHideIdle hideClass="hide-cursor"
+  [tocItems]="tocItems()!"
+  [currentTocItemIndex]="currentItem"
+  [showToC]="showToC"
+>
+  <app-readium-epub
+    [publication]="publication()!"
+    [toc]="tocItems()!"
+    (currentItemChanged)="currentItem = $event"
+  ></app-readium-epub>
+</app-toc>
 
 @defer (when bookDetails()) {
   @if (BookStatus.ge(bookDetails()!.status, BookStatus.narrating)) {

@@ -1,25 +1,32 @@
 <app-toolbar>
-  <h1 center class="title">{{ title() }}</h1>
+  <div center class="title">
+    <button matIconButton
+            aria-label="Toggle Table of Contents"
+            (click)="toc.showToC.set(!toc.showToC())"
+    >
+      <mat-icon>list</mat-icon>
+    </button>
+    <a routerLink="/books/{{ bookId() }}">
+      <h1>{{ title() }}</h1>
+    </a>
+  </div>
 </app-toolbar>
 
-<mat-sidenav-container>
-  <mat-sidenav mode="side" opened>
-    <app-toc
-      [tocItems]="tocItems()!"
-      [currentTocItemIndex]="currentItem"
-      [allowSelection]="true"
-      (currentItemChanged)="readium.navigate($event)"
-    ></app-toc>
-  </mat-sidenav>
-  <mat-sidenav-content>
-    <app-readium-epub
-      #readium
-      [publication]="publication()!"
-      [toc]="tocItems()!"
-      (currentItemChanged)="currentItem = $event"
-    ></app-readium-epub>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+<app-toc
+  #toc
+  [tocItems]="tocItems()!"
+  [currentTocItemIndex]="currentItem"
+  [showToC]="true"
+  [allowSelection]="true"
+  (currentItemChanged)="readium.navigate($event)"
+>
+  <app-readium-epub
+    #readium
+    [publication]="publication()!"
+    [toc]="tocItems()!"
+    (currentItemChanged)="currentItem = $event"
+  ></app-readium-epub>
+</app-toc>
 
 <div class="content-spacer"></div>
 
@@ -27,5 +34,6 @@
   <button matButton="outlined"
           aria-label="Enqueue book for narration"
           (click)="startNarration()"
-  >Start Narration</button>
+  >Start Narration
+  </button>
 </div>

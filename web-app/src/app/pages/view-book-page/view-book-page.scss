@@ -39,28 +39,3 @@ app-toolbar {
 .delete-button, .delete-button mat-icon {
   color: darkred !important;
 }
-
-mat-sidenav-container {
-  flex-grow: 1;
-  width: 100%;
-  height: 100%;
-}
-
-mat-sidenav {
-  min-width: 150px;
-  max-width: 300px;
-  border-right: 1px solid var(--mat-sys-outline-variant);
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  box-sizing: border-box;
-
-  ::ng-deep .mat-drawer-inner-container {
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
-}

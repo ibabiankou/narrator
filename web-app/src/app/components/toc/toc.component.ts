@@ -1,7 +1,8 @@
-import { Component, HostListener, input, output } from '@angular/core';
+import { Component, effect, HostListener, input, model, output } from '@angular/core';
 import { TocItem } from '../../core/models/books.dto';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { NgClass } from '@angular/common';
+import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/material/sidenav';
 
 
 @Component({
@@ -9,7 +10,10 @@ import { NgClass } from '@angular/common';
   standalone: true,
   imports: [
     MatCheckbox,
-    NgClass
+    NgClass,
+    MatSidenav,
+    MatSidenavContainer,
+    MatSidenavContent,
   ],
   templateUrl: './toc.component.html',
   styleUrl: './toc.component.scss',
@@ -18,6 +22,8 @@ export class TocComponent {
   tocItems = input.required<TocItem[]>();
   currentTocItemIndex = input<number>(0);
   allowSelection = input<boolean>(false);
+
+  showToC = model<boolean>(false);
 
   currentItemChanged = output<number>();
 
