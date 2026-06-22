@@ -39,6 +39,7 @@ import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { SettingsService } from '../../core/services/settings.service';
 import { secondsToTimeFormat } from '../../core/utils';
 import { FilesService } from '../../core/services/files.service';
+import { FullScreenService } from '../../core/services/fullScreen.service';
 
 @Component({
   selector: 'app-player',
@@ -64,6 +65,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   private bookService = inject(BooksService);
   private settingsService = inject(SettingsService);
   private filesService = inject(FilesService);
+  private fullScreenService = inject(FullScreenService);
   private audioPlayer: AudioPlayer;
 
   bookDetails = input.required<BookDetails>();
@@ -83,6 +85,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   private preferences = toSignal(this.settingsService.userPreferences$);
 
   syncCurrentSection = computed(() => !!this.preferences()!["auto_scroll"]);
+  isFullScreen = this.fullScreenService.fullScreen;
 
   handleKeyBindings = input(true);
 
@@ -374,5 +377,9 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   toggleSync() {
     const newValue = !this.syncCurrentSection();
     this.settingsService.patchUserPreferences({auto_scroll: newValue});
+  }
+
+  protected toggleFullScreen() {
+    this.fullScreenService.toggleFullScreen();
   }
 }

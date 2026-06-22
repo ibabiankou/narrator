@@ -28,6 +28,13 @@
               #playbackSettingsMenuTrigger="matMenuTrigger">
         <mat-icon>settings</mat-icon>
       </button>
+      <button matIconButton aria-label="Toggle Full Screen Mode" (click)="toggleFullScreen()">
+        @if (isFullScreen()) {
+          <mat-icon>fullscreen_exit</mat-icon>
+        } @else {
+          <mat-icon>fullscreen</mat-icon>
+        }
+      </button>
 
       <mat-menu #playbackSettingsMenu="matMenu" class="playback-settings-menu">
         <button mat-menu-item>
@@ -47,7 +54,6 @@
             <mat-icon>add</mat-icon>
           </button>
         </button>
-
       </mat-menu>
     </div>
 
