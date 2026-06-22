@@ -162,6 +162,8 @@ export class ReadiumEpub implements OnInit, OnDestroy {
                   if (eventName == "mousemove") {
                     clonedEvent = new MouseEvent(eventName, e);
                   } else if (eventName == "keydown") {
+                    e.preventDefault();
+                    e.stopPropagation();
                     clonedEvent = new KeyboardEvent(eventName, e);
                   } else if (eventName == "touchstart" && e instanceof TouchEvent) {
                     clonedEvent = new TouchEvent(eventName, {
@@ -188,7 +190,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
                 }
                 window.dispatchEvent(clonedEvent);
               });
-            }, { passive: true });
+            }, { passive: false });
           });
         }
       } catch (error) {
