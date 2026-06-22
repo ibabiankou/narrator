@@ -31,15 +31,6 @@
   transform: translateY(100%);
 }
 
-:host.hidden .content-spacer {
-  height: 0;
-  transition: height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.content-spacer {
-  height: 115px
-}
-
 div#controls {
   $controls_height: 60px;
   display: flex;
