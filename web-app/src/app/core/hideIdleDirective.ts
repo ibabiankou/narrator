@@ -1,9 +1,10 @@
-import { Directive, ElementRef, Input, NgZone, OnDestroy, OnInit, Renderer2 } from '@angular/core';
+import { Directive, effect, ElementRef, Input, NgZone, OnDestroy, OnInit, Renderer2 } from '@angular/core';
+import { FullScreenService } from './services/fullScreen.service';
 
 @Directive({
   selector: '[appHideIdle]'
 })
-export class HideIdleDirective implements OnInit, OnDestroy {
+export class HideIdleDirective implements OnDestroy {
   @Input() idleTime = 3000;
   @Input() hideClass = 'hidden';
 
@@ -11,17 +12,26 @@ export class HideIdleDirective implements OnInit, OnDestroy {
   private isHidden = false;
   private removeListeners: (() => void)[] = [];
 
-  constructor(private ngZone: NgZone, private renderer: Renderer2, private el: ElementRef) {}
+  constructor(
+    private fullScreenService: FullScreenService,
+    private ngZone: NgZone,
+    private renderer: Renderer2,
+    private el: ElementRef) {
 
-  ngOnInit() {
-    this.ngZone.runOutsideAngular(() => {
-      const events = ['mousemove', 'keydown', 'touchstart'];
-      events.forEach(event => {
-        const unlisten = this.renderer.listen('window', event, () => this.handleActivity());
-        this.removeListeners.push(unlisten);
-      });
+    effect(() => {
+      if (this.fullScreenService.fullScreen()) {
+        this.ngZone.runOutsideAngular(() => {
+          const events = ['mousemove', 'keydown', 'touchstart'];
+          events.forEach(event => {
+            const unlisten = this.renderer.listen('window', event, () => this.handleActivity());
+            this.removeListeners.push(unlisten);
+          });
+        });
+        this.startTimer();
+      } else {
+        this.ngOnDestroy();
+      }
     });
-    this.startTimer();
   }
 
   private handleActivity() {
@@ -48,5 +58,9 @@ export class HideIdleDirective implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.timeoutId) clearTimeout(this.timeoutId);
     this.removeListeners.forEach(fn => fn());
+
+    while (this.removeListeners.length > 0) {
+      this.removeListeners.pop();
+    }
   }
 }
