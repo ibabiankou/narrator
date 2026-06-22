@@ -40,6 +40,7 @@ export class HideIdleDirective implements OnDestroy {
         });
         this.startTimer();
       } else {
+        this.handleActivity();
         this.ngOnDestroy();
       }
     });

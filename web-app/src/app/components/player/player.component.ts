@@ -379,6 +379,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.settingsService.patchUserPreferences({auto_scroll: newValue});
   }
 
+  @HostListener("window:keydown.f", [])
   protected toggleFullScreen() {
     this.fullScreenService.toggleFullScreen();
   }

@@ -6,19 +6,20 @@ import { Injectable, signal } from '@angular/core';
 export class FullScreenService {
   fullScreen = signal<boolean>(false);
 
+  constructor() {
+    document.addEventListener('fullscreenchange', () => {
+      this.fullScreen.set(!!document.fullscreenElement);
+    })
+  }
+
   toggleFullScreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen()
-        .then(() => {
-          this.fullScreen.set(true);
-        })
         .catch((err: any) => {
           console.error(`Error attempting to enable fullscreen: ${err.message}`);
         });
     } else {
-      document.exitFullscreen().then(() => {
-        this.fullScreen.set(false);
-      });
+      document.exitFullscreen();
     }
   }
 }
