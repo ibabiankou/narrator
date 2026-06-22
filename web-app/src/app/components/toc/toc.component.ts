@@ -130,6 +130,7 @@ export class TocComponent {
     }
   }
 
+  @HostListener("window:keydown.t", [])
   toggle() {
     this.opened.set(!this.opened());
   }

@@ -82,7 +82,6 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
 
   private preferences = toSignal(this.settingsService.userPreferences$);
 
-  sectionPlayed = output<number>();
   syncCurrentSection = computed(() => !!this.preferences()!["auto_scroll"]);
 
   handleKeyBindings = input(true);
@@ -371,13 +370,9 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     this.destroy$.complete();
   }
 
+  @HostListener("window:keydown.r", [])
   toggleSync() {
     const newValue = !this.syncCurrentSection();
-    if (!newValue) {
-      this.sectionPlayed.emit(0);
-    } else {
-      // Scroll the current fragment into view.
-    }
     this.settingsService.patchUserPreferences({auto_scroll: newValue});
   }
 }
