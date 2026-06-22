@@ -1,10 +1,20 @@
-import { Component, ElementRef, inject, input, NgZone, OnDestroy, OnInit, output, ViewChild } from '@angular/core';
+import {
+  Component,
+  effect,
+  ElementRef,
+  HostListener,
+  inject,
+  input,
+  NgZone,
+  OnDestroy,
+  OnInit,
+  output,
+  ViewChild
+} from '@angular/core';
 import { EpubNavigator, TextAlignment } from '@readium/navigator';
 import { Link, Publication } from '@readium/shared';
-import { toObservable } from '@angular/core/rxjs-interop';
 import { NOOP_EPUB_LISTENERS } from '../../core/models/readium';
 import { ThemeService } from '../../core/services/theme.service';
-import { filter, take } from 'rxjs';
 import { TocItem } from '../../core/models/books.dto';
 import { environment } from '../../../environments/environment';
 
@@ -28,88 +38,12 @@ export class ReadiumEpub implements OnInit, OnDestroy {
   private navigator?: EpubNavigator;
   private observer!: MutationObserver;
   private fragmentMap = new Map<string, string>();
+  private currentFragment?: string;
 
   constructor() {
-    toObservable(this.publication)
-      .pipe(
-        filter(publication => !!publication),
-        take(1)
-      ).subscribe({
-      next: async (publication) => {
-        try {
-          this.navigator = new EpubNavigator(
-            this.readerContainer.nativeElement,
-            publication,
-            NOOP_EPUB_LISTENERS,
-            [],
-            undefined,
-            {
-              preferences: {
-                backgroundColor: this.getStyle("background-color"),
-                textColor: this.getStyle("color"),
-                scroll: true,
-                selectionBackgroundColor: "#4e70ff",
-                scrollPaddingTop: 45,
-                scrollPaddingBottom: 65,
-                scrollPaddingLeft: 8,
-                scrollPaddingRight: 8,
-                textAlign: TextAlignment.justify,
-                fontSize: 1.75
-              },
-              defaults: {
-                scroll: true,
-                selectionBackgroundColor: "#4e70ff",
-              },
-              injectables: {
-                rules: [
-                  {
-                    resources: [/.*\.x?html?/],
-                    append: [
-                      {
-                        as: "link",
-                        rel: "stylesheet",
-                        target: "head",
-                        url: `${document.location.origin}/app/css/epub-read-along.css`,
-                        type: "text/css"
-                      }
-                    ]
-                  }
-                ],
-                allowedDomains: [environment.origin]
-              }
-            }
-          );
-
-          await this.navigator.load().then(() => {
-            this.navigate(0);
-          });
-        } catch (error) {
-          console.error('Failed to initialize Readium Navigator:', error);
-        }
-
-        try {
-          if (publication.resources) {
-            const mapLinks = publication.resources.items.filter(item => item.href.endsWith("fragment-map.json"));
-            if (mapLinks.length > 0) {
-              const link = mapLinks[0];
-              const mapData: object = <Object>await publication.get(link).readAsJSON();
-              Object.entries(mapData).forEach(([href, values]) => {
-                if (Array.isArray(values)) {
-                  values.forEach((fragmentId: string) => {
-                    this.fragmentMap.set(fragmentId, href);
-                  });
-                }
-              });
-            } else {
-              console.error("No fragment map found in publication.");
-            }
-          }
-        } catch (error) {
-          console.error('Failed to load fragment map.', error);
-        }
-      }
+    effect(() => {
+      this.initNavigator();
     });
-
     this.themeService.isDark$.subscribe({
         next: () => {
           // Wait a bit for css to be updated.
@@ -119,6 +53,100 @@ export class ReadiumEpub implements OnInit, OnDestroy {
         }
       }
     );
+  }
+
+  async initNavigator() {
+    const publication = this.publication();
+    if (!publication) {
+      console.log("No publication to initialize navigator.");
+      return;
+    }
+    try {
+      this.navigator = new EpubNavigator(
+        this.readerContainer.nativeElement,
+        publication,
+        NOOP_EPUB_LISTENERS,
+        [],
+        undefined,
+        {
+          preferences: {
+            backgroundColor: this.getStyle("background-color"),
+            textColor: this.getStyle("color"),
+            scroll: true,
+            selectionBackgroundColor: "#4e70ff",
+            scrollPaddingTop: 45,
+            scrollPaddingBottom: 65,
+            scrollPaddingLeft: 8,
+            scrollPaddingRight: 8,
+            textAlign: TextAlignment.justify,
+            fontSize: 1.75
+          },
+          defaults: {
+            scroll: true,
+            selectionBackgroundColor: "#4e70ff",
+          },
+          injectables: {
+            rules: [
+              {
+                resources: [/.*\.x?html?/],
+                append: [
+                  {
+                    as: "link",
+                    rel: "stylesheet",
+                    target: "head",
+                    url: `${document.location.origin}/app/css/epub-read-along.css`,
+                    type: "text/css"
+                  }
+                ]
+              }
+            ],
+            allowedDomains: [environment.origin]
+          }
+        }
+      );
+
+      await this.navigator.load().then(() => {
+        if (this.currentFragment) {
+          this.showFragment(this.currentFragment);
+        } else {
+          this.navigate(0);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to initialize Readium Navigator:', error);
+    }
+
+    try {
+      if (publication.resources) {
+        const mapLinks = publication.resources.items.filter(item => item.href.endsWith("fragment-map.json"));
+        if (mapLinks.length > 0) {
+          const link = mapLinks[0];
+          const mapData: object = <Object>await publication.get(link).readAsJSON();
+          Object.entries(mapData).forEach(([href, values]) => {
+            if (Array.isArray(values)) {
+              values.forEach((fragmentId: string) => {
+                this.fragmentMap.set(fragmentId, href);
+              });
+            }
+          });
+        } else {
+          console.error("No fragment map found in publication.");
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load fragment map.', error);
+    }
+  }
+
+  @HostListener('document:visibilitychange')
+  async handleVisibilityChange() {
+    if (document.visibilityState !== 'visible') {
+      if (this.navigator) {
+        await this.navigator.destroy();
+      }
+    } else {
+      await this.initNavigator();
+    }
   }
 
   ngOnInit() {
@@ -250,6 +278,8 @@ export class ReadiumEpub implements OnInit, OnDestroy {
 
   showFragment(fragmentId: string) {
     console.log("showFragment", fragmentId);
+    this.currentFragment = fragmentId;
+
     if (!this.navigator) return;
     const pageHref = this.fragmentMap.get(fragmentId);
     if (!pageHref) {
@@ -321,7 +351,6 @@ export class ReadiumEpub implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.navigator && typeof this.navigator.destroy === 'function') {
-      this.navigator.resizeHandler()
       this.navigator.destroy();
     }
     if (this.observer) {
