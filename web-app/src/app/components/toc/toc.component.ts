@@ -3,6 +3,7 @@ import { TocItem } from '../../core/models/books.dto';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { NgClass } from '@angular/common';
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/material/sidenav';
+import { HideIdleDirective } from '../../core/hideIdleDirective';
 
 
 @Component({
@@ -14,6 +15,7 @@ import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/mat
     MatSidenav,
     MatSidenavContainer,
     MatSidenavContent,
+    HideIdleDirective,
   ],
   templateUrl: './toc.component.html',
   styleUrl: './toc.component.scss',
@@ -27,6 +29,7 @@ export class TocComponent {
   showAll = input<boolean>(false);
 
   opened = model<boolean>(false, {alias: "startOpen"});
+  idleHidden = model<boolean>(false);
 
   currentItemChanged = output<number>();
 

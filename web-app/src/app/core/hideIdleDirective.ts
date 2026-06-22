@@ -1,4 +1,14 @@
-import { Directive, effect, ElementRef, Input, NgZone, OnDestroy, OnInit, Renderer2 } from '@angular/core';
+import {
+  Directive,
+  effect,
+  ElementRef,
+  EventEmitter,
+  Input,
+  NgZone,
+  OnDestroy,
+  Output,
+  Renderer2
+} from '@angular/core';
 import { FullScreenService } from './services/fullScreen.service';
 
 @Directive({
@@ -7,6 +17,7 @@ import { FullScreenService } from './services/fullScreen.service';
 export class HideIdleDirective implements OnDestroy {
   @Input() idleTime = 3000;
   @Input() hideClass = 'hidden';
+  @Output() hidden = new EventEmitter<boolean>();
 
   private timeoutId: any;
   private isHidden = false;
@@ -39,6 +50,7 @@ export class HideIdleDirective implements OnDestroy {
 
     if (this.isHidden) {
       this.isHidden = false;
+      this.hidden.emit(this.isHidden);
       this.ngZone.run(() => {
         this.renderer.removeClass(this.el.nativeElement, this.hideClass);
       });
@@ -49,6 +61,7 @@ export class HideIdleDirective implements OnDestroy {
   private startTimer() {
     this.timeoutId = setTimeout(() => {
       this.isHidden = true;
+      this.hidden.emit(this.isHidden);
       this.ngZone.run(() => {
         this.renderer.addClass(this.el.nativeElement, this.hideClass);
       });
@@ -56,6 +69,9 @@ export class HideIdleDirective implements OnDestroy {
   }
 
   ngOnDestroy() {
+    this.isHidden = false;
+    this.hidden.emit(this.isHidden);
+
     if (this.timeoutId) clearTimeout(this.timeoutId);
     this.removeListeners.forEach(fn => fn());
 

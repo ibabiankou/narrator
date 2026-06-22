@@ -1,5 +1,8 @@
 <mat-sidenav-container>
-  <mat-sidenav mode="side" [opened]="opened()">
+  <mat-sidenav mode="side"
+               appHideIdle
+               (hidden)="idleHidden.set($event)"
+               [opened]="opened() && !idleHidden()">
     <div class="toc">
       @for (item of tocItems(); track $index) {
         <div class="toc-item" [ngClass]="{'selected': $index == currentTocItemIndex()}" (click)="itemClicked($index)">
