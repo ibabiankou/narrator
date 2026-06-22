@@ -1,5 +1,5 @@
 import {
-  Component,
+  Component, computed,
   effect,
   ElementRef,
   HostListener,
@@ -17,6 +17,8 @@ import { NOOP_EPUB_LISTENERS } from '../../core/models/readium';
 import { ThemeService } from '../../core/services/theme.service';
 import { TocItem } from '../../core/models/books.dto';
 import { environment } from '../../../environments/environment';
+import { SettingsService } from '../../core/services/settings.service';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-readium-epub',
@@ -25,7 +27,8 @@ import { environment } from '../../../environments/environment';
   styleUrl: './readium-epub.scss',
 })
 export class ReadiumEpub implements OnInit, OnDestroy {
-  themeService = inject(ThemeService);
+  private settingsService = inject(SettingsService);
+  private themeService = inject(ThemeService);
   private ngZone = inject(NgZone);
 
   @ViewChild('readerContainer', {static: true}) readerContainer!: ElementRef<HTMLDivElement>;
@@ -40,9 +43,22 @@ export class ReadiumEpub implements OnInit, OnDestroy {
   private fragmentMap = new Map<string, string>();
   private currentFragment?: string;
 
+  private preferences = toSignal(this.settingsService.userPreferences$);
+  private readAlong = computed(() => !!this.preferences()!["auto_scroll"]);
+
   constructor() {
     effect(() => {
       this.initNavigator();
+    });
+    effect(() => {
+      const currentReadAlong = this.readAlong();
+      if (currentReadAlong) {
+        if (this.currentFragment) {
+          this.showFragment(this.currentFragment);
+        }
+      } else {
+        this.removeHighlight();
+      }
     });
     this.themeService.isDark$.subscribe({
         next: () => {
@@ -280,6 +296,10 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     console.log("showFragment", fragmentId);
     this.currentFragment = fragmentId;
 
+    if (!this.readAlong()) {
+      return;
+    }
+
     if (!this.navigator) return;
     const pageHref = this.fragmentMap.get(fragmentId);
     if (!pageHref) {
@@ -297,7 +317,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     }
   }
 
-  doShowFrag(fragmentId: string) {
+  private doShowFrag(fragmentId: string) {
     if (!this.navigator) return;
     // This kind of access into the guts of epub renderer feels fragile.
     const frames = this.navigator.pool.currentFrames.filter(f => !!f);
@@ -314,7 +334,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
 
   private currentElement: Element | null = null;
 
-  updateStyles(doc: Document, targetElement: HTMLElement) {
+  private updateStyles(doc: Document, targetElement: HTMLElement) {
     // Find all elements in the exact order they appear on the page.
     const elements = doc.querySelectorAll("span.nf");
 
@@ -346,6 +366,21 @@ export class ReadiumEpub implements OnInit, OnDestroy {
           el.classList.remove("past")
         }
       }
+    }
+  }
+
+  private removeHighlight() {
+    if (!this.navigator) return;
+    // This kind of access into the guts of epub renderer feels fragile.
+    const frames = this.navigator.pool.currentFrames.filter(f => !!f);
+    if (frames) {
+      const doc = frames[0].window.document;
+
+      const elements = doc.querySelectorAll("span.nf");
+      for (const el of elements) {
+        el.classList.remove("past", "current")
+      }
+      this.currentElement = null;
     }
   }
 

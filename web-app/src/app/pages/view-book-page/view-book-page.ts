@@ -13,7 +13,6 @@ import { RouterLink } from '@angular/router';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
-import { SettingsService } from '../../core/services/settings.service';
 import { ReadiumEpub } from '../../components/readium-epub/readium-epub';
 import { ReadiumService } from '../../core/services/readium.service';
 import { TocComponent } from '../../components/toc/toc.component';
@@ -40,7 +39,6 @@ import { TocComponent } from '../../components/toc/toc.component';
 export class ViewBookPage {
   private booksService = inject(BooksService);
   private readiumService = inject(ReadiumService);
-  private settingsService = inject(SettingsService);
   private titleService = inject(Title);
 
   bookId = input.required<string>();
@@ -66,9 +64,6 @@ export class ViewBookPage {
   ));
   currentItem = 0;
 
-  private preferences = toSignal(this.settingsService.userPreferences$);
-  private readAlong = computed(() => !!this.preferences()!["auto_scroll"]);
-
   protected copyBookTitle() {
     navigator.clipboard.writeText(this.title() ?? "");
   }
@@ -76,8 +71,6 @@ export class ViewBookPage {
   protected readonly BookStatus = BookStatus;
 
   protected fragmentChanged(fragmentId: string) {
-    if (this.readAlong()) {
-      this.readiumEpub()!.showFragment(fragmentId);
-    }
+    this.readiumEpub()!.showFragment(fragmentId);
   }
 }
