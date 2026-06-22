@@ -3,7 +3,7 @@ import {
   BehaviorSubject,
   combineLatest,
   combineLatestWith,
-  distinct,
+  distinctUntilChanged,
   filter,
   interval,
   map,
@@ -135,6 +135,7 @@ export class AudioPlayer {
               this.timeDrift = 0;
             } else {
               this.timeDrift = this.audio.currentTime - data.frag.playlistOffset;
+              console.debug("Time drift: ", this.timeDrift);
             }
           } else {
             console.warn("Frag changed event data is missing.")
@@ -197,7 +198,7 @@ export class AudioPlayer {
         console.warn("Unable to find fragment for current time: ", currentTime);
         return null;
       }),
-      distinct(),
+      distinctUntilChanged(),
       tap((fragment) => {
         this.currentFragment$.next(fragment);
       }),
@@ -283,6 +284,7 @@ export class AudioPlayer {
 
   seek(adjustment: number) {
     // Since the change is relative to the current time, don't bother with time drift.
+    this.timeDrift = -1;
     this.audio.currentTime += adjustment;
   }
 
@@ -290,8 +292,8 @@ export class AudioPlayer {
     if (seekTime == undefined) {
       return;
     }
-    this.setCurrentTime(seekTime);
     this.timeDrift = -1;
+    this.setCurrentTime(seekTime);
   }
 
   setPlaybackRate(playbackRate: number) {
