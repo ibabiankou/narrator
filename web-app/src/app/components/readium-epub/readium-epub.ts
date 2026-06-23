@@ -11,7 +11,7 @@ import {
   output,
   ViewChild
 } from '@angular/core';
-import { EpubNavigator, TextAlignment } from '@readium/navigator';
+import { EpubNavigator, FrameManager, TextAlignment } from '@readium/navigator';
 import { Link, Publication } from '@readium/shared';
 import { NOOP_EPUB_LISTENERS } from '../../core/models/readium';
 import { ThemeService } from '../../core/services/theme.service';
@@ -159,6 +159,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     if (document.visibilityState !== 'visible') {
       if (this.navigator) {
         await this.navigator.destroy();
+        this.navigator = undefined;
       }
     } else {
       await this.initNavigator();
@@ -321,15 +322,18 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     if (!this.navigator) return;
     // This kind of access into the guts of epub renderer feels fragile.
     const frames = this.navigator.pool.currentFrames.filter(f => !!f);
-    if (frames) {
-      const doc = frames[0].window.document;
-      const el = doc.getElementById(fragmentId);
-      if (!el) {
-        console.error("Failed to getElementById for fragment", fragmentId);
-        return;
-      }
-      this.updateStyles(doc, el);
+    if (frames.length == 0) return;
+    const frame = frames[0];
+    if (frame instanceof FrameManager && frame.isDestroyed) return;
+    if (!frame.iframe.contentWindow) return;
+
+    const doc = frame.window.document;
+    const el = doc.getElementById(fragmentId);
+    if (!el) {
+      console.error("Failed to getElementById for fragment", fragmentId);
+      return;
     }
+    this.updateStyles(doc, el);
   }
 
   private currentElement: Element | null = null;
