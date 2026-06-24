@@ -68,13 +68,14 @@ div#controls {
     }
   }
 
-  .settings {
+  .controls {
     position: absolute;
     height: $controls_height;
 
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
   }
 
   .right {

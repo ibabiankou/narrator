@@ -1,7 +1,7 @@
 <div class="content-spacer"></div>
 <div class="player-container">
   <div id="controls">
-    <div class="main-controls">
+    <div class="main-controls controls left">
       <button matIconButton (click)="previous($event)">
         <mat-icon>skip_previous</mat-icon>
       </button>
@@ -22,7 +22,8 @@
         <mat-icon>skip_next</mat-icon>
       </button>
     </div>
-    <div class="settings right">
+
+    <div class="controls right">
 
       <button matIconButton aria-label="Playback settings"
               [matMenuTriggerFor]="playbackSettingsMenu"
