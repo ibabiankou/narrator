@@ -253,3 +253,13 @@ class TestTts:
                     epub.zip_file.extractall(path=epub_extracted_path)
 
                     assert False
+
+    def test_encoded_entities(self, test_data_loader):
+        """Encoded entities should remain encoded after fragment markup injection."""
+        html_str = test_data_loader("encoded_entities.xhtml")
+
+        content_bytes, fragments, frag_id = process_xhtml_inplace(html_str.encode(), 0)
+        actual_html_str = content_bytes.decode()
+        print(actual_html_str)
+
+        assert "&lt;Error Classification: Omega1.14.3871392&gt;" in actual_html_str
