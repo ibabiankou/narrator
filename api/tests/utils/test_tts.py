@@ -37,6 +37,7 @@ class TestTts:
             ([Token("___")], True),
             ([Token("***")], True),
             ([Token("◆◆◆")], True),
+            ([Token("✧────༺⚔༻────✧")], True),
             ([Token("")], False),
             ([Token(" ")], False),
             ([Token("&")], False),
