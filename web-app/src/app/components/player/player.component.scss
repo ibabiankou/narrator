@@ -5,10 +5,11 @@
 .player-container {
   position: fixed;
   bottom: 0;
-
   width: 100%;
 
   display: grid;
+  padding: 16px;
+  box-sizing: border-box;
 
   background-color: var(--mat-sys-surface);
   box-shadow: 0 -6px 8px rgba(149, 149, 149, 0.3);
@@ -21,10 +22,6 @@
     active-track-color: orange,
     disabled-inactive-track-color: transparent,
   ));
-
-  > * {
-    padding: 0 16px;
-  }
 }
 
 :host.hidden .player-container {
@@ -41,20 +38,15 @@
 }
 
 div#controls {
-  $controls_height: 60px;
   display: flex;
   justify-content: space-between;
-  height: $controls_height;
 
   .main-controls {
     display: flex;
     align-items: center;
 
-    margin-left: auto;
-    margin-right: auto;
-
     .play-pause {
-      $button_size: 36px;
+      $button_size: 42px;
 
       height: calc($button_size + 2 * 8px);
       width: calc($button_size + 2 * 8px);
@@ -69,17 +61,10 @@ div#controls {
   }
 
   .controls {
-    position: absolute;
-    height: $controls_height;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-  }
-
-  .right {
-    right: 16px;
   }
 }
 
@@ -87,8 +72,6 @@ div#controls {
   display: flex;
   align-items: center;
   gap: 12px;
-
-  margin: 16px 0;
 
   .slider {
     position: relative;
