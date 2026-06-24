@@ -1,5 +1,28 @@
 <div class="content-spacer"></div>
 <div class="player-container">
+  <div class="progress">
+    <div class="slider">
+      <div class="now"
+           (mousedown)="onSliderClick($event)"
+           (touchstart)="onSliderClick($event)"
+           [style]="{ width: (nowPercent$ | async) + '%' }"></div>
+      <div class="available"
+           #slider
+           (mousedown)="onSliderClick($event)"
+           (touchstart)="onSliderClick($event)"
+           [style]="{ width: (availablePercent$ | async) + '%' }"></div>
+      <div class="unavailable" [style]="{ width: (unavailablePercent$ | async) + '%' }"></div>
+      <div class="drag-handle"
+           [style]="{ left: (nowPercent$ | async) + '%' }"
+           (mousedown)="onDragStart($event)"
+           (touchstart)="onDragStart($event)"></div>
+    </div>
+    <div class="times">
+      <div class="current-progress">{{ nowTime$ | async }}</div>
+      <div class="remaining-progress">{{ remainingTime$ | async }}</div>
+    </div>
+  </div>
+
   <div id="controls">
     <div class="main-controls controls left">
       <button matIconButton (click)="previous($event)">
@@ -59,28 +82,5 @@
       </mat-menu>
     </div>
 
-  </div>
-
-  <div class="progress">
-    <div class="slider">
-      <div class="now"
-           (mousedown)="onSliderClick($event)"
-           (touchstart)="onSliderClick($event)"
-           [style]="{ width: (nowPercent$ | async) + '%' }"></div>
-      <div class="available"
-           #slider
-           (mousedown)="onSliderClick($event)"
-           (touchstart)="onSliderClick($event)"
-           [style]="{ width: (availablePercent$ | async) + '%' }"></div>
-      <div class="unavailable" [style]="{ width: (unavailablePercent$ | async) + '%' }"></div>
-      <div class="drag-handle"
-           [style]="{ left: (nowPercent$ | async) + '%' }"
-           (mousedown)="onDragStart($event)"
-           (touchstart)="onDragStart($event)"></div>
-    </div>
-    <div class="times">
-      <div class="current-progress">{{ nowTime$ | async }}</div>
-      <div class="remaining-progress">{{ remainingTime$ | async }}</div>
-    </div>
   </div>
 </div>
