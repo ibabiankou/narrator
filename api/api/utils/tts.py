@@ -159,10 +159,12 @@ class FragmentInjector:
             for c in t.raw_text:
                 if c.isspace(): continue
                 char_dict[c] += 1
-        if len(char_dict) == 1:
-            character, count = char_dict.popitem()
-            if not character.isalnum() and count > 1:
-                return True
+        # Check if all the characters are non word characters.
+        if len(char_dict) > 0:
+            for character, count in char_dict.items():
+                if character.isalnum():
+                    return False
+            return True
         return False
 
     def traverse(self, node):
