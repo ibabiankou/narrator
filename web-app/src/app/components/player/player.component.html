@@ -1,6 +1,7 @@
 <div class="content-spacer"></div>
 <div class="player-container">
   <div class="progress">
+    <div class="current-time">{{ nowTime$ | async }}</div>
     <div class="slider">
       <div class="now"
            (mousedown)="onSliderClick($event)"
@@ -17,10 +18,7 @@
            (mousedown)="onDragStart($event)"
            (touchstart)="onDragStart($event)"></div>
     </div>
-    <div class="times">
-      <div class="current-progress">{{ nowTime$ | async }}</div>
-      <div class="remaining-progress">{{ remainingTime$ | async }}</div>
-    </div>
+    <div class="remaining-time">{{ remainingTime$ | async }}</div>
   </div>
 
   <div id="controls">

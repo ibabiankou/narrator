@@ -84,72 +84,59 @@ div#controls {
 }
 
 .progress {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 
-  margin: 20px 0;
-}
+  margin: 16px 0;
 
-$slider_height: 8px;
-.slider {
-  position: relative;
+  .slider {
+    position: relative;
 
-  width: 100%;
-  height: $slider_height;
+    width: 100%;
+    height: 5px;
 
-  .now {
-    position: absolute;
-    height: $slider_height;
-    cursor: pointer;
+    .now {
+      position: absolute;
+      height: 100%;
+      cursor: pointer;
 
-    background-color: #005CBBFF;
-    left: 0;
-    width: 10%; // Changed programmatically
-    z-index: 1;
-  }
+      background-color: #005CBBFF;
+      left: 0;
+      width: 10%; // Changed programmatically
+      z-index: 1;
+    }
 
-  .available {
-    position: absolute;
-    height: $slider_height;
-    cursor: pointer;
+    .available {
+      position: absolute;
+      height: 100%;
+      cursor: pointer;
 
-    background-color: var(--mat-sys-primary-fixed-dim);
-    left: 0;
-    width: 40%; // Changed programmatically
-  }
+      background-color: var(--mat-sys-primary-fixed-dim);
+      left: 0;
+      width: 40%; // Changed programmatically
+    }
 
-  .unavailable {
-    position: absolute;
-    height: $slider_height;
+    .unavailable {
+      position: absolute;
+      height: 100%;
 
-    right: 0;
-    width: 60%; // Changed programmatically
-    background-color: rgba(255, 177, 177, 0.73);
-  }
+      right: 0;
+      width: 60%; // Changed programmatically
+      background-color: rgba(255, 177, 177, 0.73);
+    }
 
-  .drag-handle {
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background-color: #005CBBFF;
-    top: 50%;
-    transform: translate(-50%, -50%); /* Center the circle on the 'left' percentage */
-    z-index: 10;
-    cursor: grab;
-    touch-action: none;
-  }
-}
-
-.times {
-  margin-top: 5px;
-
-  .current-progress {
-    position: absolute;
-    left: 16px;
-  }
-
-  .remaining-progress {
-    position: absolute;
-    right: 16px;
+    .drag-handle {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: #005CBBFF;
+      top: 50%;
+      transform: translate(-50%, -50%); /* Center the circle on the 'left' percentage */
+      z-index: 10;
+      cursor: grab;
+      touch-action: none;
+    }
   }
 }
