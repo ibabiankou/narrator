@@ -1,12 +1,10 @@
-import json
+from zipfile import ZipFile
 
 import logging
 import zipfile
+from bs4 import BeautifulSoup
 from io import BytesIO
 from typing import Annotated, Tuple, Dict, List
-from zipfile import ZipFile
-
-from bs4 import BeautifulSoup
 
 from api.models.narration import NarrationManifest, ContentFile, NavigationItem, AudioTrack
 from api.utils.imgproxy import ImgProxy
@@ -15,7 +13,6 @@ from common_lib.models.tts import FragmentGroups
 from common_lib.service import Service
 from epub_lib import Epub
 from epub_lib.model.nav import PublicationContent
-from epub_lib.model.package import Item
 
 LOG = logging.getLogger(__name__)
 
@@ -99,28 +96,9 @@ class EpubService(Service):
                 fragment_map[file] = file_fragments
                 out_zip.writestr(file, content_file_bytes)
 
-            # Add fragment-map.json to the archive.
-            fragment_map_item_path = str(src_epub.root_file_dir.joinpath("fragment-map.json"))
-            short_fragment_map = {k: v.all_fragment_ids() for k, v in fragment_map.items()}
-            out_zip.writestr(fragment_map_item_path, json.dumps(short_fragment_map))
-
-            # Add fragment-map.json to the manifest.
-            fragment_map_item = Item(
-                id="fragment-map",
-                href="fragment-map.json",
-                media_type="application/json",
-            )
-            src_epub.package.manifest.item.append(fragment_map_item)
-            xml_str = src_epub.package.to_xml(exclude_none=True, xml_declaration=True)
-            out_zip.writestr(src_epub.root_file, xml_str)
-
             for fileinfo in src_zip_file.infolist():
                 if fileinfo.is_dir():
                     continue
-                if fileinfo.filename == src_epub.root_file:
-                    # Updated root file is already in the archive.
-                    continue
-
                 if fileinfo.filename == "mimetype":
                     # mimetype is added the first without compression.
                     continue

@@ -1,3 +1,4 @@
+import json
 from concurrent.futures import ProcessPoolExecutor
 
 import asyncio
@@ -68,18 +69,28 @@ class BookService(Service):
         file_bytes.seek(0)
         self.files_service.upload_file(f"{book_id}/epub-files/source.epub", file_bytes)
 
+        # Fragment map only includes spine-item to fragment-id mapping.
         file_bytes = self.epub_service.remove_links(file_bytes)
         file_bytes, fragment_map = self.epub_service.inline_fragments(file_bytes)
-        self.files_service.upload_file(f"{book_id}/epub-files/fragmented.epub", file_bytes)
 
+        # Narration manifest includes navigation items along with the content fragments.
         publication_content = epub.get_publication_content()
         narration_manifest = self.epub_service.build_narration_manifest(publication_content, fragment_map)
         narration_manifest_bytes = narration_manifest.model_dump_json().encode()
         self.files_service.upload_file(f"{book_id}/narration-manifest.json", narration_manifest_bytes)
 
+        # Use narration manifest to build the fragment map. This way, it includes the chapter titles.
+        epub = Epub(file_bytes, filename=file_name)
+        file_bytes = epub.add_manifest_item(
+            id="fragment-map",
+            href="fragment-map.json",
+            media_type="application/json",
+            body=json.dumps(narration_manifest.to_fragment_map())
+        )
+        self.files_service.upload_file(f"{book_id}/epub-files/fragmented.epub", file_bytes)
+
         # TODO: Compress images;
 
-        file_bytes.seek(0)
         book = db.Book(id=book_id,
                        owner_id=user_id,
                        file_name=file_name,

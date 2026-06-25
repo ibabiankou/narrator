@@ -4,7 +4,7 @@ from io import BytesIO
 from os import PathLike
 from pathlib import Path
 from typing import IO, List, Optional, Tuple
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 
 import imagehash
 from PIL import Image
@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from epub_lib.model.container import CONTAINER_XML, Container
 from epub_lib.model.nav import TocItem, TableOfContent, PublicationContentBuilder, PublicationContent
 from epub_lib.model.ncx import NavigationControl
-from epub_lib.model.package import Package
+from epub_lib.model.package import Package, Item
 
 LOG = logging.getLogger(__name__)
 
@@ -312,3 +312,37 @@ class Epub:
     def _read_file(self, zip_path: str) -> bytes:
         with self.zip_file.open(zip_path) as f:
             return f.read()
+
+    def add_manifest_item(self, id: str, href: str, media_type: str, body: str) -> BytesIO:
+        """Adds the new item to the manifest, appends the file to the archive, and returns bytes of the modified archive."""
+
+        out_bytes = BytesIO()
+        with ZipFile(out_bytes, "w", ZIP_DEFLATED) as out_zip:
+            out_zip.writestr("mimetype", self.zip_file.read("mimetype"), compress_type=ZIP_STORED)
+
+            # Copy all unmodified files.
+            for fileinfo in self.zip_file.infolist():
+                if fileinfo.is_dir():
+                    continue
+                if fileinfo.filename == self.root_file:
+                    # The root file is updated separately.
+                    continue
+                if fileinfo.filename == "mimetype":
+                    # mimetype is added the first without compression.
+                    continue
+
+                LOG.debug("Processing %s", fileinfo.filename)
+                out_zip.writestr(fileinfo.filename, self.zip_file.read(fileinfo.filename))
+
+
+            # Add the content to the archive.
+            out_zip.writestr(str(self.root_file_dir.joinpath(href)), body)
+
+            # Add the new item to the manifest.
+            new_map_item = Item(id=id, href=href, media_type=media_type)
+            self.package.manifest.item.append(new_map_item)
+            xml_str = self.package.to_xml(exclude_none=True, xml_declaration=True)
+            out_zip.writestr(self.root_file, xml_str)
+
+        out_bytes.seek(0)
+        return out_bytes

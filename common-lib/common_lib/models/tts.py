@@ -21,7 +21,7 @@ class FragmentId(BaseModel):
     @field_serializer('id')
     def serialize_id(self, id_val: int) -> str:
         """Converts the internal integer to 'n-X' when dumping to dict/JSON."""
-        return f"n-{id_val}"
+        return f"n-{id_val:05d}"
 
     def formatted_id(self):
         return self.serialize_id(self.id)

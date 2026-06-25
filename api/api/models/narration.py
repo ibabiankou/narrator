@@ -86,4 +86,17 @@ class ContentFile(BaseModel):
 
 
 class NarrationManifest(RootModel[List[ContentFile]]):
-    pass
+    def to_fragment_map(self) -> List:
+        result = []
+        for content_file in self.root:
+            for nav_item in content_file.navigation_items:
+                fragments = []
+                for audio_track in nav_item.audio_tracks:
+                    for fragment_group in audio_track.fragment_groups.root:
+                        fragments.extend([f.formatted_id() for f in fragment_group.root])
+                result.append({
+                    "href": content_file.href,
+                    "title": nav_item.title,
+                    "fragments": fragments
+                })
+        return result
