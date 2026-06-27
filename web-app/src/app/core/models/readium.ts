@@ -38,3 +38,13 @@ export const NOOP_EPUB_LISTENERS: EpubNavigatorListeners = {
   peripheral: (data: KeyboardPeripheralEventData) => {
   }
 }
+
+
+
+export interface NavigationItem {
+  href: string;
+  title: string;
+}
+export interface NavigationItemFragments extends NavigationItem {
+  fragments: string[];
+}

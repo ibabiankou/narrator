@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { EpubNavigator, FrameManager, TextAlignment } from '@readium/navigator';
 import { Link, Publication } from '@readium/shared';
-import { NOOP_EPUB_LISTENERS } from '../../core/models/readium';
+import { NavigationItem, NavigationItemFragments, NOOP_EPUB_LISTENERS } from '../../core/models/readium';
 import { ThemeService } from '../../core/services/theme.service';
 import { TocItem } from '../../core/models/books.dto';
 import { environment } from '../../../environments/environment';
@@ -40,7 +40,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
 
   private navigator?: EpubNavigator;
   private observer!: MutationObserver;
-  private fragmentMap = new Map<string, string>();
+  private fragmentMap = new Map<string, NavigationItem>();
   private currentFragment?: string;
 
   private preferences = toSignal(this.settingsService.userPreferences$);
@@ -137,13 +137,17 @@ export class ReadiumEpub implements OnInit, OnDestroy {
         const mapLinks = publication.resources.items.filter(item => item.href.endsWith("fragment-map.json"));
         if (mapLinks.length > 0) {
           const link = mapLinks[0];
-          const mapData: object = <Object>await publication.get(link).readAsJSON();
-          Object.entries(mapData).forEach(([href, values]) => {
-            if (Array.isArray(values)) {
-              values.forEach((fragmentId: string) => {
-                this.fragmentMap.set(fragmentId, href);
-              });
-            }
+          const navItemFragmentsList: NavigationItemFragments[] =
+            <NavigationItemFragments[]>await publication.get(link).readAsJSON();
+
+          navItemFragmentsList.forEach((navItemFragments) => {
+            const navItem: NavigationItem = {
+              href: navItemFragments.href,
+              title: navItemFragments.title,
+            };
+            navItemFragments.fragments.forEach((fragmentId: string) => {
+              this.fragmentMap.set(fragmentId, navItem);
+            });
           });
         } else {
           console.error("No fragment map found in publication.");
@@ -302,17 +306,17 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     }
 
     if (!this.navigator) return;
-    const pageHref = this.fragmentMap.get(fragmentId);
-    if (!pageHref) {
+    const navItem = this.fragmentMap.get(fragmentId);
+    if (!navItem) {
       console.warn("Fragment", fragmentId, "not found in map of size", this.fragmentMap.size);
       return;
     }
-    if (pageHref == this.navigator.currentLocator.href) {
+    if (navItem.href == this.navigator.currentLocator.href) {
       // No need to navigate.
       this.doShowFrag(fragmentId);
     } else {
       // Navigate and show
-      this.navigateHref(pageHref, (_) => {
+      this.navigateHref(navItem.href, (_) => {
         this.doShowFrag(fragmentId);
       });
     }
