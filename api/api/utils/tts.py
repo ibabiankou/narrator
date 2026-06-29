@@ -162,7 +162,7 @@ class FragmentInjector:
                 char_dict[c] += 1
                 total_count += 1
         # Check if all the characters are non word characters.
-        if len(char_dict) > 0 and total_count > 1:
+        if len(char_dict) > 0 and total_count > 0:
             for character, count in char_dict.items():
                 if character.isalnum():
                     return False
