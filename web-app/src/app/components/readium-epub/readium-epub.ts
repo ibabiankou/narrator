@@ -211,9 +211,12 @@ export class ReadiumEpub implements OnInit, OnDestroy {
                   if (eventName == "mousemove") {
                     clonedEvent = new MouseEvent(eventName, e);
                   } else if (eventName == "keydown") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    clonedEvent = new KeyboardEvent(eventName, e);
+                    const kbEvent = new KeyboardEvent(eventName, e);
+                    clonedEvent = kbEvent;
+                    if (kbEvent.code == "Space") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
                   } else if (eventName == "touchstart" && e instanceof TouchEvent) {
                     clonedEvent = new TouchEvent(eventName, {
                       bubbles: e.bubbles,
