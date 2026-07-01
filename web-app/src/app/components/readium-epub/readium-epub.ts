@@ -134,6 +134,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
 
     try {
       if (publication.resources) {
+        // TODO: Replace with pub service.
         const mapLinks = publication.resources.items.filter(item => item.href.endsWith("fragment-map.json"));
         if (mapLinks.length > 0) {
           const link = mapLinks[0];
