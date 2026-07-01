@@ -147,6 +147,8 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
         this.audioPlayer.initPlayer(this.bookDetails(), playbackInfo);
       });
 
+    // TODO: Build NavigationItemTimeline by merging readiumService.getNavItemFragments with audioPlayer.fragmentTimeline.
+
     //--- User preferences ---
     this.settingsService.userPreferences$
       .pipe(take(1))

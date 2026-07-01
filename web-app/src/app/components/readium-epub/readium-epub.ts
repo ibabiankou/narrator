@@ -1,5 +1,6 @@
 import {
-  Component, computed,
+  Component,
+  computed,
   effect,
   ElementRef,
   HostListener,
@@ -13,12 +14,13 @@ import {
 } from '@angular/core';
 import { EpubNavigator, FrameManager, TextAlignment } from '@readium/navigator';
 import { Link, Publication } from '@readium/shared';
-import { NavigationItem, NavigationItemFragments, NOOP_EPUB_LISTENERS } from '../../core/models/readium';
+import { NavigationItem, NOOP_EPUB_LISTENERS } from '../../core/models/readium';
 import { ThemeService } from '../../core/services/theme.service';
 import { TocItem } from '../../core/models/books.dto';
 import { environment } from '../../../environments/environment';
 import { SettingsService } from '../../core/services/settings.service';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ReadiumService } from '../../core/services/readium.service';
 
 @Component({
   selector: 'app-readium-epub',
@@ -27,6 +29,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
   styleUrl: './readium-epub.scss',
 })
 export class ReadiumEpub implements OnInit, OnDestroy {
+  private readiumService = inject(ReadiumService);
   private settingsService = inject(SettingsService);
   private themeService = inject(ThemeService);
   private ngZone = inject(NgZone);
@@ -132,15 +135,9 @@ export class ReadiumEpub implements OnInit, OnDestroy {
       console.error('Failed to initialize Readium Navigator:', error);
     }
 
-    try {
-      if (publication.resources) {
-        // TODO: Replace with pub service.
-        const mapLinks = publication.resources.items.filter(item => item.href.endsWith("fragment-map.json"));
-        if (mapLinks.length > 0) {
-          const link = mapLinks[0];
-          const navItemFragmentsList: NavigationItemFragments[] =
-            <NavigationItemFragments[]>await publication.get(link).readAsJSON();
-
+    this.readiumService.getNavItemFragments(publication)
+      .subscribe({
+        next: (navItemFragmentsList) => {
           navItemFragmentsList.forEach((navItemFragments) => {
             const navItem: NavigationItem = {
               href: navItemFragments.href,
@@ -150,13 +147,11 @@ export class ReadiumEpub implements OnInit, OnDestroy {
               this.fragmentMap.set(fragmentId, navItem);
             });
           });
-        } else {
-          console.error("No fragment map found in publication.");
+        },
+        error: error => {
+          console.error('Failed to load fragment map.', error);
         }
-      }
-    } catch (error) {
-      console.error('Failed to load fragment map.', error);
-    }
+      });
   }
 
   @HostListener('document:visibilitychange')
@@ -243,7 +238,7 @@ export class ReadiumEpub implements OnInit, OnDestroy {
                 }
                 window.dispatchEvent(clonedEvent);
               });
-            }, { passive: false });
+            }, {passive: false});
           });
         }
       } catch (error) {
@@ -292,7 +287,9 @@ export class ReadiumEpub implements OnInit, OnDestroy {
     const link = new Link({href: href});
     this.navigator.go(link.locator, false, (ok: boolean) => {
       if (ok) {
-        const tocIndex = this.toc().findIndex(i => {return i.href === href})
+        const tocIndex = this.toc().findIndex(i => {
+          return i.href === href
+        })
         if (tocIndex >= 0) {
           this.updateCurrentItem(tocIndex);
         }
