@@ -17,6 +17,14 @@
            [style]="{ left: (nowPercent$ | async) + '%' }"
            (mousedown)="onDragStart($event)"
            (touchstart)="onDragStart($event)"></div>
+      <div class="chapter-ticks">
+        @for (tick of chapterTicks(); track $index) {
+          <div class="chapter-tick"
+               [style]="{ left: (tick.startPercent * 100) + '%' }"
+               [ngClass]="{ past: tick.isPast, future: !tick.isPast }"
+          ></div>
+        }
+      </div>
     </div>
     <div class="remaining-time">{{ remainingTime$ | async }}</div>
   </div>

@@ -121,5 +121,19 @@ div#controls {
       cursor: grab;
       touch-action: none;
     }
+
+    .chapter-tick {
+      position: absolute;
+      height: 250%;
+      top: -75%;
+      width: 1px;
+      z-index: 9;
+    }
+    .chapter-tick.past {
+      background-color: #005CBBFF;
+    }
+    .chapter-tick.future {
+      background-color: var(--mat-sys-primary-fixed-dim);
+    }
   }
 }

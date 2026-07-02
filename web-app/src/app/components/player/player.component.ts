@@ -6,6 +6,7 @@ import {
   HostListener,
   inject,
   input,
+  model,
   OnDestroy,
   output,
   ViewChild
@@ -27,10 +28,10 @@ import {
   Subject,
   switchMap,
   take,
-  takeUntil,
+  takeUntil, tap,
   throwError,
 } from 'rxjs';
-import { AsyncPipe, DecimalPipe } from '@angular/common';
+import { AsyncPipe, DecimalPipe, NgClass } from '@angular/common';
 import { AudioPlayer, FragmentTimelineItem } from './audio.player';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { BooksService } from '../../core/services/books.service';
@@ -60,7 +61,8 @@ interface NavigationTimelineItem {
     MatMenu,
     MatMenuItem,
     MatMenuTrigger,
-    MatSlideToggle
+    MatSlideToggle,
+    NgClass
   ],
   templateUrl: './player.component.html',
   styleUrl: './player.component.scss',
@@ -114,6 +116,9 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   dragToPercent$ = new BehaviorSubject<number | undefined>(undefined);
   private sliderRect!: DOMRect;
 
+  nowPercent = model<number>(0);
+  tocTimeline = model<NavigationTimelineItem[]>([]);
+
   constructor() {
     this.audioPlayer = new AudioPlayer(this.bookService, this.filesService);
 
@@ -148,7 +153,8 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
       .pipe(
         map(([nowTime, totalTime, availablePercent]) =>
           totalTime > 0 ? (nowTime / totalTime * availablePercent) : 0
-        )
+        ),
+        tap(val => this.nowPercent.set(val))
       );
 
     this.playbackInfo$
@@ -157,9 +163,9 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
         this.audioPlayer.initPlayer(this.bookDetails(), playbackInfo);
       });
 
-    // TODO: Build NavigationItemTimeline by merging readiumService.getNavItemFragments with audioPlayer.fragmentTimeline.
+    // TODO:
+    //  - Add current chapter title to the player UI.
     let tocTimeline: NavigationTimelineItem[] = [];
-    // Combine latest, merge into tocTimeline;
     combineLatest([this.readiumService.navigationItemFragments$, this.audioPlayer.fragmentTimeline$])
       .subscribe({
         next: ([tocFragmentMap, fragmentTimeline]) => {
@@ -199,6 +205,9 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
               endTime = tocTimeline[tocTimeline.length - 1].endTime;
             }
 
+            // Skip items with empty duration;
+            if (startTime == endTime) continue;
+
             const navTimelineItem: NavigationTimelineItem = {
               index: tocTimeline.length,
               href: tocFragments.href,
@@ -208,7 +217,8 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
             }
             tocTimeline.push(navTimelineItem);
           }
-          console.log(tocTimeline);
+          this.tocTimeline.set(tocTimeline);
+          console.debug(tocTimeline);
         }
       })
 
@@ -245,6 +255,24 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
 
   ngAfterViewInit() {
     this.sliderRect = this.slider.nativeElement.getBoundingClientRect();
+  }
+
+  chapterTicks() {
+    const timeline = this.tocTimeline();
+    if (timeline.length == 0) return [];
+
+    const nowPercent = this.nowPercent() / 100;
+
+    const totalTime = timeline[timeline?.length - 1].endTime;
+    const ticks = [];
+    for (let i = 1; i < timeline.length; i++) {
+      const startPercent = timeline[i].startTime / totalTime;
+      ticks.push({
+        startPercent: startPercent,
+        isPast: startPercent < nowPercent,
+      });
+    }
+    return ticks;
   }
 
   @HostListener('window:keydown.s')
