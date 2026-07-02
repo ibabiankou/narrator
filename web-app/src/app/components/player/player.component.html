@@ -2,28 +2,27 @@
 <div class="player-container">
   <div class="progress">
     <div class="current-time">{{ nowTime$ | async }}</div>
-    <div class="slider">
-      <div class="now"
-           (mousedown)="onSliderClick($event)"
-           (touchstart)="onSliderClick($event)"
-           [style]="{ width: (nowPercent$ | async) + '%' }"></div>
-      <div class="available"
-           #slider
-           (mousedown)="onSliderClick($event)"
-           (touchstart)="onSliderClick($event)"
-           [style]="{ width: (availablePercent$ | async) + '%' }"></div>
-      <div class="unavailable" [style]="{ width: (unavailablePercent$ | async) + '%' }"></div>
-      <div class="drag-handle"
-           [style]="{ left: (nowPercent$ | async) + '%' }"
-           (mousedown)="onDragStart($event)"
-           (touchstart)="onDragStart($event)"></div>
-      <div class="chapter-ticks">
-        @for (tick of chapterTicks(); track $index) {
-          <div class="chapter-tick"
-               [style]="{ left: (tick.startPercent * 100) + '%' }"
-               [ngClass]="{ past: tick.isPast, future: !tick.isPast }"
-          ></div>
-        }
+    <div class="slider-wrapper" #slider
+         (mousedown)="onSliderClick($event)"
+         (touchstart)="onSliderClick($event)"
+    >
+      <div class="slider">
+        <div class="now"
+             [style]="{ width: (nowPercent$ | async) + '%' }"></div>
+        <div class="available"
+             [style]="{ width: '100%' }"></div>
+        <div class="drag-handle"
+             [style]="{ left: (nowPercent$ | async) + '%' }"
+             (mousedown)="onDragStart($event)"
+             (touchstart)="onDragStart($event)"></div>
+        <div class="chapter-ticks">
+          @for (tick of chapterTicks(); track $index) {
+            <div class="chapter-tick"
+                 [style]="{ left: (tick.startPercent * 100) + '%' }"
+                 [ngClass]="{ past: tick.isPast, future: !tick.isPast }"
+            ></div>
+          }
+        </div>
       </div>
     </div>
     <div class="remaining-time">{{ remainingTime$ | async }}</div>

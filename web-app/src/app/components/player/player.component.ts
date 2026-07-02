@@ -112,9 +112,6 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   nowPercent$;
   playbackRate$;
 
-  availablePercent$ = of(100);
-  unavailablePercent$ = this.availablePercent$.pipe(map(availablePercent => 100 - availablePercent));
-
   dragToPercent$ = new BehaviorSubject<number | undefined>(undefined);
   private sliderRect!: DOMRect;
 
@@ -152,10 +149,10 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     );
     this.remainingTime$ = combineLatest([nowTimeSeconds, this.totalNarratedSeconds$])
       .pipe(map(([nowTime, totalTime]) => secondsToTimeFormat(nowTime - totalTime)));
-    this.nowPercent$ = combineLatest([nowTimeSeconds, this.totalNarratedSeconds$, this.availablePercent$])
+    this.nowPercent$ = combineLatest([nowTimeSeconds, this.totalNarratedSeconds$])
       .pipe(
-        map(([nowTime, totalTime, availablePercent]) =>
-          totalTime > 0 ? (nowTime / totalTime * availablePercent) : 0
+        map(([nowTime, totalTime]) =>
+          totalTime > 0 ? (nowTime / totalTime * 100) : 0
         ),
         tap(val => this.nowPercent.set(val))
       );
