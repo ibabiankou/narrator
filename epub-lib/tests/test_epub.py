@@ -25,6 +25,13 @@ class TestEpub:
         unique_spine_refs = set([i.idref for i in epub.package.spine.items])
         assert len(toc.spine_items) == len(unique_spine_refs)
 
+    def test_nested_ncx(self):
+        epub = Epub("tests/test_data/Heavens_River_-_Bobiverse_4.epub")
+        toc = epub.get_publication_content()
+        assert len(toc.spine_items) == 81
+        assert toc.spine_items[10].navigation_items[0].title == "1. Frenemies"
+
+
     @pytest.mark.skip(reason="For manual execution only.")
     def test_toc_all_files(self):
         dir_path = os.path.expanduser("~/Downloads/epub")

@@ -15,7 +15,7 @@ from pydantic import ValidationError
 
 from epub_lib.model.container import CONTAINER_XML, Container
 from epub_lib.model.nav import TocItem, TableOfContent, PublicationContentBuilder, PublicationContent
-from epub_lib.model.ncx import NavigationControl
+from epub_lib.model.ncx import NavigationControl, NavPoint
 from epub_lib.model.package import Package, Item
 
 LOG = logging.getLogger(__name__)
@@ -88,8 +88,13 @@ class Epub:
             # Feed NCX items
             ncx_maybe = self._get_navigation_control()
             if ncx_maybe is not None:
-                for nav_point in ncx_maybe.nav_map.points:
+                def visit_nav_point(nav_point: NavPoint):
                     builder.add_navigation_item(nav_point.content.src, nav_point.nav_label.text)
+                    for child in nav_point.children:
+                        visit_nav_point(child)
+
+                for nav_point in ncx_maybe.nav_map.points:
+                    visit_nav_point(nav_point)
 
         # Iterate over all items, parse the file, fill in missing details.
         for spine_item in builder.spine_items:
