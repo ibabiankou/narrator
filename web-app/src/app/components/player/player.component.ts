@@ -31,7 +31,7 @@ import {
   throwError,
 } from 'rxjs';
 import { AsyncPipe, DecimalPipe } from '@angular/common';
-import { AudioPlayer } from './audio.player';
+import { AudioPlayer, FragmentTimelineItem } from './audio.player';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { BooksService } from '../../core/services/books.service';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
@@ -40,6 +40,15 @@ import { SettingsService } from '../../core/services/settings.service';
 import { secondsToTimeFormat } from '../../core/utils';
 import { FilesService } from '../../core/services/files.service';
 import { FullScreenService } from '../../core/services/fullScreen.service';
+import { ReadiumService } from '../../core/services/readium.service';
+
+interface NavigationTimelineItem {
+  index: number;
+  href: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+}
 
 @Component({
   selector: 'app-player',
@@ -63,6 +72,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
   private destroy$ = new Subject<boolean>();
 
   private bookService = inject(BooksService);
+  private readiumService = inject(ReadiumService);
   private settingsService = inject(SettingsService);
   private filesService = inject(FilesService);
   private fullScreenService = inject(FullScreenService);
@@ -148,6 +158,60 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
       });
 
     // TODO: Build NavigationItemTimeline by merging readiumService.getNavItemFragments with audioPlayer.fragmentTimeline.
+    let tocTimeline: NavigationTimelineItem[] = [];
+    // Combine latest, merge into tocTimeline;
+    combineLatest([this.readiumService.navigationItemFragments$, this.audioPlayer.fragmentTimeline$])
+      .subscribe({
+        next: ([tocFragmentMap, fragmentTimeline]) => {
+          if (tocFragmentMap.length == 0) {
+            console.warn("Fragment map is empty. Not building tocTimeline...");
+            return;
+          }
+          if (fragmentTimeline.length == 0) {
+            console.warn("Fragment timeline is empty. Not building tocTimeline...");
+            return;
+          }
+
+          tocTimeline = [];
+
+          const fragmentTimelineMap = new Map<string, FragmentTimelineItem>();
+          for (const fragmentTimelineItem of fragmentTimeline) {
+            fragmentTimelineMap.set(fragmentTimelineItem.id, fragmentTimelineItem);
+          }
+
+          for (const tocFragments of tocFragmentMap) {
+            let startTime = 0;
+            let endTime = 0;
+            // Fragments might be empty if page has no narrated content.
+            if (tocFragments.fragments.length > 0) {
+              const startFragment = fragmentTimelineMap.get(tocFragments.fragments[0]);
+              const endFragment = fragmentTimelineMap.get(tocFragments.fragments[tocFragments.fragments.length - 1]);
+              if (startFragment == undefined || endFragment == undefined) {
+                // Undefined fragment means tocItem is not narrated, so assume it has 0 duration.
+                startTime = tocTimeline.length > 0 ? tocTimeline[tocTimeline.length - 1].endTime : 0;
+                endTime = tocTimeline.length > 0 ? tocTimeline[tocTimeline.length - 1].endTime : 0;
+              } else {
+                startTime = startFragment!.startTime;
+                endTime = endFragment!.endTime;
+              }
+            } else if (tocTimeline.length > 0) {
+              startTime = tocTimeline[tocTimeline.length - 1].endTime;
+              endTime = tocTimeline[tocTimeline.length - 1].endTime;
+            }
+
+            const navTimelineItem: NavigationTimelineItem = {
+              index: tocTimeline.length,
+              href: tocFragments.href,
+              title: tocFragments.title,
+              startTime: startTime,
+              endTime: endTime,
+            }
+            tocTimeline.push(navTimelineItem);
+          }
+          console.log(tocTimeline);
+        }
+      })
+
 
     //--- User preferences ---
     this.settingsService.userPreferences$

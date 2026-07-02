@@ -25,7 +25,7 @@ enum PlayerStatus {
   paused = "paused",
 }
 
-interface FragmentTimelineItem {
+export interface FragmentTimelineItem {
   id: string;
   index: number
   startTime: number;
@@ -56,7 +56,8 @@ export class AudioPlayer {
   playbackRate$ = new BehaviorSubject<number>(-1);
   isPlaying$ = this.status$.pipe(map((status) => status == PlayerStatus.playing));
 
-  private fragmentTimeline: FragmentTimelineItem[] = [];
+  private _fragmentTimeline = new BehaviorSubject<FragmentTimelineItem[]>([]);
+  fragmentTimeline$ = this._fragmentTimeline.asObservable();
   currentFragment$ = new BehaviorSubject<FragmentTimelineItem | null>(null);
 
   constructor(private bookService: BooksService, filesService: FilesService) {
@@ -116,11 +117,7 @@ export class AudioPlayer {
 
             this.totalSize$.next(cumulativeSize)
             this.totalDuration$.next(cumulativeDuration);
-            this.fragmentTimeline = fragments;
-          }
-
-          if (!this.fragmentTimeline) {
-            console.warn("No date ranges found, unable to sync fragment being played.")
+            this._fragmentTimeline.next(fragments);
           }
         });
 
@@ -170,6 +167,7 @@ export class AudioPlayer {
 
     this.globalProgressSeconds$.pipe(
       map((currentTime) => {
+        const currentTimeline = this._fragmentTimeline.value;
         const currentFragment = this.currentFragment$.value;
         if (currentFragment) {
           // Check current and next
@@ -177,9 +175,9 @@ export class AudioPlayer {
             if (currentTime < currentFragment.endTime) {
               // It's still current fragment...
               return currentFragment;
-            } else if (currentFragment.index + 1 < this.fragmentTimeline.length) {
+            } else if (currentFragment.index + 1 < currentTimeline.length) {
               // check the next fragment, assuming we are simply listening and went to the next one.
-              const nextFragment = this.fragmentTimeline[currentFragment.index + 1];
+              const nextFragment = currentTimeline[currentFragment.index + 1];
               if (currentTime >= nextFragment.startTime && currentTime <= nextFragment.endTime) {
                 return nextFragment;
               }
@@ -187,9 +185,9 @@ export class AudioPlayer {
           }
         }
 
-        const fragmentIndex = binarySearch(this.fragmentTimeline, (i) => i.startTime, currentTime);
+        const fragmentIndex = binarySearch(currentTimeline, (i) => i.startTime, currentTime);
         if (fragmentIndex >= 0) {
-          const fragment = this.fragmentTimeline[fragmentIndex];
+          const fragment = currentTimeline[fragmentIndex];
           if (currentTime >= fragment.startTime && currentTime < fragment.endTime) {
             return fragment;
           }
