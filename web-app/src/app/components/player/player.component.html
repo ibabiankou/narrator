@@ -52,8 +52,11 @@
       </button>
     </div>
 
-    <div class="controls">
+    <div class="controls chapter-title-wrapper" *appRenderIf="'desktop'">
+      <h3 class="chapter-title">{{ chapterTitle() }}</h3>
+    </div>
 
+    <div class="controls">
       <button matIconButton aria-label="Playback settings"
               [matMenuTriggerFor]="playbackSettingsMenu"
               #playbackSettingsMenuTrigger="matMenuTrigger">

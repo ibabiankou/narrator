@@ -1,7 +1,7 @@
 import {
   AfterViewInit,
   Component,
-  computed,
+  computed, effect,
   ElementRef,
   HostListener,
   inject,
@@ -42,6 +42,7 @@ import { secondsToTimeFormat } from '../../core/utils';
 import { FilesService } from '../../core/services/files.service';
 import { FullScreenService } from '../../core/services/fullScreen.service';
 import { ReadiumService } from '../../core/services/readium.service';
+import { RenderIfDirective } from '../../core/renderIfDirective';
 
 interface NavigationTimelineItem {
   index: number;
@@ -62,7 +63,8 @@ interface NavigationTimelineItem {
     MatMenuItem,
     MatMenuTrigger,
     MatSlideToggle,
-    NgClass
+    NgClass,
+    RenderIfDirective
   ],
   templateUrl: './player.component.html',
   styleUrl: './player.component.scss',
@@ -118,6 +120,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
 
   nowPercent = model<number>(0);
   tocTimeline = model<NavigationTimelineItem[]>([]);
+  chapterTitle = model<string>("");
 
   constructor() {
     this.audioPlayer = new AudioPlayer(this.bookService, this.filesService);
@@ -163,8 +166,6 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
         this.audioPlayer.initPlayer(this.bookDetails(), playbackInfo);
       });
 
-    // TODO:
-    //  - Add current chapter title to the player UI.
     let tocTimeline: NavigationTimelineItem[] = [];
     combineLatest([this.readiumService.navigationItemFragments$, this.audioPlayer.fragmentTimeline$])
       .subscribe({
@@ -211,7 +212,8 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
             const navTimelineItem: NavigationTimelineItem = {
               index: tocTimeline.length,
               href: tocFragments.href,
-              title: tocFragments.title,
+              // TODO: Do this sort of cleanup in BE.
+              title: tocFragments.title.replace(/\s+/g, ' '),
               startTime: startTime,
               endTime: endTime,
             }
@@ -220,7 +222,20 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
           this.tocTimeline.set(tocTimeline);
           console.debug(tocTimeline);
         }
-      })
+      });
+    effect(() => {
+      const timeline = this.tocTimeline();
+      if (timeline.length == 0) return;
+
+      const totalTime = timeline[timeline?.length - 1].endTime;
+      const nowTime = this.nowPercent() / 100 * totalTime;
+      const currentItem = timeline.filter(i => i.startTime < nowTime && nowTime < i.endTime);
+      if (currentItem.length == 1) {
+        this.chapterTitle.set(currentItem[0].title);
+      } else {
+        this.chapterTitle.set("");
+      }
+    });
 
 
     //--- User preferences ---
@@ -261,7 +276,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
     const timeline = this.tocTimeline();
     if (timeline.length == 0) return [];
 
-    const nowPercent = this.nowPercent() / 100;
+    const nowFraction = this.nowPercent() / 100;
 
     const totalTime = timeline[timeline?.length - 1].endTime;
     const ticks = [];
@@ -269,7 +284,7 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
       const startPercent = timeline[i].startTime / totalTime;
       ticks.push({
         startPercent: startPercent,
-        isPast: startPercent < nowPercent,
+        isPast: startPercent < nowFraction,
       });
     }
     return ticks;
