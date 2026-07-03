@@ -135,7 +135,7 @@ class TestTts:
         fi.inject()
 
         expected_html = """
-        <p id="text-only"><span class="nf" id="n-0">The idea helps explain </span><span class="nf" id="n-1">why free markets.</span></p>
+        <p id="text-only"><span class="nf" id="n-00000">The idea helps explain </span><span class="nf" id="n-00001">why free markets.</span></p>
         """
         assert expected_html.strip() == str(tag)
 
@@ -152,7 +152,7 @@ class TestTts:
         fi.inject()
 
         expected_html = """
-        <p id="with-tag"><span class="nf" id="n-0">The <b>idea</b> helps explain </span><span class="nf" id="n-1">why free markets.</span></p>
+        <p id="with-tag"><span class="nf" id="n-00000">The <b>idea</b> helps explain </span><span class="nf" id="n-00001">why free markets.</span></p>
         """
         assert expected_html.strip() == str(tag)
 
@@ -169,7 +169,7 @@ class TestTts:
         fi.inject()
 
         expected_html = """
-        <p id="mid-tag"><span class="nf" id="n-0">The <b>idea helps explain </b></span><span class="nf" id="n-1"><b>why free</b> markets.</span></p>
+        <p id="mid-tag"><span class="nf" id="n-00000">The <b>idea helps explain </b></span><span class="nf" id="n-00001"><b>why free</b> markets.</span></p>
         """
         assert expected_html.strip() == str(tag)
 
@@ -186,7 +186,7 @@ class TestTts:
         fi.inject()
 
         expected_html = """
-        <p id="end-tag"><span class="nf" id="n-0">The <b>idea helps explain </b></span><span class="nf" id="n-1">why free markets.</span></p>
+        <p id="end-tag"><span class="nf" id="n-00000">The <b>idea helps explain </b></span><span class="nf" id="n-00001">why free markets.</span></p>
         """
         assert expected_html.strip() == str(tag)
 
@@ -203,7 +203,7 @@ class TestTts:
         fi.inject()
 
         expected_html = """
-        <p id="start-tag"><span class="nf" id="n-0">The idea helps explain </span><span class="nf" id="n-1"><b>why free </b>markets.</span></p>
+        <p id="start-tag"><span class="nf" id="n-00000">The idea helps explain </span><span class="nf" id="n-00001"><b>why free </b>markets.</span></p>
         """
         assert expected_html.strip() == str(tag)
 
