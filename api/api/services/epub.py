@@ -45,7 +45,7 @@ class EpubService(Service):
                     continue
 
                 # TODO: make it more robust/configurable. Use regexp.
-                if fileinfo.filename == "oceanofpdf.com":
+                if fileinfo.filename in ["oceanofpdf.com", "readrobe.com"]:
                     LOG.debug("Skipping %s file...", fileinfo.filename)
                     continue
 
@@ -63,16 +63,17 @@ class EpubService(Service):
         str(soup)
         for anc in soup.find_all("a", attrs={"href": True}):
             # TODO: make it more robust/configurable. Use regexp.
-            if "oceanofpdf" in anc.get("href"):
-                LOG.debug("Found tag to remove %s", anc)
-                should_continue = True
-                current = anc
-                while should_continue:
-                    parent = current.parent
-                    LOG.debug("Decomposing %s", current)
-                    current.decompose()
-                    should_continue = parent is not None and len(parent.contents) == 0
-                    current = parent
+            if anc.attrs:
+                if "oceanofpdf" in anc.get("href") or "readrobe" in anc.get("href"):
+                    LOG.debug("Found tag to remove %s", anc)
+                    should_continue = True
+                    current = anc
+                    while should_continue:
+                        parent = current.parent
+                        LOG.debug("Decomposing %s", current)
+                        current.decompose()
+                        should_continue = parent is not None and len(parent.contents) == 0
+                        current = parent
 
         return soup.encode(formatter="minimal")
 
