@@ -128,7 +128,7 @@ class NarrationQueueService(Service):
         playlist.target_duration = max([sum([f.duration for f in t.timeline]) for t in tracks] or [0]) + 1
         playlist.media_sequence = 0
         # TODO: Set endlist to True if the book status is ready (no narration happens).
-        playlist.is_endlist = False
+        playlist.is_endlist = True
 
         for track in tracks:
             fragments = []

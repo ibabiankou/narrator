@@ -65,8 +65,6 @@ async def lifespan(app: FastAPI):
     def configure(channel: BlockingChannel):
         channel.exchange_declare(Topology.default_exchange, ExchangeType.topic, durable=True)
         channel.queue_declare(Topology.api_queue, durable=True, arguments={"x-queue-type": "quorum"})
-        channel.queue_bind(Topology.api_queue, Topology.default_exchange, "phonemes")
-        channel.queue_bind(Topology.api_queue, Topology.default_exchange, "speech")
         channel.queue_bind(Topology.api_queue, Topology.default_exchange, "narrate-response")
 
     rmq_client.configure(configure)
