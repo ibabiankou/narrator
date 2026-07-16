@@ -76,7 +76,9 @@ export class AudioPlayer {
         }
 
         this.hls = new Hls({
-          maxBufferLength: 1800,
+          maxBufferLength: 36000, // 10h buffer
+          maxMaxBufferLength: 36000, // 10h buffer
+          maxBufferSize: 500, // 500mb max buffer size
           loader: CachingHlsLoader,
           debug: false,
         });
