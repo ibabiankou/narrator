@@ -1,3 +1,4 @@
+from io import BytesIO
 from pathlib import Path
 
 import logging
@@ -37,10 +38,13 @@ def test_data_loader(request):
     test_dir = Path(request.fspath).parent
     data_dir = test_dir / "test_data"
 
-    def _loader(filename: str) -> str:
+    def _loader(filename: str, text: bool = True) -> str | BytesIO:
         file_path = data_dir / filename
         if not file_path.exists():
             raise FileNotFoundError(f"Test file not found at {file_path}")
-        return file_path.read_text(encoding="utf-8")
+        if text:
+            return file_path.read_text(encoding="utf-8")
+        else:
+            return BytesIO(file_path.read_bytes())
 
     return _loader

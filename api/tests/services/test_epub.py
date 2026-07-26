@@ -60,6 +60,31 @@ class TestEpubService:
             epub_extracted_path = dest_dir_path.joinpath(epub_path.stem + "_unpacked")
             zipfile.ZipFile(epub_with_fragments).extractall(path=epub_extracted_path)
 
+    def test_something(self, test_data_loader):
+        """A content file with multiple navigation items. Second nav item has a pause fragment that was breaking
+        narration manifest generation due to the missing visited_ids."""
+        epub_bytes = test_data_loader("Antecedents_Assembly.epub", text=False)
+        dest_dir_path = Path(os.path.expanduser("~/repos/narrator/out/fragments/"))
+
+        epub = Epub(epub_bytes)
+
+        clean_epub = svc.remove_links(epub_bytes)
+        epub_with_fragments, fragments = svc.inline_fragments(clean_epub)
+
+        epub_file_name = dest_dir_path.joinpath("Antecedents_Assembly" + "_updated.epub")
+        with open(epub_file_name, "wb") as f:
+            f.write(epub_with_fragments.getvalue())
+
+        fragments_file_name = dest_dir_path.joinpath("Antecedents_Assembly" + "_fragments.json")
+        with open(fragments_file_name, "w") as f:
+            json.dump({k: v.model_dump() for k, v in fragments.items()}, f, indent=2)
+
+        epub_extracted_path = dest_dir_path.joinpath("Antecedents_Assembly" + "_unpacked")
+        zipfile.ZipFile(epub_with_fragments).extractall(path=epub_extracted_path)
+
+        publication_content = epub.get_publication_content()
+        narration_manifest = svc.build_narration_manifest(publication_content, fragments)
+
     @pytest.mark.skip(reason="For manual execution.")
     def test_manifest(self):
         src_dir_path = os.path.expanduser("~/Downloads/epub/")
