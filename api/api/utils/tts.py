@@ -121,7 +121,7 @@ class FragmentInjector:
         self.fragments.next_group()
 
         if self._scene_break(tag_tokens):
-            self.fragments.add_pause(1, [])
+            self.fragments.add_pause(1, list(self.visited_ids))
             return
 
         self.pending_fragments.extend(split_tokens_into_fragments(tag_tokens, target_length=self.target_length))
@@ -303,7 +303,7 @@ class FragmentInjectorV2:
         self.fragments.next_group()
 
         if self._scene_break(tag_tokens):
-            self.fragments.add_pause(1, [])
+            self.fragments.add_pause(1, list(self.visited_ids))
             return
 
         self.pending_fragments.extend(split_tokens_into_fragments(tag_tokens, target_length=self.target_length))
