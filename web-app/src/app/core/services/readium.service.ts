@@ -38,6 +38,10 @@ export class ReadiumService {
     return this.publication$;
   }
 
+  resetPublication() {
+    this._publication.next(undefined);
+  }
+
   getUrl(pub: Publication, href: string): string {
     const pathParts = pub.manifest.links.filterByRel("self")[0].href.split('/');
     pathParts.pop();

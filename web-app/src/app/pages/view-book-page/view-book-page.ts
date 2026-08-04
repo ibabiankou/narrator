@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, viewChild } from '@angular/core';
+import { Component, computed, inject, input, OnDestroy, OnInit, viewChild } from '@angular/core';
 import { BookStatus } from '../../core/models/books.dto';
 import { BooksService } from '../../core/services/books.service';
 import { filter, switchMap, tap } from 'rxjs';
@@ -36,7 +36,7 @@ import { TocComponent } from '../../components/toc/toc.component';
   templateUrl: './view-book-page.html',
   styleUrl: './view-book-page.scss',
 })
-export class ViewBookPage {
+export class ViewBookPage implements OnDestroy {
   private booksService = inject(BooksService);
   private readiumService = inject(ReadiumService);
   private titleService = inject(Title);
@@ -72,5 +72,9 @@ export class ViewBookPage {
 
   protected fragmentChanged(fragmentId: string) {
     this.readiumEpub()!.showFragment(fragmentId);
+  }
+
+  ngOnDestroy(): void {
+    this.readiumService.resetPublication();
   }
 }
