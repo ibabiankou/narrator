@@ -15,12 +15,12 @@ class TestBooksService:
         id = uuid.UUID("84efd0c9-80b5-46f4-bf13-44b3726baf25")
 
         playlist = books_service._generate_master_playlist(id, "kokoro", "am_michael", has_subtitles=True)
-        assert 'TYPE=subtitles' in playlist
+        assert 'TYPE=SUBTITLES' in playlist
         assert f'/api/files/{id}/playlists/kokoro_am_michael_subs.m3u8' in playlist
         assert f'/api/files/{id}/playlists/kokoro_am_michael.m3u8' in playlist
 
         playlist_no_sub = books_service._generate_master_playlist(id, "kokoro", "am_michael", has_subtitles=False)
-        assert 'TYPE=subtitles' not in playlist_no_sub
+        assert 'TYPE=SUBTITLES' not in playlist_no_sub
 
     def test_format_vtt_timestamp(self):
         assert books_service._format_vtt_timestamp(0) == "00:00:00.000"
