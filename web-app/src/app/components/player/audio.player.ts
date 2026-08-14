@@ -80,6 +80,7 @@ export class AudioPlayer {
           maxMaxBufferLength: 36000, // 10h buffer
           maxBufferSize: 500, // 500mb max buffer size
           loader: CachingHlsLoader,
+          enableWebVTT: true,
           debug: false,
         });
 
@@ -144,6 +145,53 @@ export class AudioPlayer {
         // Pause once end is reached.
         this.hls.on(Hls.Events.MEDIA_ENDED, () => {
           this.pause();
+        });
+
+        // Subtitle & caption event listeners
+        this.hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (eventName, data) => {
+          console.log("Handling: %s", eventName, data);
+          if (this.hls && this.hls.subtitleTracks.length > 0 && this.hls.subtitleTrack === -1) {
+            console.log("Subtitle tracks available:", this.hls.subtitleTracks);
+            this.hls.subtitleTrack = 0;
+          }
+        });
+
+        this.hls.on(Hls.Events.SUBTITLE_FRAG_PROCESSED, (eventName, data) => {
+          console.log("Handling: %s", eventName, data);
+        });
+
+        this.hls.on(Hls.Events.CUES_PARSED, (eventName, data) => {
+          console.log("Handling: %s", eventName, data);
+          console.log("Subtitle captions from hls.js (CUES_PARSED):", data.cues);
+          if (data.cues && Array.isArray(data.cues)) {
+            data.cues.forEach(cue => {
+              console.log(`Caption [${cue.startTime}s - ${cue.endTime}s]:`, cue.text);
+            });
+          }
+        });
+
+        const handleTrack = (track: TextTrack) => {
+          track.mode = 'hidden';
+          track.oncuechange = () => {
+            if (track.activeCues && track.activeCues.length > 0) {
+              for (let i = 0; i < track.activeCues.length; i++) {
+                const cue = track.activeCues[i] as VTTCue;
+                console.log("Active subtitle caption:", cue.text);
+              }
+            }
+          };
+        };
+
+        console.log("Text tracks:", this.audio.textTracks)
+
+        for (let i = 0; i < this.audio.textTracks.length; i++) {
+          handleTrack(this.audio.textTracks[i]);
+        }
+
+        this.audio.textTracks.addEventListener('addtrack', (event: TrackEvent) => {
+          if (event.track) {
+            handleTrack(event.track);
+          }
         });
 
         const masterPlaylistUrl = `/api/files/${book?.id}/playlists/master.m3u8`;
