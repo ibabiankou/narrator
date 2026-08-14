@@ -10,7 +10,7 @@ LOG = logging.getLogger(__name__)
 
 processing_router = APIRouter(tags=["Processing API"])
 
-tasks = ["split-pages", "extract-text", "extract-images", "extract-metadata"]
+tasks = ["generate-subtitles"]
 
 
 def check_task_name(task_name):

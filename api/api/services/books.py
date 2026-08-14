@@ -10,11 +10,12 @@ from fastapi import BackgroundTasks
 from io import BytesIO
 from sqlalchemy import update, text, select
 from sqlalchemy.sql.functions import count
-from typing import Annotated, List
+from typing import Annotated, List, Dict, Optional
 
 from api.models import api, db, domain
 from api.models.db import NarrationQueue
 from api.models.narration import NarrationManifest
+from common_lib.models.tts import TrackManifest, TextFragment, Fragment
 from api.services.epub import EpubServiceDep
 from api.services.files import FilesServiceDep
 from api.services.progress import PlaybackProgressServiceDep
@@ -254,7 +255,71 @@ class BookService(Service):
 
     @transactional
     def process_book(self, book_id, task_name, background_tasks):
-        pass
+        if task_name == "generate-subtitles":
+            background_tasks.add_task(self._generate_subtitles, book_id)
+
+    def _generate_subtitles(self, book_id: uuid.UUID):
+        # 1. Load the narration manifest.
+        manifest_bytes = self.files_service.get_book_file(book_id, "narration-manifest.json")
+        manifest: NarrationManifest = NarrationManifest.model_validate_json(manifest_bytes.getvalue())
+
+        fragment_map: Dict[int, Fragment] = {}
+        for content_file in manifest.root:
+            for nav_item in content_file.navigation_items:
+                for audio_track in nav_item.audio_tracks:
+                    for group in audio_track.fragment_groups.root:
+                        for frag in group.root:
+                            fragment_map[frag.id] = frag
+
+        # 2. Load and sort all audio tracks.
+        audio_dir = f"{book_id}/audio-files"
+        all_audio_files = self.files_service.list_files(audio_dir)
+        track_manifest_files = [f for f in all_audio_files if f.endswith(".json")]
+
+        if not track_manifest_files:
+            LOG.warning("No audio track manifests found for book %s.", book_id)
+            return
+
+        track_manifests: List[TrackManifest] = []
+        model = None
+        voice = None
+
+        for track_manifest_key in track_manifest_files:
+            file_data = self.files_service.get_object(track_manifest_key)
+            if file_data and file_data.body:
+                track_manifest = TrackManifest.model_validate_json(file_data.body)
+                track_manifests.append(track_manifest)
+                if model is None or voice is None:
+                    parts = track_manifest_key.split("/")
+                    if len(parts) >= 5:
+                        model = parts[2]
+                        voice = parts[3]
+
+        if not track_manifests:
+            LOG.warning("No valid track manifests found for book %s.", book_id)
+            return
+
+        if model is None or voice is None:
+            model = "kokoro"
+            voice = "am_michael"
+
+        track_manifests.sort(key=lambda t: t.timeline[0].id if t.timeline else 0)
+
+        # 3. For each track, generate vtt file
+        for track in track_manifests:
+            vtt_content = self._generate_track_vtt(track, fragment_map)
+            vtt_key = track.audio_key.rsplit(".", 1)[0] + ".vtt"
+            self.files_service.upload_file(vtt_key, BytesIO(vtt_content.encode("utf-8")))
+
+        # 4. Generate the m3u8 manifest for the subtitles
+        subtitles_playlist = self._generate_subtitles_playlist(track_manifests)
+        subtitles_playlist_key = f"{book_id}/playlists/{model}_{voice}_subs.m3u8"
+        self.files_service.upload_file(subtitles_playlist_key, BytesIO(subtitles_playlist.encode("utf-8")))
+
+        # 5. Update master playlist
+        master_playlist = self._generate_master_playlist(book_id=book_id, model=model, voice=voice, has_subtitles=True)
+        master_playlist_key = f"{book_id}/playlists/master.m3u8"
+        self.files_service.upload_file(master_playlist_key, BytesIO(master_playlist.encode("utf-8")))
 
     @transactional
     def update_status(self, book_id: uuid.UUID, status: db.BookStatus):
@@ -395,16 +460,77 @@ class BookService(Service):
         self.files_service.upload_file(master_playlist_key, master_playlist.encode())
 
 
-    def _generate_master_playlist(self, book_id: uuid.UUID, model: str, voice: str) -> str:
+    @staticmethod
+    def _format_vtt_timestamp(seconds: float) -> str:
+        total_ms = max(0, int(round(seconds * 1000)))
+        hours = total_ms // 3600000
+        minutes = (total_ms % 3600000) // 60000
+        secs = (total_ms % 60000) // 1000
+        millis = total_ms % 1000
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
+
+    def _generate_track_vtt(self, track: TrackManifest, fragment_map: Dict[int, Fragment]) -> str:
+        vtt_lines = ["WEBVTT", ""]
+        current_time = 0.0
+
+        for frag_duration in track.timeline:
+            frag_id = frag_duration.id
+            duration = frag_duration.duration
+            start_time = current_time
+            end_time = current_time + duration
+            current_time = end_time
+
+            frag = fragment_map.get(frag_id)
+            if (frag is None or isinstance(frag, TextFragment)) and end_time > start_time:
+                vtt_lines.append(f"{self._format_vtt_timestamp(start_time)} --> {self._format_vtt_timestamp(end_time)}")
+                vtt_lines.append(frag_duration.formatted_id())
+                vtt_lines.append("")
+
+        return "\n".join(vtt_lines)
+
+    def _generate_subtitles_playlist(self, tracks: List[TrackManifest]) -> str:
         playlist = m3u8.M3U8()
 
         playlist.version = "4"
+        playlist.target_duration = max([sum([f.duration for f in t.timeline]) for t in tracks] or [0]) + 1
+        playlist.media_sequence = 0
+        playlist.is_endlist = True
+
+        for track in tracks:
+            vtt_key = track.audio_key.rsplit(".", 1)[0] + ".vtt"
+            segment = m3u8.Segment(
+                uri=f"/api/files/{vtt_key}",
+                duration=round(sum([f.duration for f in track.timeline]), 3),
+                discontinuity=True,
+            )
+            playlist.segments.append(segment)
+
+        return playlist.dumps()
+
+    def _generate_master_playlist(self, book_id: uuid.UUID, model: str, voice: str, has_subtitles: bool = True) -> str:
+        playlist = m3u8.M3U8()
+
+        playlist.version = "4"
+
+        if has_subtitles:
+            subtitles_media = m3u8.Media(
+                uri=f"/api/files/{book_id}/playlists/{model}_{voice}_subs.m3u8",
+                type="subtitles",
+                group_id="subs",
+                language="en",
+                name="English",
+                default="yes",
+                autoselect="yes",
+                forced="no",
+            )
+            playlist.add_media(subtitles_media)
 
         pl = m3u8.Playlist(
             uri=f"/api/files/{book_id}/playlists/{model}_{voice}.m3u8",
             stream_info={
                 "bandwidth": 96000,
-                "audio": "voices"
+                "audio": "voices",
+                "subtitles": "subs" if has_subtitles else None,
             },
             media=[],
             base_uri="",
