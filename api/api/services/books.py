@@ -515,15 +515,25 @@ class BookService(Service):
         if has_subtitles:
             subtitles_media = m3u8.Media(
                 uri=f"/api/files/{book_id}/playlists/{model}_{voice}_subs.m3u8",
-                type="subtitles",
+                type="SUBTITLES",
                 group_id="subs",
                 language="en",
                 name="English",
-                default="yes",
-                autoselect="yes",
-                forced="no",
+                default="YES",
+                autoselect="YES",
+                forced="NO",
             )
             playlist.add_media(subtitles_media)
+
+        voice_media = m3u8.Media(
+            type="AUDIO",
+            group_id="voices",
+            name=f"{model} {voice}",
+            default="YES",
+            autoselect="YES",
+            language="en"
+        )
+        playlist.add_media(voice_media)
 
         pl = m3u8.Playlist(
             uri=f"/api/files/{book_id}/playlists/{model}_{voice}.m3u8",
@@ -532,20 +542,10 @@ class BookService(Service):
                 "audio": "voices",
                 "subtitles": "subs" if has_subtitles else None,
             },
-            media=[],
+            media=[voice_media],
             base_uri="",
         )
         playlist.add_playlist(pl)
-
-        voice_media = m3u8.Media(
-            type="audio",
-            group_id="voices",
-            name=f"{model} {voice}",
-            default="yes",
-            autoselect="yes",
-            language="en"
-        )
-        playlist.add_media(voice_media)
 
         return playlist.dumps()
 
