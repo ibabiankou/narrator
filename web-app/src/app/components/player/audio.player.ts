@@ -83,6 +83,17 @@ export class AudioPlayer {
           enableWebVTT: true,
           debug: false,
         });
+        const hls = this.hls;
+
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          // Check if subtitle tracks were detected
+          console.log("hls.subtitleTracks", hls.subtitleTracks);
+
+          // Select the first subtitle track (or matching language)
+          if (hls.subtitleTracks.length > 0) {
+            hls.subtitleTrack = 0; // Forces hls.js to load the subtitle playlist
+          }
+        });
 
         this.hls.on(Hls.Events.LEVEL_UPDATED, (eventName, data) => {
           console.debug("Handling: %s", eventName, data);
@@ -181,8 +192,6 @@ export class AudioPlayer {
             }
           };
         };
-
-        console.log("Text tracks:", this.audio.textTracks)
 
         for (let i = 0; i < this.audio.textTracks.length; i++) {
           handleTrack(this.audio.textTracks[i]);
