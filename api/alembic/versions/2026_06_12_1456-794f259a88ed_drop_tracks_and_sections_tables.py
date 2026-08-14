@@ -17,8 +17,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.drop_table('audio_tracks')
-    op.drop_table('sections')
+    pass
 
 
 def downgrade() -> None:
