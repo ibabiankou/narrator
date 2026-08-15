@@ -217,7 +217,6 @@ export class PlayerComponent implements OnDestroy, AfterViewInit {
             tocTimeline.push(navTimelineItem);
           }
           this.tocTimeline.set(tocTimeline);
-          console.debug(tocTimeline);
         }
       });
     effect(() => {

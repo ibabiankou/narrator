@@ -83,17 +83,6 @@ export class AudioPlayer {
           enableWebVTT: true,
           debug: false,
         });
-        const hls = this.hls;
-
-        hls.on(Hls.Events.MANIFEST_PARSED, function () {
-          // Check if subtitle tracks were detected
-          console.log("hls.subtitleTracks", hls.subtitleTracks);
-
-          // Select the first subtitle track (or matching language)
-          if (hls.subtitleTracks.length > 0) {
-            hls.subtitleTrack = 0; // Forces hls.js to load the subtitle playlist
-          }
-        });
 
         this.hls.on(Hls.Events.LEVEL_UPDATED, (eventName, data) => {
           console.debug("Handling: %s", eventName, data);
@@ -158,28 +147,13 @@ export class AudioPlayer {
           this.pause();
         });
 
+        this.hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal || data.details.includes('subtitle')) {
+            console.error("HLS Error:", data.details, data);
+          }
+        });
+
         // Subtitle & caption event listeners
-        this.hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (eventName, data) => {
-          console.log("Handling: %s", eventName, data);
-          if (this.hls && this.hls.subtitleTracks.length > 0 && this.hls.subtitleTrack === -1) {
-            console.log("Subtitle tracks available:", this.hls.subtitleTracks);
-            this.hls.subtitleTrack = 0;
-          }
-        });
-
-        this.hls.on(Hls.Events.SUBTITLE_FRAG_PROCESSED, (eventName, data) => {
-          console.log("Handling: %s", eventName, data);
-        });
-
-        this.hls.on(Hls.Events.CUES_PARSED, (eventName, data) => {
-          console.log("Handling: %s", eventName, data);
-          console.log("Subtitle captions from hls.js (CUES_PARSED):", data.cues);
-          if (data.cues && Array.isArray(data.cues)) {
-            data.cues.forEach(cue => {
-              console.log(`Caption [${cue.startTime}s - ${cue.endTime}s]:`, cue.text);
-            });
-          }
-        });
 
         const handleTrack = (track: TextTrack) => {
           track.mode = 'hidden';
@@ -192,10 +166,6 @@ export class AudioPlayer {
             }
           };
         };
-
-        for (let i = 0; i < this.audio.textTracks.length; i++) {
-          handleTrack(this.audio.textTracks[i]);
-        }
 
         this.audio.textTracks.addEventListener('addtrack', (event: TrackEvent) => {
           if (event.track) {

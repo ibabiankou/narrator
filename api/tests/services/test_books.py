@@ -45,7 +45,7 @@ class TestBooksService:
             2: TextFragment(id=2, text="Second subtitle sentence.")
         }
         vtt = books_service._generate_track_vtt(track, fragment_map)
-        assert vtt.startswith("WEBVTT\n\n")
+        assert vtt.startswith("WEBVTT\nX-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:00.000\n\n")
         assert "00:00:00.000 --> 00:00:02.500\nn-00000" in vtt
         assert "00:00:03.500 --> 00:00:06.500\nn-00002" in vtt
 
@@ -218,8 +218,10 @@ class TestBooksService:
         books_service._generate_subtitles(book_id)
 
         # Both VTT files generated
-        assert f"{book_id}/audio-files/kokoro/am_michael/0-1.vtt" in uploaded_files
-        assert f"{book_id}/audio-files/kokoro/am_michael/2-3.vtt" in uploaded_files
+        vtt_1 = uploaded_files[f"{book_id}/audio-files/kokoro/am_michael/0-1.vtt"].decode("utf-8")
+        vtt_2 = uploaded_files[f"{book_id}/audio-files/kokoro/am_michael/2-3.vtt"].decode("utf-8")
+        assert "X-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:00.000" in vtt_1
+        assert "X-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:03.000" in vtt_2
 
         # Subtitles playlist has both tracks in sorted order
         sub_text = uploaded_files[f"{book_id}/playlists/kokoro_am_michael_subs.m3u8"].decode("utf-8")

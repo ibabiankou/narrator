@@ -306,10 +306,12 @@ class BookService(Service):
         track_manifests.sort(key=lambda t: t.timeline[0].id if t.timeline else 0)
 
         # 3. For each track, generate vtt file
+        cumulative_duration = 0.0
         for track in track_manifests:
-            vtt_content = self._generate_track_vtt(track, fragment_map)
+            vtt_content = self._generate_track_vtt(track, fragment_map, track_start_time=cumulative_duration)
             vtt_key = track.audio_key.rsplit(".", 1)[0] + ".vtt"
             self.files_service.upload_file(vtt_key, BytesIO(vtt_content.encode("utf-8")))
+            cumulative_duration += sum([f.duration for f in track.timeline])
 
         # 4. Generate the m3u8 manifest for the subtitles
         subtitles_playlist = self._generate_subtitles_playlist(track_manifests)
@@ -469,8 +471,9 @@ class BookService(Service):
         millis = total_ms % 1000
         return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
 
-    def _generate_track_vtt(self, track: TrackManifest, fragment_map: Dict[int, Fragment]) -> str:
-        vtt_lines = ["WEBVTT", ""]
+    def _generate_track_vtt(self, track: TrackManifest, fragment_map: Dict[int, Fragment], track_start_time: float = 0.0) -> str:
+        mpegts = round(track_start_time * 90_000)
+        vtt_lines = ["WEBVTT", f"X-TIMESTAMP-MAP=MPEGTS:{mpegts},LOCAL:00:00:00.000", ""]
         current_time = 0.0
 
         for frag_duration in track.timeline:
@@ -501,7 +504,6 @@ class BookService(Service):
             segment = m3u8.Segment(
                 uri=f"/api/files/{vtt_key}",
                 duration=round(sum([f.duration for f in track.timeline]), 3),
-                discontinuity=True,
             )
             playlist.segments.append(segment)
 
