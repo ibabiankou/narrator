@@ -51,6 +51,12 @@ body.light-mode {
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
+:fullscreen {
+  /* Use small viewport height to prevent overflow */
+  height: 100vh;
+  height: 100svh;
+}
+
 .toggle-buttons {
   padding: 0 8px 8px 8px;
   display: flex;
