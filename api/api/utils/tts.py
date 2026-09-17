@@ -197,6 +197,14 @@ class FragmentInjector:
             attr_str = " ".join([f'{k}="{v}"' for k, v in attrs.items()])
             tag_open = f"<{node.name} {attr_str}>" if attr_str else f"<{node.name}>"
 
+            # IDs must be processed in two places (here and in process_xhtml_inplace).
+            # If processed only here, IDs of elements outside the leaf block tags will be missed.
+            if node.get("id"):
+                tag_id: str = str(node.get("id"))
+                self.visited_ids.add(tag_id)
+                # Also update the current fragment.
+                self.current_fragment.visited_ids = list(self.visited_ids)
+
             LOG.debug("  " * len(self.open_tag_stack) + "Traversing: %s", node.name)
 
             if node.name in VOID_TAGS:
@@ -242,11 +250,15 @@ def process_xhtml_inplace(file_bytes: bytes, global_id_start) -> Tuple[bytes, Fr
 
         visited_ids = set()
         for tag in soup.find_all():
+            # IDs must be processed in two places (here and inside FragmentInjector).
+            # If processed only here, fragments of a tag might miss IDs of elements inside that tag.
             if tag.get("id"):
                 tag_id: str = str(tag.get("id"))
                 visited_ids.add(tag_id)
 
+            # We are only interested in block elements,
             if tag.name not in BLOCK_TAGS: continue
+            # that do not contain other block elements. In other words, we only expect content in leaf blocks.
             if tag.find(BLOCK_TAGS): continue
 
             # TODO: This is where a fragment group (paragraph) starts.

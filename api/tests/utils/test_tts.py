@@ -265,3 +265,14 @@ class TestTts:
         print(actual_html_str)
 
         assert "&lt;Error Classification: Omega1.14.3871392&gt;" in actual_html_str
+
+    def test_id_inside_block_tag(self, test_data_loader):
+        """ID attribute inside the leaf block tag should be added as soon as visited."""
+        html_str = test_data_loader("id_on_child.html")
+
+        content_bytes, fragments, frag_id = process_xhtml_inplace(html_str.encode(), 0)
+        print(fragments)
+
+        fragment = fragments.root[0].root[0]
+        assert "Chapter 39" in fragment.text
+        assert "C4O-e03a7507a5b444d7b61c8831a22b5c13" in fragment.visited_ids
