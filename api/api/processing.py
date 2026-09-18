@@ -1,3 +1,5 @@
+from enum import Enum
+
 import logging
 import uuid
 
@@ -10,17 +12,19 @@ LOG = logging.getLogger(__name__)
 
 processing_router = APIRouter(tags=["Processing API"])
 
-tasks = ["generate-subtitles"]
+
+class ProcessingTaskName(str, Enum):
+    generate_subtitles = "generate-subtitles"
 
 
 def check_task_name(task_name):
-    if task_name not in tasks:
-        raise HTTPException(status_code=400, detail="Invalid task name. Supported tasks: " + ", ".join(tasks) + ".")
+    if task_name not in ProcessingTaskName:
+        raise HTTPException(status_code=400, detail="Invalid task name. Supported tasks: " + ", ".join(ProcessingTaskName) + ".")
 
 
 @processing_router.post("/{book_id}/{task_name}")
 def process_book(book_id: uuid.UUID,
-                 task_name: str,
+                 task_name: ProcessingTaskName,
                  user: AdminUser,
                  background_tasks: BackgroundTasks,
                  book_service: BookServiceDep):
