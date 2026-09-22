@@ -1,3 +1,5 @@
+import uuid
+
 from io import BytesIO
 
 import asyncio
@@ -103,8 +105,11 @@ class NarrationQueueService(Service):
         db_record.duration_s = payload.duration_s
         db_record.size_bytes = payload.size_bytes
 
+        self._generate_audio_playlist(db_record.book_id, db_record.tts_model, db_record.voice)
+
+    def _generate_audio_playlist(self, book_id: uuid.UUID, tts_model: str, voice: str):
         # Load all track manifests to generate the playlist
-        audio_dir = f"{db_record.book_id}/audio-files/{db_record.tts_model}/{db_record.voice}"
+        audio_dir = f"{book_id}/audio-files/{tts_model}/{voice}"
         all_files = self.files_service.list_files(audio_dir)
         track_manifest_files = [f for f in all_files if f.endswith(".json")]
         track_manifests = []
@@ -117,7 +122,7 @@ class NarrationQueueService(Service):
         # Or simply order by the first fragment ID? < Do this one for now.
         # TODO: Might do complete cross-check upon book completion.
 
-        playlist_key = f"{db_record.book_id}/playlists/{db_record.tts_model}_{db_record.voice}.m3u8"
+        playlist_key = f"{book_id}/playlists/{tts_model}_{voice}.m3u8"
         playlist = self._generate_playlist(track_manifests)
         self.files_service.upload_file(playlist_key, BytesIO(playlist.encode()))
 
