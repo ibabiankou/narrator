@@ -44,7 +44,7 @@
     "@angular/build": "^21.1.0",
     "@angular/cli": "^21.1.0",
     "@angular/compiler-cli": "^21.1.0",
-    "@readium/navigator": "^2.5.5",
+    "@readium/navigator": "^2.11.1",
     "@readium/navigator-html-injectables": "^2.4.2",
     "@readium/shared": "^2.2.0",
     "@types/jasmine": "~5.1.0",

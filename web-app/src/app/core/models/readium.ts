@@ -1,5 +1,5 @@
 import { EpubNavigatorListeners, KeyboardPeripheralEventData } from '@readium/navigator';
-import { Locator } from '@readium/shared';
+import { Locator, TimelineItem } from '@readium/shared';
 import {
   BasicTextSelection,
   ContextMenuEvent,
@@ -12,6 +12,7 @@ export const NOOP_EPUB_LISTENERS: EpubNavigatorListeners = {
   },
   positionChanged: (locator: Locator) => {
   },
+  timelineItemChanged: (item: TimelineItem | undefined) => {},
   tap: (e: FrameClickEvent) => {
     return true
   },
