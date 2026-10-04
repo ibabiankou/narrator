@@ -1,10 +1,11 @@
 import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
-
 from dotenv import load_dotenv
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2AuthorizationCodeBearer
 from fastapi_keycloak_middleware import setup_keycloak_middleware, KeycloakConfiguration
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exchange_type import ExchangeType
@@ -31,6 +32,8 @@ from common_lib.db import DBFactory
 from common_lib.models import rmq
 from common_lib.rmq import Topology
 from common_lib.uvicorn import EndpointFilter
+
+LOG = logging.getLogger(__name__)
 
 # Filter out health check from access logs.
 EndpointFilter.add_filter("/api/")
@@ -79,6 +82,22 @@ async def lifespan(app: FastAPI):
     RMQClient.instance.close()
 
 
+def configure_swagger_auth():
+    LOG.warning("Configuring Swagger ... ")
+    auth_scheme = OAuth2AuthorizationCodeBearer(
+        scheme_name="keycloak",
+        authorizationUrl="https://iam.nnarrator.eu/realms/nnarrator/protocol/openid-connect/auth",
+        tokenUrl="https://iam.nnarrator.eu/realms/nnarrator/protocol/openid-connect/token",
+        refreshUrl="https://iam.nnarrator.eu/realms/nnarrator/protocol/openid-connect/token"
+    )
+    swagger_ui_init_oauth = {
+        "clientId": "nnarrator-webapp",
+        "appName": "NNarrator API",
+        "usePkceWithAuthorizationCodeGrant": True,
+    }
+    app.swagger_ui_init_oauth = swagger_ui_init_oauth
+    app.router.dependencies.append(Depends(auth_scheme))
+
 app = FastAPI(lifespan=lifespan,
               swagger_ui_parameters={"tryItOutEnabled": True})
 
@@ -88,15 +107,12 @@ keycloak_config = KeycloakConfiguration(
     client_id=os.getenv("KC_CLIENT_ID"),
     client_secret=os.getenv("KC_CLIENT_SECRET"),
     claims=["sub", "email", "realm_access"],
-    swagger_client_id="nnarrator-webapp",
 )
 setup_keycloak_middleware(
     app,
     keycloak_configuration=keycloak_config,
     user_mapper=map_user,
     exclude_patterns=[r"^\/api\/?$", "/docs", "/openapi.json"],
-    add_swagger_auth=True,
-    swagger_auth_pkce=True,
 )
 
 app.add_middleware(
@@ -109,7 +125,7 @@ app.add_middleware(
     expose_headers=["Etag", "Content-Range"],
 )
 app.add_middleware(GZipMiddleware)
-
+configure_swagger_auth()
 base_url_router = APIRouter(prefix="/api")
 
 
