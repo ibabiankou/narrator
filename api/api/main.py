@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -32,8 +31,6 @@ from common_lib.db import DBFactory
 from common_lib.models import rmq
 from common_lib.rmq import Topology
 from common_lib.uvicorn import EndpointFilter
-
-LOG = logging.getLogger(__name__)
 
 # Filter out health check from access logs.
 EndpointFilter.add_filter("/api/")
@@ -82,23 +79,12 @@ async def lifespan(app: FastAPI):
     RMQClient.instance.close()
 
 
-def configure_swagger_auth():
-    LOG.warning("Configuring Swagger ... ")
-    auth_scheme = OAuth2AuthorizationCodeBearer(
-        scheme_name="keycloak",
-        authorizationUrl="https://iam.nnarrator.eu/realms/nnarrator/protocol/openid-connect/auth",
-        tokenUrl="https://iam.nnarrator.eu/realms/nnarrator/protocol/openid-connect/token",
-        refreshUrl="https://iam.nnarrator.eu/realms/nnarrator/protocol/openid-connect/token"
-    )
-    swagger_ui_init_oauth = {
-        "clientId": "nnarrator-webapp",
-        "appName": "NNarrator API",
-        "usePkceWithAuthorizationCodeGrant": True,
-    }
-    app.swagger_ui_init_oauth = swagger_ui_init_oauth
-    app.router.dependencies.append(Depends(auth_scheme))
-
 app = FastAPI(lifespan=lifespan,
+              swagger_ui_init_oauth = {
+                  "clientId": "nnarrator-webapp",
+                  "appName": "NNarrator API",
+                  "usePkceWithAuthorizationCodeGrant": True,
+              },
               swagger_ui_parameters={"tryItOutEnabled": True})
 
 keycloak_config = KeycloakConfiguration(
@@ -125,7 +111,16 @@ app.add_middleware(
     expose_headers=["Etag", "Content-Range"],
 )
 app.add_middleware(GZipMiddleware)
-configure_swagger_auth()
+
+
+# Swagger UI Auth config
+auth_scheme = OAuth2AuthorizationCodeBearer(
+    scheme_name="auth_code",
+    authorizationUrl="https://iam.nnarrator.eu/realms/nnarrator/protocol/openid-connect/auth",
+    tokenUrl="https://iam.nnarrator.eu/realms/nnarrator/protocol/openid-connect/token",
+    refreshUrl="https://iam.nnarrator.eu/realms/nnarrator/protocol/openid-connect/token"
+)
+
 base_url_router = APIRouter(prefix="/api")
 
 
@@ -134,16 +129,17 @@ def health_check():
     return {"status": "ok"}
 
 
-@base_url_router.get("/user", tags=["System API"])
+@base_url_router.get("/user", tags=["System API"], dependencies=[Depends(auth_scheme)])
 def get_current_user(user: UserDep):
     return user
 
-base_url_router.include_router(files_router, prefix="/files")
-base_url_router.include_router(books_router, prefix="/books")
-base_url_router.include_router(metadata_router, prefix="/books/{book_id}/metadata")
-base_url_router.include_router(processing_router, prefix="/processing")
-base_url_router.include_router(settings_router, prefix="/settings")
-base_url_router.include_router(procurement_router)
-base_url_router.include_router(maintenance_router, prefix="/maintenance")
-base_url_router.include_router(experimental_router, prefix="/experimental")
+
+base_url_router.include_router(files_router, prefix="/files", dependencies=[Depends(auth_scheme)])
+base_url_router.include_router(books_router, prefix="/books", dependencies=[Depends(auth_scheme)])
+base_url_router.include_router(metadata_router, prefix="/books/{book_id}/metadata", dependencies=[Depends(auth_scheme)])
+base_url_router.include_router(processing_router, prefix="/processing", dependencies=[Depends(auth_scheme)])
+base_url_router.include_router(settings_router, prefix="/settings", dependencies=[Depends(auth_scheme)])
+base_url_router.include_router(procurement_router, dependencies=[Depends(auth_scheme)])
+base_url_router.include_router(maintenance_router, prefix="/maintenance", dependencies=[Depends(auth_scheme)])
+base_url_router.include_router(experimental_router, prefix="/experimental", dependencies=[Depends(auth_scheme)])
 app.include_router(base_url_router)

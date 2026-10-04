@@ -26,6 +26,7 @@ RUN python -m nltk.downloader punkt_tab
 
 COPY api/api ./api
 
-EXPOSE 8000
+EXPOSE 8000 5678
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-config", "log_conf.yaml", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["python3", "-Xfrozen_modules=off", "-m", "debugpy", "--listen", "0.0.0.0:5678", \
+     "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-config", "log_conf.yaml", "--proxy-headers", "--forwarded-allow-ips", "*"]

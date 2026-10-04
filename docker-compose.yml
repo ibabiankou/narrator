@@ -43,6 +43,7 @@ services:
         restart: true
     ports:
       - "8000:8000"
+      - "5678:5678"
   pg:
     image: postgres:17.7
     environment:
