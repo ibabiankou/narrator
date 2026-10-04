@@ -79,7 +79,8 @@ async def lifespan(app: FastAPI):
     RMQClient.instance.close()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan,
+              swagger_ui_parameters={"tryItOutEnabled": True})
 
 keycloak_config = KeycloakConfiguration(
     url="https://iam.nnarrator.eu/",
