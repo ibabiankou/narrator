@@ -225,8 +225,8 @@ class SpeechGenService(Service):
                 current_batch = results[i].tokens
                 # noinspection PyTypeChecker
                 for token in current_batch:
-                    token.start_ts = token.start_ts or 0 + previous_batch[-1].end_ts
-                    token.end_ts = token.end_ts or 0 + previous_batch[-1].end_ts
+                    token.start_ts += previous_batch[-1].end_ts
+                    token.end_ts += previous_batch[-1].end_ts
 
         all_tokens = deque[MToken]()
         for result in results:
