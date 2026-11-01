@@ -23,6 +23,41 @@ from common_lib.service import Service
 LOG = logging.getLogger(__name__)
 
 
+def generate_playlist(tracks: List[tts.TrackManifest]) -> str:
+    playlist = m3u8.M3U8()
+
+    playlist.version = "4"
+    playlist.target_duration = max([sum([f.duration for f in t.timeline]) for t in tracks] or [0]) + 1
+    playlist.media_sequence = 0
+    # TODO: Set endlist to True if the book status is ready (no narration happens).
+    playlist.is_endlist = True
+
+    for track in tracks:
+        fragments = []
+        fragments.append({
+            "id": track.track_name,
+            "start_date": "0000-00-01",
+            "x_size_bytes": str(track.size_bytes)
+        })
+        for frag in track.timeline:
+            fragments.append({
+                "id": frag.formatted_id(),
+                "start_date": "0000-00-00",
+                "x_duration": str(round(frag.duration, 3))
+            })
+        segment = m3u8.Segment(
+            uri=f"/api/files/{track.audio_key}",
+            duration=round(sum([f.duration for f in track.timeline]), 3),
+            discontinuity=True,
+            # Abusing the dateranges field to include timeline and file size data.
+            dateranges=fragments
+        )
+        playlist.segments.append(segment)
+
+
+    return playlist.dumps()
+
+
 class NarrationQueueService(Service):
     def __init__(self,
                  rmq_client: RMQClientDep,
@@ -123,42 +158,8 @@ class NarrationQueueService(Service):
         # TODO: Might do complete cross-check upon book completion.
 
         playlist_key = f"{book_id}/playlists/{tts_model}_{voice}.m3u8"
-        playlist = self._generate_playlist(track_manifests)
+        playlist = generate_playlist(track_manifests)
         self.files_service.upload_file(playlist_key, BytesIO(playlist.encode()))
-
-    def _generate_playlist(self, tracks: List[tts.TrackManifest]) -> str:
-        playlist = m3u8.M3U8()
-
-        playlist.version = "4"
-        playlist.target_duration = max([sum([f.duration for f in t.timeline]) for t in tracks] or [0]) + 1
-        playlist.media_sequence = 0
-        # TODO: Set endlist to True if the book status is ready (no narration happens).
-        playlist.is_endlist = True
-
-        for track in tracks:
-            fragments = []
-            fragments.append({
-                "id": track.track_name,
-                "start_date": "0000-00-01",
-                "x_size_bytes": str(track.size_bytes)
-            })
-            for frag in track.timeline:
-                fragments.append({
-                    "id": frag.formatted_id(),
-                    "start_date": "0000-00-00",
-                    "x_duration": str(round(frag.duration, 3))
-                })
-            segment = m3u8.Segment(
-                uri=f"/api/files/{track.audio_key}",
-                duration=round(sum([f.duration for f in track.timeline]), 3),
-                discontinuity=True,
-                # Abusing the dateranges field to include timeline and file size data.
-                dateranges=fragments
-            )
-            playlist.segments.append(segment)
-
-
-        return playlist.dumps()
 
     @transactional
     def resend(self, queue_ids):

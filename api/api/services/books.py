@@ -10,11 +10,12 @@ from fastapi import BackgroundTasks
 from io import BytesIO
 from sqlalchemy import update, text, select
 from sqlalchemy.sql.functions import count
-from typing import Annotated, List, Dict, Optional
+from typing import Annotated, List, Dict
 
 from api.models import api, db, domain
 from api.models.db import NarrationQueue
 from api.models.narration import NarrationManifest
+from api.services.narration_queue import generate_playlist
 from common_lib.models.tts import TrackManifest, TextFragment, Fragment
 from api.services.epub import EpubServiceDep
 from api.services.files import FilesServiceDep
@@ -258,6 +259,10 @@ class BookService(Service):
         if task_name == "generate-subtitles":
             background_tasks.add_task(self._generate_subtitles, book_id)
 
+        if task_name == "generate-playlists":
+            background_tasks.add_task(self._generate_playlists, book_id)
+
+
     def _generate_subtitles(self, book_id: uuid.UUID):
         # 1. Load the narration manifest.
         manifest_bytes = self.files_service.get_book_file(book_id, "narration-manifest.json")
@@ -302,6 +307,8 @@ class BookService(Service):
         if model is None or voice is None:
             model = "kokoro"
             voice = "am_michael"
+            LOG.warning("Failed to identify model and voice from audio tracks. Default to: %s, %s.",
+                        model, voice)
 
         track_manifests.sort(key=lambda t: t.timeline[0].id if t.timeline else 0)
 
@@ -322,6 +329,60 @@ class BookService(Service):
         master_playlist = self._generate_master_playlist(book_id=book_id, model=model, voice=voice, has_subtitles=True)
         master_playlist_key = f"{book_id}/playlists/master.m3u8"
         self.files_service.upload_file(master_playlist_key, BytesIO(master_playlist.encode("utf-8")))
+
+    def _generate_playlists(self, book_id: uuid.UUID):
+        # 1. Load the narration manifest.
+        manifest_bytes = self.files_service.get_book_file(book_id, "narration-manifest.json")
+        manifest: NarrationManifest = NarrationManifest.model_validate_json(manifest_bytes.getvalue())
+
+        fragment_map: Dict[int, Fragment] = {}
+        for content_file in manifest.root:
+            for nav_item in content_file.navigation_items:
+                for audio_track in nav_item.audio_tracks:
+                    for group in audio_track.fragment_groups.root:
+                        for frag in group.root:
+                            fragment_map[frag.id] = frag
+
+        # 2. Load and sort all audio tracks.
+        audio_dir = f"{book_id}/audio-files"
+        all_audio_files = self.files_service.list_files(audio_dir)
+        track_manifest_files = [f for f in all_audio_files if f.endswith(".json")]
+
+        if not track_manifest_files:
+            LOG.warning("No audio track manifests found for book %s.", book_id)
+            return
+
+        track_manifests: List[TrackManifest] = []
+        model = None
+        voice = None
+
+        for track_manifest_key in track_manifest_files:
+            file_data = self.files_service.get_object(track_manifest_key)
+            if file_data and file_data.body:
+                track_manifest = TrackManifest.model_validate_json(file_data.body)
+                track_manifests.append(track_manifest)
+                if model is None or voice is None:
+                    parts = track_manifest_key.split("/")
+                    if len(parts) >= 5:
+                        model = parts[2]
+                        voice = parts[3]
+
+        if not track_manifests:
+            LOG.warning("No valid track manifests found for book %s.", book_id)
+            return
+
+        if model is None or voice is None:
+            model = "kokoro"
+            voice = "am_michael"
+            LOG.warning("Failed to identify model and voice from audio tracks. Default to: %s, %s.",
+                        model, voice)
+
+        track_manifests.sort(key=lambda t: t.timeline[0].id if t.timeline else 0)
+
+        # TODO Generate the playlist
+        playlist_key = f"{book_id}/playlists/{model}_{voice}.m3u8"
+        playlist = generate_playlist(track_manifests)
+        self.files_service.upload_file(playlist_key, BytesIO(playlist.encode()))
 
     @transactional
     def update_status(self, book_id: uuid.UUID, status: db.BookStatus):

@@ -15,6 +15,7 @@ processing_router = APIRouter(tags=["Processing API"])
 
 class ProcessingTaskName(str, Enum):
     generate_subtitles = "generate-subtitles"
+    generate_playlists = "generate-playlists"
 
 
 def check_task_name(task_name):
